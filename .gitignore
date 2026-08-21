@@ -1,2 +1,8 @@
 node_modules/
 .env
+git init
+git remote add origin https://github.com/uppadashajini-art/NEXUS-ISB7
+git checkout -b staging
+git add .
+git commit -m "Initial project setup"
+git push -u origin staging
