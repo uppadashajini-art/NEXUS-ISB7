@@ -9,13 +9,15 @@ app.use(express.json());
 app.get("/", (req, res) => {
   res.json({
     project: "AI Based Startup Idea Validator",
+    environment: process.env.NODE_ENV || "staging",
     status: "Backend is running"
   });
 });
 
 app.get("/api/health", (req, res) => {
   res.json({
-    status: "healthy"
+    status: "healthy",
+    environment: process.env.NODE_ENV || "staging"
   });
 });
 
