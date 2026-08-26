@@ -1,4 +1,6 @@
 fastapi
 uvicorn[standard]
+pytest
+httpx
 tavily-python
 duckduckgo-search
