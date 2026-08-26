@@ -1,0 +1,1135 @@
+/* =========================================================
+   NEXUS — AI STARTUP IDEA VALIDATOR
+   Premium Warm Dark SaaS UI
+
+   Color System:
+   Obsidian  → #11100E
+   Cards     → #1C1A17
+   Gold      → #E8C77B
+   Coral     → #FF7657
+   Text      → #F5F1E8
+   Secondary → #A9A39A
+   Borders   → #38342E
+========================================================= */
+
+/* =========================================================
+   ROOT
+========================================================= */
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* =========================================================
+   MAIN CONTAINER
+========================================================= */
+
+.startup-validator {
+  position: relative;
+
+  width: min(1050px, 92%);
+
+  min-height: 100vh;
+
+  margin: 0 auto;
+
+  padding: 75px 0 100px;
+
+  overflow: hidden;
+
+  animation: containerReveal 0.8s ease-out;
+}
+
+/* =========================================================
+   BACKGROUND GLOWS
+========================================================= */
+
+.startup-validator::before,
+.startup-validator::after {
+  content: "";
+
+  position: fixed;
+
+  width: 420px;
+  height: 420px;
+
+  border-radius: 50%;
+
+  filter: blur(120px);
+
+  opacity: 0.09;
+
+  pointer-events: none;
+
+  z-index: -1;
+}
+
+/* GOLD GLOW */
+
+.startup-validator::before {
+  top: -150px;
+  left: -180px;
+
+  background: #E8C77B;
+
+  animation:
+    floatGlowGold 12s ease-in-out infinite;
+}
+
+/* CORAL GLOW */
+
+.startup-validator::after {
+  right: -180px;
+  bottom: -120px;
+
+  background: #FF7657;
+
+  animation:
+    floatGlowCoral 15s ease-in-out infinite reverse;
+}
+
+/* =========================================================
+   HERO
+========================================================= */
+
+.hero {
+  position: relative;
+
+  text-align: center;
+
+  margin-bottom: 50px;
+
+  animation:
+    fadeUp 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Small decorative line */
+
+.hero::before {
+  content: "";
+
+  display: block;
+
+  width: 45px;
+  height: 2px;
+
+  margin: 0 auto 22px;
+
+  background: #E8C77B;
+
+  border-radius: 999px;
+
+  box-shadow:
+    0 0 15px rgba(232, 199, 123, 0.35);
+
+  animation: lineExpand 0.8s ease-out;
+}
+
+/* =========================================================
+   HERO TITLE
+========================================================= */
+
+.hero h1 {
+  margin: 0;
+
+  font-size: clamp(2.4rem, 6vw, 4.5rem);
+
+  line-height: 1.05;
+
+  font-weight: 800;
+
+  letter-spacing: -0.045em;
+
+  color: #F5F1E8;
+
+  animation:
+    titleReveal 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* GOLD BRAND TEXT */
+
+.hero h1 span {
+  background:
+    linear-gradient(
+      110deg,
+      #E8C77B 0%,
+      #F3D995 45%,
+      #E8C77B 70%,
+      #CFAE5D 100%
+    );
+
+  background-size: 200% auto;
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  -webkit-text-fill-color: transparent;
+
+  color: transparent;
+
+  animation:
+    goldShimmer 5s linear infinite;
+}
+
+/* =========================================================
+   HERO DESCRIPTION
+========================================================= */
+
+.hero p {
+  max-width: 650px;
+
+  margin: 22px auto 0;
+
+  color: #A9A39A;
+
+  font-size: 1.08rem;
+
+  line-height: 1.7;
+
+  animation:
+    fadeUp 1s ease-out 0.15s both;
+}
+
+/* =========================================================
+   INPUT CARD
+========================================================= */
+
+.input-section {
+  position: relative;
+
+  padding: 34px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #1C1A17,
+      #191714
+    );
+
+  border: 1px solid #38342E;
+
+  border-radius: 20px;
+
+  box-shadow:
+    0 25px 70px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+
+  animation:
+    cardReveal 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+
+  transition:
+    transform 0.35s ease,
+    border-color 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+/* GOLD TOP LIGHT */
+
+.input-section::before {
+  content: "";
+
+  position: absolute;
+
+  top: -1px;
+
+  left: 12%;
+
+  width: 76%;
+
+  height: 1px;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      #E8C77B,
+      transparent
+    );
+
+  opacity: 0.65;
+
+  animation:
+    glowLine 4s ease-in-out infinite;
+}
+
+/* CARD HOVER */
+
+.input-section:hover {
+  transform: translateY(-4px);
+
+  border-color: rgba(232, 199, 123, 0.28);
+
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.45),
+    0 0 45px rgba(232, 199, 123, 0.035);
+}
+
+/* =========================================================
+   FORM
+========================================================= */
+
+.idea-form {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 15px;
+}
+
+.idea-form label {
+  color: #F5F1E8;
+
+  font-size: 0.95rem;
+
+  font-weight: 600;
+
+  transition:
+    color 0.25s ease;
+}
+
+.idea-form:focus-within label {
+  color: #E8C77B;
+}
+
+/* =========================================================
+   TEXTAREA
+========================================================= */
+
+.idea-form textarea {
+  width: 100%;
+
+  min-height: 150px;
+
+  padding: 18px;
+
+  resize: vertical;
+
+  color: #F5F1E8;
+
+  background: #11100E;
+
+  border: 1px solid #38342E;
+
+  border-radius: 13px;
+
+  outline: none;
+
+  line-height: 1.6;
+
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease,
+    background 0.3s ease,
+    transform 0.3s ease;
+}
+
+.idea-form textarea::placeholder {
+  color: #777169;
+
+  transition:
+    color 0.25s ease;
+}
+
+.idea-form textarea:hover {
+  border-color: #514B42;
+}
+
+.idea-form textarea:focus {
+  background: #15130F;
+
+  border-color: #E8C77B;
+
+  box-shadow:
+    0 0 0 3px rgba(232, 199, 123, 0.08),
+    0 10px 35px rgba(0, 0, 0, 0.18);
+
+  transform: translateY(-1px);
+}
+
+.idea-form textarea:focus::placeholder {
+  color: #5E5951;
+}
+
+/* =========================================================
+   CTA BUTTON
+========================================================= */
+
+.idea-form button {
+  position: relative;
+
+  align-self: flex-start;
+
+  overflow: hidden;
+
+  padding: 13px 28px;
+
+  color: #17110D;
+
+  background: #FF7657;
+
+  border: none;
+
+  border-radius: 10px;
+
+  font-weight: 750;
+
+  font-size: 0.95rem;
+
+  box-shadow:
+    0 8px 25px rgba(255, 118, 87, 0.18);
+
+  transition:
+    transform 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+/* BUTTON SHINE */
+
+.idea-form button::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+
+  left: -120%;
+
+  width: 70%;
+
+  height: 100%;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.32),
+      transparent
+    );
+
+  transform: skewX(-20deg);
+
+  transition:
+    left 0.65s ease;
+}
+
+.idea-form button:hover::before {
+  left: 140%;
+}
+
+/* BUTTON HOVER */
+
+.idea-form button:hover {
+  background: #FF856A;
+
+  transform: translateY(-3px);
+
+  box-shadow:
+    0 13px 32px rgba(255, 118, 87, 0.28),
+    0 0 25px rgba(255, 118, 87, 0.08);
+}
+
+/* BUTTON PRESS */
+
+.idea-form button:active {
+  transform: translateY(-1px);
+
+  box-shadow:
+    0 7px 16px rgba(255, 118, 87, 0.18);
+}
+
+/* DISABLED */
+
+.idea-form button:disabled {
+  cursor: not-allowed;
+
+  opacity: 0.5;
+
+  transform: none;
+
+  box-shadow: none;
+}
+
+/* =========================================================
+   ERROR
+========================================================= */
+
+.error-message {
+  margin: 0;
+
+  padding: 11px 14px;
+
+  color: #FFB4A7;
+
+  background:
+    rgba(127, 29, 29, 0.12);
+
+  border: 1px solid rgba(255, 118, 87, 0.20);
+
+  border-radius: 9px;
+
+  animation:
+    shake 0.35s ease;
+}
+
+/* =========================================================
+   RESULTS SECTION
+========================================================= */
+
+.results-section {
+  margin-top: 60px;
+
+  animation:
+    fadeUp 0.8s ease-out;
+}
+
+.results-section h2 {
+  margin-bottom: 25px;
+
+  color: #F5F1E8;
+
+  font-size: 1.7rem;
+
+  font-weight: 700;
+
+  letter-spacing: -0.02em;
+}
+
+/* GOLD UNDERLINE */
+
+.results-section h2::after {
+  content: "";
+
+  display: block;
+
+  width: 45px;
+
+  height: 2px;
+
+  margin-top: 9px;
+
+  background: #E8C77B;
+
+  border-radius: 5px;
+
+  box-shadow:
+    0 0 12px rgba(232, 199, 123, 0.3);
+
+  animation:
+    lineExpand 0.7s ease-out;
+}
+
+/* =========================================================
+   RESULTS LIST
+========================================================= */
+
+.results-list {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 17px;
+}
+
+/* =========================================================
+   RESULT CARD
+========================================================= */
+
+.search-result-card {
+  position: relative;
+
+  padding: 24px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #1C1A17,
+      #191714
+    );
+
+  border: 1px solid #38342E;
+
+  border-radius: 15px;
+
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.22);
+
+  animation:
+    cardAppear 0.6s ease-out both;
+
+  transition:
+    transform 0.3s ease,
+    border-color 0.3s ease,
+    background 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+/* STAGGERED CARDS */
+
+.search-result-card:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.search-result-card:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.search-result-card:nth-child(3) {
+  animation-delay: 0.19s;
+}
+
+.search-result-card:nth-child(4) {
+  animation-delay: 0.26s;
+}
+
+.search-result-card:nth-child(5) {
+  animation-delay: 0.33s;
+}
+
+/* CARD HOVER */
+
+.search-result-card:hover {
+  transform: translateY(-5px);
+
+  background:
+    linear-gradient(
+      145deg,
+      #211E1A,
+      #1C1916
+    );
+
+  border-color: rgba(232, 199, 123, 0.25);
+
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.35),
+    0 0 25px rgba(232, 199, 123, 0.025);
+}
+
+/* GOLD ACCENT BAR */
+
+.search-result-card::before {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+
+  top: 20px;
+
+  width: 3px;
+
+  height: 35px;
+
+  background: #E8C77B;
+
+  border-radius: 0 5px 5px 0;
+
+  transition:
+    height 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.search-result-card:hover::before {
+  height: 58px;
+
+  box-shadow:
+    0 0 12px rgba(232, 199, 123, 0.35);
+}
+
+/* =========================================================
+   RESULT TITLE
+========================================================= */
+
+.search-result-card h3 {
+  margin: 0 0 10px;
+
+  color: #F5F1E8;
+
+  font-size: 1.15rem;
+
+  line-height: 1.45;
+
+  transition:
+    color 0.25s ease;
+}
+
+.search-result-card:hover h3 {
+  color: #E8C77B;
+}
+
+/* =========================================================
+   RESULT DESCRIPTION
+========================================================= */
+
+.search-result-card p {
+  margin: 0 0 16px;
+
+  color: #A9A39A;
+
+  line-height: 1.65;
+}
+
+/* =========================================================
+   SOURCE LINK
+========================================================= */
+
+.search-result-card a {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  color: #E8C77B;
+
+  font-size: 0.9rem;
+
+  font-weight: 600;
+
+  text-decoration: none;
+
+  transition:
+    color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.search-result-card a:hover {
+  color: #F3D995;
+
+  transform: translateX(5px);
+}
+
+.search-result-card a::after {
+  content: "→";
+
+  transition:
+    transform 0.25s ease;
+}
+
+.search-result-card a:hover::after {
+  transform: translateX(3px);
+}
+
+/* =========================================================
+   STATUS BADGE
+========================================================= */
+
+.status-badge {
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  margin-bottom: 18px;
+
+  padding: 6px 10px;
+
+  color: #E8C77B;
+
+  background:
+    rgba(232, 199, 123, 0.07);
+
+  border: 1px solid rgba(232, 199, 123, 0.16);
+
+  border-radius: 999px;
+
+  font-size: 0.78rem;
+
+  font-weight: 600;
+
+  animation:
+    badgeAppear 0.6s ease-out;
+}
+
+.status-badge::before {
+  content: "";
+
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: #E8C77B;
+
+  box-shadow:
+    0 0 8px rgba(232, 199, 123, 0.45);
+
+  animation:
+    pulse 2s ease-in-out infinite;
+}
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+.empty-state {
+  padding: 40px 20px;
+
+  text-align: center;
+
+  color: #A9A39A;
+
+  background: #1C1A17;
+
+  border: 1px dashed #38342E;
+
+  border-radius: 15px;
+
+  animation:
+    fadeUp 0.6s ease-out;
+}
+
+/* =========================================================
+   AI STAT CARDS
+========================================================= */
+
+.ai-stats {
+  display: grid;
+
+  grid-template-columns: repeat(4, 1fr);
+
+  gap: 14px;
+
+  margin-top: 22px;
+}
+
+.ai-stat-card {
+  padding: 18px;
+
+  background: #1C1A17;
+
+  border: 1px solid #38342E;
+
+  border-radius: 15px;
+
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.18);
+
+  transition:
+    transform 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.ai-stat-card:hover {
+  transform: translateY(-4px);
+
+  border-color: rgba(232, 199, 123, 0.25);
+
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, 0.28);
+}
+
+.ai-stat-card .stat-value {
+  margin-top: 5px;
+
+  color: #E8C77B;
+
+  font-size: 1.45rem;
+
+  font-weight: 800;
+}
+
+.ai-stat-card .stat-label {
+  color: #A9A39A;
+
+  font-size: 0.78rem;
+
+  font-weight: 600;
+}
+
+/* =========================================================
+   ANIMATIONS
+========================================================= */
+
+/* Main fade */
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(25px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Container */
+
+@keyframes containerReveal {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Hero title */
+
+@keyframes titleReveal {
+  from {
+    opacity: 0;
+    transform: translateY(25px);
+    filter: blur(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* Card */
+
+@keyframes cardReveal {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Results */
+
+@keyframes cardAppear {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Gold glow */
+
+@keyframes floatGlowGold {
+  0%,
+  100% {
+    transform:
+      translate(0, 0)
+      scale(1);
+  }
+
+  50% {
+    transform:
+      translate(35px, 25px)
+      scale(1.08);
+  }
+}
+
+/* Coral glow */
+
+@keyframes floatGlowCoral {
+  0%,
+  100% {
+    transform:
+      translate(0, 0)
+      scale(1);
+  }
+
+  50% {
+    transform:
+      translate(-35px, -25px)
+      scale(1.1);
+  }
+}
+
+/* Gold shimmer */
+
+@keyframes goldShimmer {
+  0% {
+    background-position: 200% center;
+  }
+
+  100% {
+    background-position: -200% center;
+  }
+}
+
+/* Decorative line */
+
+@keyframes lineExpand {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+
+  to {
+    width: 45px;
+    opacity: 1;
+  }
+}
+
+/* Glow line */
+
+@keyframes glowLine {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scaleX(0.8);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scaleX(1);
+  }
+}
+
+/* Badge */
+
+@keyframes badgeAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Pulse */
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.4;
+    transform: scale(0.7);
+  }
+}
+
+/* Error shake */
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-4px);
+  }
+
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 800px) {
+  .startup-validator {
+    width: 92%;
+
+    padding: 50px 0 70px;
+  }
+
+  .hero h1 {
+    font-size: 3rem;
+  }
+
+  .input-section {
+    padding: 25px;
+
+    border-radius: 18px;
+  }
+
+  .ai-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .startup-validator {
+    width: 91%;
+
+    padding: 40px 0 60px;
+  }
+
+  .hero {
+    margin-bottom: 35px;
+  }
+
+  .hero h1 {
+    font-size: 2.45rem;
+
+    letter-spacing: -0.04em;
+  }
+
+  .hero p {
+    margin-top: 16px;
+
+    font-size: 0.95rem;
+
+    line-height: 1.6;
+  }
+
+  .input-section {
+    padding: 20px;
+
+    border-radius: 16px;
+  }
+
+  .idea-form textarea {
+    min-height: 135px;
+  }
+
+  .idea-form button {
+    width: 100%;
+  }
+
+  .results-section {
+    margin-top: 45px;
+  }
+
+  .results-section h2 {
+    font-size: 1.45rem;
+  }
+
+  .search-result-card {
+    padding: 20px;
+  }
+
+  .ai-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================================
+   ACCESSIBILITY
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
