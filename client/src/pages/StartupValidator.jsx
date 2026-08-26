@@ -5,32 +5,39 @@ import SearchResultCard from "../components/SearchResultCard";
 function StartupValidator() {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleIdeaSubmit = (idea) => {
+  const handleIdeaSubmit = async (idea) => {
     console.log("Startup idea:", idea);
 
     setLoading(true);
+    setError("");
+    setResults([]);
 
-    // Temporary mock data.
-    // This will later be replaced with the FastAPI API call.
-    setTimeout(() => {
-      setResults([
-        {
-          title: "Example Market Result",
-          content:
-            "This is temporary mock data. Later, real information will come from the Web Search Agent.",
-          url: "https://example.com",
+    try {
+      const response = await fetch("http://localhost:8000/api/search", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        {
-          title: "Example Competitor Result",
-          content:
-            "Real Tavily/DuckDuckGo search results will appear here after backend integration.",
-          url: "https://example.com",
-        },
-      ]);
+        body: JSON.stringify({
+          idea: idea,
+        }),
+      });
 
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Failed to validate startup idea.");
+      }
+
+      setResults(data.results || []);
+    } catch (err) {
+      console.error("Search error:", err);
+      setError(err.message || "Something went wrong.");
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -50,6 +57,12 @@ function StartupValidator() {
           loading={loading}
         />
       </section>
+
+      {error && (
+        <section className="error-section">
+          <p>{error}</p>
+        </section>
+      )}
 
       {results.length > 0 && (
         <section className="results-section">
