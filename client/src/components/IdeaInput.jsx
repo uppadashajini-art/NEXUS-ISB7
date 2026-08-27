@@ -8,8 +8,14 @@ function IdeaInput({ onSubmit, loading }) {
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    if (loading) return;
+
     const trimmedIdea = idea.trim();
     const trimmedTargetCustomer = targetCustomer.trim();
+
+    // =========================================
+    // STARTUP IDEA VALIDATION
+    // =========================================
 
     if (!trimmedIdea) {
       setError("Please enter your startup idea.");
@@ -25,6 +31,10 @@ function IdeaInput({ onSubmit, loading }) {
 
     setError("");
 
+    // =========================================
+    // SUBMIT TO PARENT
+    // =========================================
+
     onSubmit({
       idea: trimmedIdea,
       targetCustomer: trimmedTargetCustomer,
@@ -33,6 +43,10 @@ function IdeaInput({ onSubmit, loading }) {
 
   return (
     <form onSubmit={handleSubmit} className="idea-form">
+
+      {/* =========================================
+          STARTUP IDEA
+      ========================================= */}
 
       <div className="idea-input-wrapper">
         <label htmlFor="startup-idea">
@@ -53,9 +67,17 @@ function IdeaInput({ onSubmit, loading }) {
 
         <div className="textarea-footer">
           <span>{idea.length} characters</span>
-          <span>Be specific for better results</span>
+
+          <span>
+            Be specific for better results
+          </span>
         </div>
       </div>
+
+
+      {/* =========================================
+          TARGET CUSTOMERS
+      ========================================= */}
 
       <div className="target-customer-wrapper">
 
@@ -84,7 +106,13 @@ function IdeaInput({ onSubmit, loading }) {
           placeholder="Example: College students, working professionals, small businesses"
           disabled={loading}
         />
+
       </div>
+
+
+      {/* =========================================
+          ERROR
+      ========================================= */}
 
       {error && (
         <div className="inline-error">
@@ -92,6 +120,11 @@ function IdeaInput({ onSubmit, loading }) {
           <p>{error}</p>
         </div>
       )}
+
+
+      {/* =========================================
+          SUBMIT BUTTON
+      ========================================= */}
 
       <button
         type="submit"
@@ -112,8 +145,14 @@ function IdeaInput({ onSubmit, loading }) {
         )}
       </button>
 
+
+      {/* =========================================
+          HINT
+      ========================================= */}
+
       <div className="input-hint">
         <span>💡</span>
+
         <p>
           Include your target users, problem, industry,
           or business model for better research results.
