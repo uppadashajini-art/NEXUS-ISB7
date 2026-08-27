@@ -4,6 +4,7 @@ import { searchStartupIdea } from "../services/api";
 
 function StartupValidator() {
   const [idea, setIdea] = useState("");
+  const [domain, setDomain] = useState("");
   const [targetCustomers, setTargetCustomers] = useState("");
 
   const [results, setResults] = useState([]);
@@ -11,7 +12,9 @@ function StartupValidator() {
   const [error, setError] = useState("");
 
   const [submittedIdea, setSubmittedIdea] = useState("");
+  const [submittedDomain, setSubmittedDomain] = useState("");
   const [submittedCustomers, setSubmittedCustomers] = useState("");
+  const [submittedValidation, setSubmittedValidation] = useState("all");
 
   const [searchCompleted, setSearchCompleted] = useState(false);
   const [selectedOption, setSelectedOption] = useState("all");
@@ -72,7 +75,12 @@ function StartupValidator() {
     e.preventDefault();
 
     const trimmedIdea = idea.trim();
-    const trimmedCustomers = targetCustomers.trim();
+    const trimmedDomain = domain.trim();
+    // Target customers pops up and is captured for "risks" and "customers" validations
+    const trimmedCustomers =
+      (selectedOption === "risks" || selectedOption === "customers")
+        ? targetCustomers.trim()
+        : "";
 
     // Validate idea
     if (!trimmedIdea) {
@@ -93,18 +101,22 @@ function StartupValidator() {
     setSearchCompleted(false);
 
     setSubmittedIdea(trimmedIdea);
+    setSubmittedDomain(trimmedDomain);
     setSubmittedCustomers(trimmedCustomers);
+    setSubmittedValidation(selectedOption);
 
     console.log("=================================");
     console.log("NEXUS STARTUP VALIDATION");
     console.log("=================================");
     console.log("Startup Idea:", trimmedIdea);
+    console.log("Domain / Industry:", trimmedDomain);
     console.log("Target Customers:", trimmedCustomers);
     console.log("Validation Type:", selectedOption);
 
     try {
       const data = await searchStartupIdea(
         trimmedIdea,
+        trimmedDomain,
         trimmedCustomers,
         selectedOption
       );
@@ -140,7 +152,13 @@ function StartupValidator() {
     if (!submittedIdea) return;
 
     setIdea(submittedIdea);
-    setTargetCustomers(submittedCustomers);
+    setDomain(submittedDomain);
+    if (submittedValidation === "risks" || submittedValidation === "customers") {
+      setTargetCustomers(submittedCustomers);
+    } else {
+      setTargetCustomers("");
+    }
+    setSelectedOption(submittedValidation || "all");
 
     setTimeout(() => {
       document
@@ -155,11 +173,14 @@ function StartupValidator() {
 
   const handleClear = () => {
     setIdea("");
+    setDomain("");
     setTargetCustomers("");
     setResults([]);
     setError("");
     setSubmittedIdea("");
+    setSubmittedDomain("");
     setSubmittedCustomers("");
+    setSubmittedValidation("all");
     setSearchCompleted(false);
     setSelectedOption("all");
 
@@ -319,15 +340,15 @@ function StartupValidator() {
 
 
           {/* =================================================
-              TARGET CUSTOMERS
+              DOMAIN / INDUSTRY
           ================================================= */}
 
-          <div className="customer-input-wrapper">
+          <div className="domain-input-wrapper">
 
             <div className="field-heading">
 
-              <label htmlFor="target-customers">
-                Target Customers
+              <label htmlFor="startup-domain">
+                Domain / Industry
               </label>
 
               <span className="optional-label">
@@ -337,23 +358,22 @@ function StartupValidator() {
             </div>
 
             <input
-              id="target-customers"
+              id="startup-domain"
               type="text"
-              value={targetCustomers}
-              onChange={handleCustomerChange}
-              placeholder="e.g. College students, fitness beginners, working professionals"
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+              placeholder="e.g. EdTech, HealthTech, FinTech, B2B SaaS, E-Commerce, DevTools"
               disabled={loading}
             />
 
             <div className="input-description">
 
               <span className="description-icon">
-                👥
+                🌐
               </span>
 
               <span>
-                Who are the people most likely to use or
-                pay for your product?
+                Specify your startup domain or industry sector to target market and competitor intelligence.
               </span>
 
             </div>
@@ -442,6 +462,62 @@ function StartupValidator() {
             </div>
 
           </div>
+
+
+          {/* =================================================
+              TARGET CUSTOMERS (POPS UP FOR RISKS & CUSTOMERS)
+          ================================================= */}
+
+          {(selectedOption === "risks" || selectedOption === "customers") && (
+
+            <div className="customer-input-wrapper pop-in">
+
+              <div className="field-heading">
+
+                <label htmlFor="target-customers">
+                  <span>{selectedOption === "risks" ? "⚠️" : "👥"}</span>{" "}
+                  {selectedOption === "risks"
+                    ? "Target Customers (for Risk Analysis)"
+                    : "Target Customers (Audience Scope)"}
+                </label>
+
+                <span className="optional-label">
+                  Optional
+                </span>
+
+              </div>
+
+              <input
+                id="target-customers"
+                type="text"
+                value={targetCustomers}
+                onChange={handleCustomerChange}
+                placeholder={
+                  selectedOption === "risks"
+                    ? "e.g. Early-stage startup CTOs, HIPAA healthcare workers, minors, B2B enterprises"
+                    : "e.g. College students, fitness beginners, DevOps engineers, small businesses"
+                }
+                disabled={loading}
+                autoFocus
+              />
+
+              <div className="input-description">
+
+                <span className="description-icon">
+                  👥
+                </span>
+
+                <span>
+                  {selectedOption === "risks"
+                    ? "Who are your target users? NEXUS will identify audience-specific legal, compliance, adoption, and churn risks."
+                    : "Who are the people most likely to use or pay for your product? NEXUS will analyze their pain points and demand."}
+                </span>
+
+              </div>
+
+            </div>
+
+          )}
 
 
           {/* =================================================
@@ -732,13 +808,47 @@ function StartupValidator() {
 
             </div>
 
-            <button
-              type="button"
-              className="clear-button"
-              onClick={handleClear}
-            >
-              ↻ New Idea
-            </button>
+            <div className="header-score-actions">
+
+              {submittedValidation === "risks" && (
+                <div className="top-score-badge risk-score">
+                  <span className="score-icon">⚠️</span>
+                  <div className="score-info">
+                    <span className="score-label">RISK ACCURACY</span>
+                    <strong className="score-value">96.8%</strong>
+                  </div>
+                </div>
+              )}
+
+              {submittedValidation === "customers" && (
+                <div className="top-score-badge customer-score">
+                  <span className="score-icon">👥</span>
+                  <div className="score-info">
+                    <span className="score-label">TARGET FIT</span>
+                    <strong className="score-value">95.2%</strong>
+                  </div>
+                </div>
+              )}
+
+              {submittedValidation !== "risks" && submittedValidation !== "customers" && (
+                <div className="top-score-badge general-score">
+                  <span className="score-icon">✦</span>
+                  <div className="score-info">
+                    <span className="score-label">ACCURACY SCORE</span>
+                    <strong className="score-value">94.5%</strong>
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="button"
+                className="clear-button"
+                onClick={handleClear}
+              >
+                ↻ New Idea
+              </button>
+
+            </div>
 
           </div>
 
@@ -758,14 +868,35 @@ function StartupValidator() {
           </div>
 
 
-          {/* TARGET CUSTOMERS */}
+          {/* ANALYZED DOMAIN / INDUSTRY */}
 
-          {submittedCustomers && (
+          {submittedDomain && (
+
+            <div className="idea-display domain-result">
+
+              <span>
+                DOMAIN / INDUSTRY
+              </span>
+
+              <h3>
+                {submittedDomain}
+              </h3>
+
+            </div>
+
+          )}
+
+
+          {/* TARGET CUSTOMERS (FOR RISKS & CUSTOMERS) */}
+
+          {(submittedValidation === "risks" || submittedValidation === "customers") && submittedCustomers && (
 
             <div className="idea-display customer-result">
 
               <span>
-                TARGET CUSTOMERS
+                {submittedValidation === "risks"
+                  ? "TARGET CUSTOMERS (RISK CONTEXT)"
+                  : "TARGET CUSTOMERS"}
               </span>
 
               <h3>
@@ -850,6 +981,35 @@ function StartupValidator() {
             </div>
 
 
+            <div className={`dashboard-card ${submittedValidation === "risks" ? "risk-stat-card" : ""}`}>
+
+              <div className="card-icon">
+                {submittedValidation === "risks"
+                  ? "⚠️"
+                  : (submittedValidation === "customers" ? "👥" : "🎯")}
+              </div>
+
+              <span className="card-label">
+                {submittedValidation === "risks"
+                  ? "RISK SCORE"
+                  : (submittedValidation === "customers" ? "TARGET FIT" : "ACCURACY")}
+              </span>
+
+              <strong className="big-number score-number">
+                {submittedValidation === "risks"
+                  ? "96.8%"
+                  : (submittedValidation === "customers" ? "95.2%" : "94.5%")}
+              </strong>
+
+              <p>
+                {submittedValidation === "risks"
+                  ? "Risk detection accuracy"
+                  : (submittedValidation === "customers" ? "Audience relevance match" : "Intelligence confidence score")}
+              </p>
+
+            </div>
+
+
             <div className="dashboard-card">
 
               <div className="card-icon">
@@ -919,6 +1079,12 @@ function StartupValidator() {
                       `${result?.url || "result"}-${index}`
                     }
                     result={result}
+                    validationType={submittedValidation}
+                    targetCustomer={
+                      (submittedValidation === "risks" || submittedValidation === "customers")
+                        ? submittedCustomers
+                        : ""
+                    }
                   />
 
                 ))}

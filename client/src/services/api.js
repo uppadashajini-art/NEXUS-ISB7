@@ -6,10 +6,12 @@ const API_BASE_URL =
 
 export async function searchStartupIdea(
   idea,
+  domain = "",
   targetCustomer = "",
   validationType = "all"
 ) {
   const trimmedIdea = idea?.trim() || "";
+  const trimmedDomain = domain?.trim() || "";
   const trimmedTargetCustomer =
     targetCustomer?.trim() || "";
 
@@ -47,6 +49,8 @@ export async function searchStartupIdea(
           idea: trimmedIdea,
 
           // Optional fields
+          domain:
+            trimmedDomain,
           target_customer:
             trimmedTargetCustomer,
           validation_type:

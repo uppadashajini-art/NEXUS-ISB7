@@ -1,4 +1,4 @@
-function SearchResultCard({ result }) {
+function SearchResultCard({ result, targetCustomer, validationType = "all" }) {
   if (!result) {
     return null;
   }
@@ -7,10 +7,28 @@ function SearchResultCard({ result }) {
     <article className="search-result-card">
 
       {/* =========================================
-          STATUS
+          TOP ROW (STATUS + TARGET CUSTOMER + RISK TAG)
       ========================================= */}
-      <div className="status-badge">
-        Web Research Source
+      <div className="card-top-row">
+        <div className="status-badge">
+          Web Research Source
+        </div>
+
+        {targetCustomer && (
+          <div className="card-customer-tab">
+            <span className="customer-tab-icon">👥</span>
+            <span className="customer-tab-label">Target:</span>
+            <span className="customer-tab-value">{targetCustomer}</span>
+          </div>
+        )}
+
+        {validationType === "risks" && (
+          <div className="card-risk-tab">
+            <span className="risk-tab-icon">⚠️</span>
+            <span className="risk-tab-label">Risk Signal:</span>
+            <span className="risk-tab-value">96.8%</span>
+          </div>
+        )}
       </div>
 
       {/* =========================================

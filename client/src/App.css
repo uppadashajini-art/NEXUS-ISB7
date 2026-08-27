@@ -586,9 +586,25 @@ button:disabled {
 }
 
 /* =========================================================
-   TARGET CUSTOMERS
+   TARGET CUSTOMERS (POPS UP FOR RISKS VALIDATION)
 ========================================================= */
 
+@keyframes targetPopIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* =========================================================
+   DOMAIN & TARGET CUSTOMER INPUTS
+========================================================= */
+
+.domain-input-wrapper,
 .customer-input-wrapper {
   display: flex;
 
@@ -597,6 +613,18 @@ button:disabled {
   gap: 10px;
 }
 
+.customer-input-wrapper.pop-in {
+  animation: targetPopIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  margin-top: 6px;
+  margin-bottom: 4px;
+  padding: 18px 20px;
+  background: rgba(255, 118, 87, 0.035);
+  border: 1px dashed rgba(255, 118, 87, 0.28);
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.domain-input-wrapper label,
 .customer-input-wrapper label {
   display: flex;
 
@@ -646,9 +674,10 @@ button:disabled {
 }
 
 /* =========================================================
-   TARGET CUSTOMERS INPUT
+   INPUT CONTROLS
 ========================================================= */
 
+.domain-input-wrapper input,
 .customer-input-wrapper input {
   width: 100%;
 
@@ -677,16 +706,19 @@ button:disabled {
     transform 0.3s ease;
 }
 
+.domain-input-wrapper input::placeholder,
 .customer-input-wrapper input::placeholder {
   color: var(--muted);
 
   transition: color 0.25s ease;
 }
 
+.domain-input-wrapper input:hover,
 .customer-input-wrapper input:hover {
   border-color: var(--border-light);
 }
 
+.domain-input-wrapper input:focus,
 .customer-input-wrapper input:focus {
   background: #15130f;
 
@@ -699,10 +731,12 @@ button:disabled {
   transform: translateY(-1px);
 }
 
+.domain-input-wrapper input:focus::placeholder,
 .customer-input-wrapper input:focus::placeholder {
   color: #5e5951;
 }
 
+.domain-input-wrapper input:disabled,
 .customer-input-wrapper input:disabled {
   opacity: 0.6;
 
@@ -1821,17 +1855,111 @@ button:disabled {
 }
 
 /* =========================================================
+   TOP RIGHT SCORE BADGES & HEADER ACTIONS
+========================================================= */
+
+.header-score-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.top-score-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.top-score-badge:hover {
+  transform: translateY(-2px);
+}
+
+.top-score-badge.risk-score {
+  background: linear-gradient(135deg, rgba(255, 118, 87, 0.14), rgba(232, 199, 123, 0.06));
+  border: 1px solid rgba(255, 118, 87, 0.4);
+  box-shadow: 0 4px 16px rgba(255, 118, 87, 0.15);
+}
+
+.top-score-badge.customer-score {
+  background: linear-gradient(135deg, rgba(94, 234, 212, 0.12), rgba(56, 189, 248, 0.05));
+  border: 1px solid rgba(94, 234, 212, 0.35);
+}
+
+.top-score-badge.general-score {
+  background: linear-gradient(135deg, rgba(232, 199, 123, 0.12), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(232, 199, 123, 0.32);
+}
+
+.top-score-badge .score-icon {
+  font-size: 1.15rem;
+}
+
+.top-score-badge .score-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.top-score-badge .score-label {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.top-score-badge.risk-score .score-label {
+  color: var(--coral-light);
+}
+
+.top-score-badge .score-value {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--gold);
+}
+
+.top-score-badge.risk-score .score-value {
+  color: #ff9b82;
+}
+
+/* =========================================================
    DASHBOARD GRID
 ========================================================= */
 
 .dashboard-grid {
   display: grid;
 
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
 
   gap: 13px;
 
   margin-top: 15px;
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.dashboard-card.risk-stat-card {
+  border-color: rgba(255, 118, 87, 0.35);
+  background: linear-gradient(145deg, rgba(255, 118, 87, 0.06), #191714);
+}
+
+.score-number {
+  color: var(--gold);
+}
+
+.risk-stat-card .score-number {
+  color: #ff9b82;
 }
 
 .dashboard-card {
@@ -2134,8 +2262,89 @@ button:disabled {
 }
 
 /* =========================================================
-   STATUS BADGE
+   STATUS BADGE & TOP ROW
 ========================================================= */
+
+.card-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.card-top-row .status-badge {
+  margin-bottom: 0;
+}
+
+.card-customer-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 5px 12px;
+  background: rgba(255, 118, 87, 0.09);
+  border: 1px solid rgba(255, 118, 87, 0.28);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.card-risk-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 5px 12px;
+  background: rgba(255, 118, 87, 0.12);
+  border: 1px solid rgba(255, 118, 87, 0.35);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--coral-light);
+  box-shadow: 0 2px 8px rgba(255, 118, 87, 0.15);
+}
+
+.card-risk-tab .risk-tab-icon {
+  font-size: 0.8rem;
+}
+
+.card-risk-tab .risk-tab-label {
+  color: var(--secondary);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.card-risk-tab .risk-tab-value {
+  color: #ff9b82;
+  font-weight: 800;
+}
+
+.customer-tab-icon {
+  font-size: 0.8rem;
+}
+
+.customer-tab-label {
+  color: var(--coral-light);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.customer-tab-value {
+  color: var(--text);
+  font-weight: 600;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .status-badge {
   display: inline-flex;
@@ -2143,8 +2352,6 @@ button:disabled {
   align-items: center;
 
   gap: 7px;
-
-  margin-bottom: 15px;
 
   padding: 6px 10px;
 
