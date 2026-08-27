@@ -2,12 +2,22 @@ const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   "https://nexus-server-staging.onrender.com";
 
-export async function searchStartupIdea(idea) {
-  const trimmedIdea = idea.trim();
+export async function searchStartupIdea(
+  idea,
+  targetCustomer = ""
+) {
+  const trimmedIdea = idea?.trim() || "";
+  const trimmedTargetCustomer =
+    targetCustomer?.trim() || "";
 
-  // Frontend validation
+  // =========================================
+  // STARTUP IDEA VALIDATION
+  // =========================================
+
   if (!trimmedIdea) {
-    throw new Error("Please enter a startup idea.");
+    throw new Error(
+      "Please enter your startup idea."
+    );
   }
 
   if (trimmedIdea.length < 3) {
@@ -16,19 +26,33 @@ export async function searchStartupIdea(idea) {
     );
   }
 
+  // =========================================
+  // API REQUEST
+  // =========================================
+
   try {
     const response = await fetch(
       `${API_BASE_URL}/api/search`,
       {
         method: "POST",
+
         headers: {
           "Content-Type": "application/json",
         },
+
         body: JSON.stringify({
           idea: trimmedIdea,
+
+          // Optional field
+          target_customer:
+            trimmedTargetCustomer,
         }),
       }
     );
+
+    // =========================================
+    // RESPONSE
+    // =========================================
 
     let data;
 
@@ -40,16 +64,26 @@ export async function searchStartupIdea(idea) {
       );
     }
 
+    // =========================================
+    // ERROR
+    // =========================================
+
     if (!response.ok) {
       throw new Error(
-        data.detail ||
+        data?.detail ||
+          data?.message ||
           "Failed to validate startup idea."
       );
     }
 
     return data;
+
   } catch (error) {
-    console.error("API request failed:", error);
+
+    console.error(
+      "API request failed:",
+      error
+    );
 
     if (error instanceof TypeError) {
       throw new Error(
