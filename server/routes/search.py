@@ -4,18 +4,19 @@ from server.models.search import SearchRequest, SearchResponse
 try:
     from server.agents import run_web_search_agent
 except ImportError:
-    # Fallback/Mock for when Member 2's code isn't merged yet
-    # or the module is missing in the current branch context.
-    async def run_web_search_agent(idea: str) -> dict:
-        return {
-            "results": [
-                {
-                    "title": "Mock Results (Agent Not Found)",
-                    "url": "https://example.com/mock",
-                    "content": f"Mock data for idea: {idea}"
-                }
-            ]
-        }
+    try:
+        from server.agents.web_search_agent import run_web_search_agent
+    except ImportError:
+        async def run_web_search_agent(idea: str, target_customer: str | None = None, validation_type: str = "all") -> dict:
+            return {
+                "results": [
+                    {
+                        "title": "Mock Results (Agent Not Found)",
+                        "url": "https://example.com/mock",
+                        "content": f"Mock data for idea: {idea} | customer: {target_customer} | focus: {validation_type}"
+                    }
+                ]
+            }
 
 router = APIRouter()
 
@@ -30,7 +31,12 @@ async def search_idea(request: SearchRequest):
         raise HTTPException(status_code=400, detail="Idea is too short to validate.")
     
     try:
-        agent_response = await run_web_search_agent(request.idea)
+        agent_response = await run_web_search_agent(
+            idea=request.idea.strip(),
+            domain=request.domain.strip() if request.domain else None,
+            target_customer=request.target_customer.strip() if request.target_customer else None,
+            validation_type=request.validation_type or "all"
+        )
         
         if not agent_response or "results" not in agent_response:
             return SearchResponse(results=[])
@@ -38,6 +44,4 @@ async def search_idea(request: SearchRequest):
         return SearchResponse(**agent_response)
         
     except Exception as e:
-        # According to Member 2, their code shouldn't raise unhandled exceptions,
-        # but it's best practice for the API to have a safety net.
         raise HTTPException(status_code=500, detail="Search agent failed to process the request.")
