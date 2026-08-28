@@ -2281,16 +2281,17 @@ button:disabled {
 .card-customer-tab {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   margin-left: auto;
-  padding: 5px 12px;
-  background: rgba(255, 118, 87, 0.09);
-  border: 1px solid rgba(255, 118, 87, 0.28);
+  padding: 3px 10px;
+  background: rgba(255, 118, 87, 0.08);
+  border: 1px solid rgba(255, 118, 87, 0.22);
   border-radius: 999px;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 600;
   color: var(--text);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  max-width: 320px;
 }
 
 .card-risk-tab {

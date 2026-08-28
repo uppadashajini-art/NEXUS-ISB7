@@ -3,22 +3,24 @@ function SearchResultCard({ result, targetCustomer, validationType = "all" }) {
     return null;
   }
 
+  const displayedAudience = result.target_audience || targetCustomer;
+
   return (
     <article className="search-result-card">
 
       {/* =========================================
-          TOP ROW (STATUS + TARGET CUSTOMER + RISK TAG)
+          TOP ROW (STATUS + TARGET AUDIENCE + RISK TAG)
       ========================================= */}
       <div className="card-top-row">
         <div className="status-badge">
           Web Research Source
         </div>
 
-        {targetCustomer && (
-          <div className="card-customer-tab">
+        {displayedAudience && (
+          <div className="card-customer-tab" title={`Target Audience: ${displayedAudience}`}>
             <span className="customer-tab-icon">👥</span>
             <span className="customer-tab-label">Target:</span>
-            <span className="customer-tab-value">{targetCustomer}</span>
+            <span className="customer-tab-value">{displayedAudience}</span>
           </div>
         )}
 

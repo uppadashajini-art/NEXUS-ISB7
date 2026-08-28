@@ -332,7 +332,7 @@ def _build_gemini_prompt(
     specific_instruction = focus_guidelines.get(validation_type, focus_guidelines["all"])
     
     return f"""You are an elite AI Startup Research & Evidence Quality Analyst.
-Your objective is to strictly evaluate EVIDENCE QUALITY, eliminate false positives, avoid market-size bias, and provide the most accurate, evidence-backed assessment possible.
+Your objective is to strictly evaluate EVIDENCE QUALITY, eliminate false positives, avoid market-size bias, identify the specific target audience for each source, and provide the most accurate assessment possible.
 
 PROPOSITION DETAILS:
 - Startup Idea: {idea}
@@ -346,24 +346,25 @@ FOCUS GUIDELINE:
 CORE EVIDENCE EVALUATION RULES:
 1. Extract the primary claim from each candidate source.
 2. Classify evidence type: Market Size | Problem Validation | Customer Pain | Willingness To Pay | Competition | Business Potential | Risk | Industry Context.
-3. Determine evidence relevance & strength:
+3. Target Audience Identification: For each source, identify the specific user, customer, or buyer segment this finding directly impacts or targets (e.g., 'Residential Homeowners', 'Municipal Public Works (B2G)', 'Enterprise Sustainability Teams', 'Smart Home Consumers'). Keep it concise (2-5 words).
+4. Determine evidence relevance & strength:
    - Direct Evidence (1.0) = explicitly validates the startup idea / exact problem
    - Strong Indirect Evidence (0.75) = validates a closely related problem
    - Weak Indirect Evidence (0.50) = supports surrounding context only
    - Contextual Evidence (0.25) = general industry background
    - Noise (0.0) = not useful / promotional spam
-4. Determine source quality: Academic/Gov/Industry Research Firm > Public Company Report > Industry Publication > Company Website > Blog/Social.
-5. ANTI-BIAS GUARDRAILS:
+5. Determine source quality: Academic/Gov/Industry Research Firm > Public Company Report > Industry Publication > Company Website > Blog/Social.
+6. ANTI-BIAS GUARDRAILS:
    - NEVER treat industry growth as proof of customer demand.
    - NEVER treat market size as proof of problem existence.
    - NEVER treat customer interest as proof of willingness to pay.
    - NEVER treat a related industry problem as validation of the startup's exact problem.
-6. A source must be scored based on how DIRECTLY it validates the startup's core problem, not just matching the industry.
-7. If evidence only validates the industry and not the startup idea itself, explicitly state:
+7. A source must be scored based on how DIRECTLY it validates the startup's core problem, not just matching the industry.
+8. If evidence only validates the industry and not the startup idea itself, explicitly state:
    "This source validates the market context but does not directly validate the startup's core problem."
-8. Include contradictory or risk-challenging evidence when found—do not hide real obstacles.
-9. Weighting priorities: Problem Validation (35%) > Customer Pain (25%) > Willingness To Pay (15%) > Market Size (10%) > Competition (10%) > Risks (5%).
-10. Final selection priority: Direct Evidence > Strong Indirect Evidence > Contextual Evidence.
+9. Include contradictory or risk-challenging evidence when found—do not hide real obstacles.
+10. Weighting priorities: Problem Validation (35%) > Customer Pain (25%) > Willingness To Pay (15%) > Market Size (10%) > Competition (10%) > Risks (5%).
+11. Final selection priority: Direct Evidence > Strong Indirect Evidence > Contextual Evidence.
 
 CANDIDATE WEB RESEARCH RESULTS:
 {json.dumps(compact_results, indent=2)}
@@ -371,15 +372,17 @@ CANDIDATE WEB RESEARCH RESULTS:
 YOUR OBJECTIVES:
 1. Filter out pure promotional spam or off-topic noise.
 2. Re-order the results so that highest-strength Direct Evidence matching '{validation_type}' appears first.
-3. For each source, synthesize a crisp 1-2 sentence evidence-backed finding following: [Evidence Classification] Specific Claim → Core Problem Takeaway.
-4. Strictly PRESERVE the exact 'title' and 'url' from the candidate list. DO NOT invent or alter URLs.
-5. Return ONLY a valid JSON array of objects with keys: "title", "url", "content".
+3. For each source, determine the precise 'target_audience' (2-5 words).
+4. For each source, synthesize a crisp 1-2 sentence evidence-backed finding following: [Evidence Classification] Specific Claim → Core Problem Takeaway.
+5. Strictly PRESERVE the exact 'title' and 'url' from the candidate list. DO NOT invent or alter URLs.
+6. Return ONLY a valid JSON array of objects with keys: "title", "url", "target_audience", "content".
 
 Output JSON format:
 [
   {{
     "title": "Exact Title",
     "url": "Exact URL",
+    "target_audience": "Concise Audience Segment (2-5 words)",
     "content": "Actionable, evidence-backed takeaway directly tying the finding to the startup's core problem and validation focus."
   }}
 ]"""
@@ -461,9 +464,54 @@ def _heuristic_rerank(
     return [r for _, r in scored]
 
 
+
+def _infer_fallback_audience(
+    title: str,
+    content: str,
+    decomposed: Dict[str, str],
+    user_audience: str | None = None
+) -> str:
+    """
+    Intelligently infer a 2-5 word concise target audience segment from source text or vectors.
+    """
+    if user_audience and len(user_audience.strip()) > 2:
+        return user_audience.strip().title()
+
+    full_text = f"{title} {content}".lower()
+
+    if any(w in full_text for w in ["municipal", "city", "public works", "government", "b2g", "mayors", "civic"]):
+        return "Municipalities & Smart Cities (B2G)"
+    if any(w in full_text for w in ["homeowner", "household", "kitchen", "residential", "consumer", "apartment"]):
+        return "Residential Households & Consumers"
+    if any(w in full_text for w in ["enterprise", "corporate", "b2b", "procurement", "workplace", "supply chain"]):
+        return "Enterprise & B2B Buyers"
+    if any(w in full_text for w in ["student", "university", "college", "professor", "teacher", "academic"]):
+        return "Students & Academic Institutions"
+    if any(w in full_text for w in ["developer", "engineer", "software", "api", "technical team", "devops"]):
+        return "Developers & Tech Teams"
+    if any(w in full_text for w in ["doctor", "patient", "clinic", "hospital", "healthcare", "medical"]):
+        return "Healthcare Providers & Patients"
+    if any(w in full_text for w in ["retail", "ecommerce", "merchant", "store owner", "small business", "smb"]):
+        return "Retailers & Small Businesses"
+    if any(w in full_text for w in ["property", "facility", "landlord", "building manager", "real estate"]):
+        return "Property & Facility Managers"
+
+    aud = decomposed.get("audience", "").strip()
+    if aud:
+        return aud.title()
+
+    dom = decomposed.get("domain", "").strip()
+    if dom:
+        return f"{dom.title()} Buyers"
+
+    return "Target Market Users"
+
+
 def _validate_gemini_results(
     gemini_output_text: str,
-    original_results: List[Dict[str, str]]
+    original_results: List[Dict[str, str]],
+    decomposed: Dict[str, str] | None = None,
+    user_audience: str | None = None
 ) -> List[Dict[str, str]] | None:
     """
     Defensively validate Gemini's JSON output ensuring only genuine input URLs are used.
@@ -487,10 +535,17 @@ def _validate_gemini_results(
             url = str(item.get("url", "")).strip()
             norm_url = _normalize_url(url)
             if norm_url in original_urls and url:
+                t = str(item.get("title", "")).strip()
+                c = str(item.get("content", "")).strip()
+                aud = str(item.get("target_audience", "")).strip()
+                if not aud:
+                    aud = _infer_fallback_audience(t, c, decomposed or {}, user_audience)
+
                 valid_items.append({
-                    "title": str(item.get("title", "")).strip(),
+                    "title": t,
                     "url": url,
-                    "content": str(item.get("content", "")).strip()
+                    "target_audience": aud,
+                    "content": c
                 })
         
         if valid_items:
@@ -507,11 +562,12 @@ async def _rerank_with_gemini(
     target_customer: str | None,
     validation_type: str,
     results: List[Dict[str, str]],
-    api_key: str
+    api_key: str,
+    decomposed: Dict[str, str] | None = None
 ) -> List[Dict[str, str]]:
     """
-    Asynchronously invoke Gemini API to verify accuracy, synthesize takeaways, and re-rank results
-    with multi-model fallbacks.
+    Asynchronously invoke Gemini API to verify accuracy, synthesize takeaways, extract target audiences,
+    and re-rank results with multi-model fallbacks.
     """
     if not results or not api_key:
         return results
@@ -538,7 +594,12 @@ async def _rerank_with_gemini(
                         content_parts = candidates[0].get("content", {}).get("parts", [])
                         if content_parts:
                             raw_text = content_parts[0].get("text", "")
-                            validated = _validate_gemini_results(raw_text, results)
+                            validated = _validate_gemini_results(
+                                raw_text,
+                                results,
+                                decomposed=decomposed,
+                                user_audience=target_customer
+                            )
                             if validated:
                                 return validated
         except Exception as e:
@@ -564,7 +625,7 @@ async def run_web_search_agent(
         validation_type: Focus area ('all', 'market', 'competition', 'customers', 'business', 'risks').
         
     Returns:
-        Dict with shape {"results": [{"title": "", "url": "", "content": ""}]}
+        Dict with shape {"results": [{"title": "", "url": "", "target_audience": "", "content": ""}]}
     """
     try:
         _load_env_if_needed()
@@ -621,7 +682,7 @@ async def run_web_search_agent(
         # 4. Deterministic Pre-Ranking
         aggregated_results = _heuristic_rerank(aggregated_results, decomposed, validation_type)
         
-        # 5. Gemini 20-Point Synthesis & Verification (with fallbacks)
+        # 5. Gemini Synthesis & Audience Inference (with fallbacks)
         gemini_api_key = os.getenv("GEMINI_API_KEY")
         if gemini_api_key and gemini_api_key.strip() and aggregated_results:
             aggregated_results = await _rerank_with_gemini(
@@ -630,10 +691,29 @@ async def run_web_search_agent(
                 target_customer=target_customer,
                 validation_type=validation_type,
                 results=aggregated_results,
-                api_key=gemini_api_key.strip()
+                api_key=gemini_api_key.strip(),
+                decomposed=decomposed
             )
+        
+        # 6. Ensure target_audience is populated on all items
+        final_results = []
+        for r in aggregated_results[:MAX_TOTAL_RESULTS]:
+            aud = r.get("target_audience")
+            if not aud or not str(aud).strip():
+                aud = _infer_fallback_audience(
+                    r.get("title", ""),
+                    r.get("content", ""),
+                    decomposed,
+                    target_customer
+                )
+            final_results.append({
+                "title": r.get("title", ""),
+                "url": r.get("url", ""),
+                "target_audience": aud,
+                "content": r.get("content", "")
+            })
                 
-        return {"results": aggregated_results[:MAX_TOTAL_RESULTS]}
+        return {"results": final_results}
 
     except Exception as e:
         logger.error(f"Unexpected error in run_web_search_agent: {e}")
