@@ -11,6 +11,7 @@ class SearchResultItem(BaseModel):
     title: str
     url: str
     content: str
+    target_audience: Optional[str] = Field(default=None, description="Inferred target audience or buyer segment for this specific finding")
 
 class SearchResponse(BaseModel):
     results: List[SearchResultItem]
