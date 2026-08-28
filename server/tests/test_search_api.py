@@ -36,3 +36,16 @@ def test_search_api_missing_field():
         json={}
     )
     assert response.status_code == 422 # FastAPI validation error for missing field
+
+def test_search_api_with_domain():
+    response = client.post(
+        "/api/search",
+        json={
+            "idea": "AI based fitness platform",
+            "domain": "healthcare"
+        }
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "results" in data
+    assert isinstance(data["results"], list)
