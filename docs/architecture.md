@@ -22,20 +22,20 @@ the target architecture the system is designed to grow into.
  USER
    │
    ▼
- React + Vite UI         idea input, submit button, loading state, results display
+ React + Vite UI                   idea input, submit button, loading state, results display
    │  POST /api/search
    ▼
- FastAPI backend         request validation, routing, response formatting
+ FastAPI backend                   request validation, routing, response formatting
    │
    ▼
- Web Search Agent        builds search queries from the idea, calls the search API
+ Web Search Agent                 builds search queries from the idea, calls the search API
    │
    ▼
- Tavily API               primary search provider
+ Tavily API                       primary search provider
    │  (fallback if unavailable/rate-limited)
    ▼
- DuckDuckGo               fallback search provider
-   │
+ DuckDuckGo                      fallback search provider
+   │ 
    ▼
  Search results → FastAPI response → React UI → displayed to user
 ```
@@ -138,7 +138,7 @@ key recommendation.
 
 ```
 NEXUS-ISB7/
-├── client/                       React + Vite frontend
+├── client/                           React + Vite frontend
 │   ├── src/
 │   │   ├── components/
 │   │   ├── pages/
@@ -146,7 +146,7 @@ NEXUS-ISB7/
 │   ├── package.json
 │   └── vite.config.js
 │
-├── server/                       FastAPI backend
+├── server/                             FastAPI backend
 │   ├── agents/
 │   │   └── web_search_agent.py
 │   ├── routes/
@@ -157,7 +157,7 @@ NEXUS-ISB7/
 │   └── requirements.txt
 │
 ├── docs/
-│   └── architecture.md           this document
+│   └── architecture.md           
 │
 ├── tests/
 │   ├── test_search_agent.py
