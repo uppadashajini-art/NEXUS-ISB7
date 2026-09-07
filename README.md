@@ -24,7 +24,7 @@ NEXUS aims to simplify this process by combining **AI agents and real-time web s
 
 # 🏗️ System Architecture
 
-## Current Implementation — Milestone 1
+## Current Implementation
 
 The current implementation focuses on the **Startup Idea Submission Interface and Web Search Agent**.
 
