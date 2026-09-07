@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from server.routes.validation import router as validation_router
-app.include_router(validation_router)
 import os
 
 from server.routes import search
@@ -16,7 +15,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(validation_router)
 app.include_router(search.router)
+
 
 @app.get("/")
 def root():
