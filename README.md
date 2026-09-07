@@ -194,7 +194,7 @@ Detailed architecture documentation is available in:
 
 ---
 
-# 🛠️ Technology Stack
+# Technology Stack
 
 | Component           | Technology       |
 | ------------------- | ---------------- |
