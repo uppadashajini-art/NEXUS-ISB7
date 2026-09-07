@@ -199,6 +199,7 @@ function StartupValidator() {
     setDomain("");
     setTargetCustomers("");
     setResults([]);
+    setValidationResult(null);
     setError("");
     setSubmittedIdea("");
     setSubmittedDomain("");
