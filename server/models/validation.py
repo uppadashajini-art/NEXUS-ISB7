@@ -1,5 +1,4 @@
 """
-Pydantic models for the /api/validate endpoint.
 
 These models define:
 - The incoming request shape (the startup idea).
@@ -7,7 +6,6 @@ These models define:
   and the Competitor Analysis Agent (Member 3).
 - The final combined response returned by FastAPI to the React frontend.
 
-Place this file at: server/models/validation.py
 """
 
 from typing import List, Optional
