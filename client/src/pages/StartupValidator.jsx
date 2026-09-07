@@ -1,6 +1,12 @@
 import { useState } from "react";
 import SearchResultCard from "../components/SearchResultCard";
 import { searchStartupIdea } from "../services/api";
+import MarketAnalysis from "../components/MarketAnalysis";
+import CustomerSegments from "../components/CustomerSegments";
+import CompetitorAnalysis from "../components/CompetitorAnalysis";
+import MarketGaps from "../components/MarketGaps";
+import { validateIdea } from "../services/validationService";
+
 
 function StartupValidator() {
   const [idea, setIdea] = useState("");
@@ -18,6 +24,10 @@ function StartupValidator() {
 
   const [searchCompleted, setSearchCompleted] = useState(false);
   const [selectedOption, setSelectedOption] = useState("all");
+
+  const [validationResult, setValidationResult] = useState(null);
+  const [validationLoading, setValidationLoading] = useState(false);
+  const [validationError, setValidationError] = useState("");
 
   // =========================================================
   // VALIDATION OPTIONS
@@ -130,6 +140,19 @@ function StartupValidator() {
       );
 
       setSearchCompleted(true);
+
+      // NEW: fetch Milestone 2 market + competitor analysis
+      setValidationLoading(true);
+      setValidationError("");
+      try {
+        const analysisData = await validateIdea(trimmedIdea);
+        setValidationResult(analysisData);
+      } catch (analysisErr) {
+        setValidationError(analysisErr.message);
+        setValidationResult(null);
+      } finally {
+        setValidationLoading(false);
+      }
     } catch (err) {
       console.error("Search error:", err);
 
@@ -1093,6 +1116,25 @@ function StartupValidator() {
 
             </div>
 
+          )}
+
+          {/* MILESTONE 2: MARKET + COMPETITOR ANALYSIS */}
+
+          {validationLoading && (
+            <p className="analysis-loading">Analyzing market and competitors...</p>
+          )}
+
+          {validationError && (
+            <p className="inline-error">{validationError}</p>
+          )}
+
+          {validationResult && (
+            <>
+              <MarketAnalysis data={validationResult.market_analysis} />
+              <CustomerSegments segments={validationResult.market_analysis?.customer_segments} />
+              <CompetitorAnalysis data={validationResult.competitor_analysis} />
+              <MarketGaps gaps={validationResult.competitor_analysis?.market_gaps} />
+            </>
           )}
 
         </section>
