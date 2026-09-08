@@ -1,4 +1,4 @@
-# 🚀 NEXUS — AI Startup Idea Validator
+# NEXUS — AI Startup Idea Validator
 
 ### Development of AI-Based Startup Idea Validator with Market Analysis Assistance
 
@@ -8,7 +8,7 @@ The system allows a founder to submit a startup idea and retrieves relevant mark
 
 ---
 
-## 🎯 Project Objective
+## Project Objective
 
 Entrepreneurs often find it difficult and time-consuming to validate startup ideas because they need to research:
 
@@ -22,7 +22,7 @@ NEXUS aims to simplify this process by combining **AI agents and real-time web s
 
 ---
 
-# 🏗️ System Architecture
+# System Architecture
 
 ## Current Implementation
 
@@ -56,7 +56,7 @@ React Results Interface
 
 ---
 
-# 🤖 Web Search Agent
+# Web Search Agent
 
 The Web Search Agent is the main AI component implemented in the current milestone.
 
@@ -93,7 +93,7 @@ Frontend
 
 ---
 
-# 🖥️ Frontend
+# Frontend
 
 The frontend provides an interface where the user can submit the necessary startup information.
 
@@ -111,7 +111,7 @@ The frontend provides an interface where the user can submit the necessary start
 
 ---
 
-# ⚙️ Backend
+# Backend
 
 The backend handles API requests and communicates with the Web Search Agent.
 
@@ -130,7 +130,7 @@ The backend handles API requests and communicates with the Web Search Agent.
 
 ---
 
-# 🔎 Web Search & Data Retrieval
+# Web Search & Data Retrieval
 
 The current system uses **Tavily API** for real-time web search and data retrieval.
 
@@ -164,7 +164,7 @@ An alternative search provider such as **DuckDuckGo** can also be used.
 
 ---
 
-# 🔮 Planned Multi-Agent Architecture
+# Planned Multi-Agent Architecture
 
 The current milestone implements the Web Search Agent. The architecture is designed to support additional agents in the future.
 
@@ -194,7 +194,7 @@ Detailed architecture documentation is available in:
 
 ---
 
-# 🛠️ Technology Stack
+# Technology Stack
 
 | Component           | Technology       |
 | ------------------- | ---------------- |
@@ -209,7 +209,7 @@ Detailed architecture documentation is available in:
 
 ---
 
-# 📁 Project Structure
+# Project Structure
 
 ```text
 NEXUS-ISB7/
@@ -249,7 +249,7 @@ NEXUS-ISB7/
 
 ---
 
-# 🔄 API Communication
+# API Communication
 
 The frontend communicates with the FastAPI backend through REST APIs.
 
@@ -279,7 +279,7 @@ React Frontend
 
 ---
 
-# 🚀 Deployment
+# Deployment
 
 The project uses separate **staging** and **main** branches.
 
@@ -307,7 +307,7 @@ GitHub
 
 ---
 
-# 📌 Milestone 1 Deliverables
+# Milestone 1 Deliverables
 
 ### Completed /
 
@@ -325,7 +325,7 @@ GitHub
 
 ---
 
-# 🎯 Expected Milestone 1 Output
+# Expected Milestone 1 Output
 
 The user submits a startup idea through the frontend.
 
@@ -349,7 +349,7 @@ This provides the foundation for the complete **AI Startup Idea Validation platf
 
 ---
 
-# 📚 Documentation
+# Documentation
 
 For the detailed system architecture, agent roles, data flow, and sequence diagrams, see:
 
@@ -357,9 +357,3 @@ For the detailed system architecture, agent roles, data flow, and sequence diagr
 * `docs/sequence-diagram.md`
 
 ---
-
-## 👥 Team NEXUS
-
-**Project:** AI-Based Startup Idea Validator with Market Analysis Assistance
-
-**Current Focus:** Web Search API + System Architecture + Startup Idea Submission Interface

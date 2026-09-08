@@ -23,7 +23,10 @@ STOP_WORDS = {
     "startup", "business", "product", "idea", "aimed", "helping", "people",
     "users", "clients", "companies", "designed", "that", "this", "which",
     "turns", "into", "their", "your", "our", "provide", "provides", "making",
-    "make", "use", "using", "uses"
+    "make", "use", "using", "uses", "solves", "solve", "solving", "deploy",
+    "deploys", "deploying", "repurpose", "repurposes", "repurposing",
+    "enable", "enables", "enabling", "guarantee", "guarantees", "operate",
+    "operates", "operating", "serves", "serve", "serving", "persistent"
 }
 
 VALID_VALIDATION_TYPES = {
@@ -31,6 +34,30 @@ VALID_VALIDATION_TYPES = {
 }
 
 MAX_TOTAL_RESULTS = 10
+
+DOMAIN_KEYWORD_TAXONOMY = [
+    ("last-mile logistics micro-fulfillment", ["last-mile", "supply chain", "fulfillment", "delivery", "warehouse", "logistics", "courier", "freight", "transit"]),
+    ("cleantech carbon sustainability", ["sustainability", "carbon", "emissions", "cleantech", "renewable", "solar", "esg", "recycle"]),
+    ("fintech banking payments", ["fintech", "banking", "payment", "payments", "lending", "credit", "wealth", "invest"]),
+    ("digital health fitness", ["health", "fitness", "workout", "wellness", "medical", "clinic", "telehealth"]),
+    ("edtech learning education", ["education", "edtech", "student", "lecture", "quiz", "course", "tutor"]),
+    ("ecommerce retail commerce", ["ecommerce", "e-commerce", "retail", "merchant", "marketplace", "shop", "store"]),
+    ("enterprise saas productivity", ["saas", "enterprise", "workflow", "productivity", "collaboration", "crm"]),
+    ("cybersecurity data privacy", ["cybersecurity", "security", "privacy", "gdpr", "compliance", "fraud"]),
+    ("ai automation robotics", ["ai", "automation", "robotics", "drones", "ground bots", "autonomous", "machine learning"])
+]
+
+
+def _detect_domain_from_keywords(text: str) -> str:
+    text_lower = text.lower()
+    best_domain = ""
+    best_matches = 0
+    for domain_name, keywords in DOMAIN_KEYWORD_TAXONOMY:
+        matches = sum(1 for kw in keywords if kw in text_lower)
+        if matches > best_matches:
+            best_matches = matches
+            best_domain = domain_name
+    return best_domain
 
 
 def _load_env_if_needed() -> None:
@@ -90,37 +117,44 @@ def decompose_startup_idea(idea: str, domain: str = "", audience: str = "") -> D
     domain, audience, core problem, and proposed innovation mechanism.
     """
     cleaned_idea = clean_text(idea)
+    words = cleaned_idea.split()
+    first_word = words[0].lower() if words else ""
     
     # 1. Domain Vector
     domain_vec = extract_key_phrases(domain, max_terms=3) if domain else ""
     if not domain_vec:
-        domain_vec = extract_key_phrases(cleaned_idea[:120], max_terms=3)
+        detected = _detect_domain_from_keywords(cleaned_idea)
+        if detected:
+            domain_vec = detected
+        else:
+            first_removed = " ".join(words[1:]) if len(words) > 1 else cleaned_idea
+            domain_vec = extract_key_phrases(first_removed[:120], max_terms=3)
     
     # 2. Audience Vector
     audience_vec = extract_key_phrases(audience, max_terms=3) if audience else ""
     if not audience_vec:
-        aud_match = re.search(r"(?:for|designed for|targeting|aimed at)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE)
+        aud_match = re.search(r"(?:for|designed for|targeting|aimed at|sold to|enabling)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE)
         if aud_match:
             audience_vec = extract_key_phrases(aud_match.group(1), max_terms=3)
             
     # 3. Problem & Value Vector (look for eliminate, reduce, cost, friction, problem, loss)
     problem_words = []
-    for m in re.finditer(r"(?:eliminat\w*|reduc\w*|cost\w*|expens\w*|problem\w*|friction|wast\w*|loss\w*|challeng\w*)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE):
+    for m in re.finditer(r"(?:eliminat\w*|reduc\w*|cost\w*|expens\w*|problem\w*|friction|wast\w*|loss\w*|challeng\w*|bottleneck\w*)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE):
         problem_words.extend(extract_key_phrases(m.group(1), max_terms=3).split())
-    problem_vec = " ".join(list(dict.fromkeys(problem_words))[:4])
+    problem_vec = " ".join(list(dict.fromkeys([w for w in problem_words if w.lower() != first_word]))[:4])
     if not problem_vec:
         problem_vec = "cost margin loss friction"
         
     # 4. Mechanism / Innovation Vector (look for algorithms, hubs, micro, auctions, automated)
     solution_words = []
-    for m in re.finditer(r"(?:combining|utilizing|using|with|via|through|platform|network)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE):
+    for m in re.finditer(r"(?:combining|utilizing|using|with|via|through|platform|network|deploying|repurposing)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE):
         solution_words.extend(extract_key_phrases(m.group(1), max_terms=3).split())
-    solution_vec = " ".join(list(dict.fromkeys(solution_words))[:4])
+    solution_vec = " ".join(list(dict.fromkeys([w for w in solution_words if w.lower() != first_word]))[:4])
     if not solution_vec:
-        solution_vec = extract_key_phrases(cleaned_idea, max_terms=4)
+        solution_vec = extract_key_phrases(" ".join(words[1:]) if len(words) > 1 else cleaned_idea, max_terms=4)
         
     return {
-        "domain": domain_vec if domain_vec else "e-commerce logistics",
+        "domain": domain_vec if domain_vec else "last-mile logistics micro-fulfillment",
         "audience": audience_vec,
         "problem": problem_vec,
         "solution": solution_vec
@@ -574,7 +608,7 @@ async def _rerank_with_gemini(
         
     prompt = _build_gemini_prompt(idea, domain, target_customer, validation_type, results)
     
-    models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.5-flash-lite"]
+    models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
     for model in models:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key.strip()}"
         payload = {
@@ -585,7 +619,7 @@ async def _rerank_with_gemini(
             }
         }
         try:
-            async with httpx.AsyncClient(timeout=20.0) as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.post(url, json=payload)
                 if resp.status_code == 200:
                     data = resp.json()
@@ -667,12 +701,21 @@ async def run_web_search_agent(
             for item in batch:
                 raw_url = item.get("url", "")
                 norm_url = _normalize_url(raw_url)
+                title = item.get("title", "")
+                content = item.get("content", "")
+                full_lower = f"{title} {content}".lower()
+                
+                # Filter out obvious false-positive food pulses if domain is logistics
+                if any(k in decomposed.get("domain", "").lower() for k in ["logistics", "supply chain", "fulfillment", "delivery", "transit"]):
+                    if any(food in full_lower for food in ["chickpea", "lentil", "pulse ingredient", "pea flour", "yellow pea", "faba bean"]):
+                        continue
+                        
                 if norm_url and norm_url not in seen_urls:
                     seen_urls.add(norm_url)
                     aggregated_results.append({
-                        "title": item.get("title", ""),
+                        "title": title,
                         "url": raw_url,
-                        "content": item.get("content", "")
+                        "content": content
                     })
                     if len(aggregated_results) >= MAX_TOTAL_RESULTS * 2:
                         break
