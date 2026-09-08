@@ -1,17 +1,47 @@
-from pydantic import BaseModel, Field
 from typing import List, Optional
 
+from pydantic import BaseModel, Field
+
+
 class SearchRequest(BaseModel):
-    idea: str = Field(..., min_length=1, description="The startup idea to validate")
-    domain: Optional[str] = Field(default=None, description="Optional startup domain / industry")
-    target_customer: Optional[str] = Field(default=None, description="Optional target customer segment")
-    validation_type: Optional[str] = Field(default="all", description="Validation focus area: all, market, competition, customers, business, risks")
+    idea: str = Field(
+        ...,
+        min_length=1,
+        description="The startup idea to validate",
+    )
+
+    domain: Optional[str] = Field(
+        default=None,
+        description="Optional startup domain / industry",
+    )
+
+    target_customer: Optional[str] = Field(
+        default=None,
+        description="Optional target customer segment",
+    )
+
+    validation_type: Optional[str] = Field(
+        default="all",
+        description=(
+            "Validation focus area: "
+            "all, market, competition, customers, business, risks"
+        ),
+    )
+
 
 class SearchResultItem(BaseModel):
     title: str
     url: str
     content: str
-    target_audience: Optional[str] = Field(default=None, description="Inferred target audience or buyer segment for this specific finding")
+
+    target_audience: Optional[str] = Field(
+        default=None,
+        description=(
+            "Inferred target audience or buyer segment "
+            "for this specific finding"
+        ),
+    )
+
 
 class SearchResponse(BaseModel):
     results: List[SearchResultItem]
