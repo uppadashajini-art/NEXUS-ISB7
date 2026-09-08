@@ -7,119 +7,258 @@ function SearchResultCard({
     return null;
   }
 
-  /*
-   * IMPORTANT:
-   * If the user entered a target customer, always display it.
-   *
-   * Example:
-   * User enters:
-   * "College students and working professionals"
-   *
-   * The card should show:
-   * "Target: College students and working professionals"
-   *
-   * instead of allowing the web source's inferred audience
-   * such as "Residential Households & Consumers" to replace it.
-   */
-  const userTargetCustomer = targetCustomer?.trim();
+  const userTargetCustomer =
+    targetCustomer?.trim() || "General Users";
 
-  const displayedAudience =
-    userTargetCustomer ||
-    result.target_audience ||
-    "General Users";
+  // -----------------------------------------
+  // Detect a simple research category
+  // -----------------------------------------
+  const text = `
+    ${result.title || ""}
+    ${result.content || ""}
+    ${result.description || ""}
+  `.toLowerCase();
+
+  let category = "MARKET SIGNAL";
+  let categoryIcon = "📈";
+
+  if (
+    text.includes("competitor") ||
+    text.includes("competition") ||
+    text.includes("market share") ||
+    text.includes("alternative")
+  ) {
+    category = "COMPETITION";
+    categoryIcon = "🏢";
+  } else if (
+    text.includes("customer") ||
+    text.includes("consumer") ||
+    text.includes("user") ||
+    text.includes("buyer")
+  ) {
+    category = "CUSTOMER INSIGHT";
+    categoryIcon = "👥";
+  } else if (
+    text.includes("revenue") ||
+    text.includes("pricing") ||
+    text.includes("subscription") ||
+    text.includes("profit") ||
+    text.includes("monetization")
+  ) {
+    category = "BUSINESS POTENTIAL";
+    categoryIcon = "💰";
+  } else if (
+    text.includes("risk") ||
+    text.includes("challenge") ||
+    text.includes("privacy") ||
+    text.includes("regulation")
+  ) {
+    category = "RISK SIGNAL";
+    categoryIcon = "⚠️";
+  }
+
+  // -----------------------------------------
+  // Get content
+  // -----------------------------------------
+  const rawContent =
+    result.content ||
+    result.description ||
+    "No additional information was provided for this source.";
+
+  // -----------------------------------------
+  // Create a short readable summary
+  // -----------------------------------------
+  const cleanContent = rawContent
+    .replace(/\s+/g, " ")
+    .replace(/\[\.\.\.\]/g, "")
+    .trim();
+
+  const summary =
+    cleanContent.length > 260
+      ? `${cleanContent.substring(0, 260).trim()}...`
+      : cleanContent;
+
+  // -----------------------------------------
+  // Extract useful metric
+  // -----------------------------------------
+  const metricPatterns = [
+    /\$[\d,.]+\s*(?:billion|million|trillion)?/i,
+    /\d+(?:\.\d+)?%\s*(?:CAGR|growth)?/i,
+    /\d+(?:\.\d+)?%\s*CAGR/i,
+    /USD\s*[\d,.]+\s*(?:billion|million|trillion)?/i,
+  ];
+
+  let metric = null;
+
+  for (const pattern of metricPatterns) {
+    const match = cleanContent.match(pattern);
+
+    if (match) {
+      metric = match[0];
+      break;
+    }
+  }
+
+  // -----------------------------------------
+  // Key insight
+  // -----------------------------------------
+  let keyInsight =
+    "This research provides useful market intelligence for evaluating the startup opportunity.";
+
+  if (
+    text.includes("growth") ||
+    text.includes("cagr") ||
+    text.includes("forecast") ||
+    text.includes("projected")
+  ) {
+    keyInsight =
+      "The research indicates measurable market growth, supporting further validation of the opportunity.";
+  } else if (
+    text.includes("competitor") ||
+    text.includes("competition") ||
+    text.includes("market share")
+  ) {
+    keyInsight =
+      "The research highlights an existing competitive landscape that should be considered when positioning the product.";
+  } else if (
+    text.includes("customer") ||
+    text.includes("consumer") ||
+    text.includes("user")
+  ) {
+    keyInsight =
+      "The research provides signals about customer needs and behavior relevant to the proposed product.";
+  } else if (
+    text.includes("pricing") ||
+    text.includes("subscription") ||
+    text.includes("revenue")
+  ) {
+    keyInsight =
+      "The research reveals potential pricing and monetization patterns that can inform the business model.";
+  } else if (
+    text.includes("risk") ||
+    text.includes("challenge") ||
+    text.includes("privacy")
+  ) {
+    keyInsight =
+      "The research identifies factors that may create challenges or risks for the startup.";
+  }
 
   return (
     <article className="search-result-card">
 
       {/* =========================================
-          TOP ROW
+          CARD HEADER
       ========================================= */}
+      <div className="search-card-header">
 
-      <div className="card-top-row">
+        <div className="research-category">
+          <span className="category-icon">
+            {categoryIcon}
+          </span>
 
-        {/* SOURCE TYPE */}
-
-        <div className="status-badge">
-          Web Research Source
+          <span>
+            {category}
+          </span>
         </div>
 
-        {/* TARGET AUDIENCE */}
-
-        {displayedAudience && (
-          <div
-            className="card-customer-tab"
-            title={`Target Audience: ${displayedAudience}`}
-          >
-            <span className="customer-tab-icon">
-              👥
-            </span>
-
-            <span className="customer-tab-label">
-              Target:
-            </span>
-
-            <span className="customer-tab-value">
-              {displayedAudience}
-            </span>
-          </div>
-        )}
-
-        {/* RISK SCORE */}
-
-        {validationType === "risks" && (
-          <div className="card-risk-tab">
-
-            <span className="risk-tab-icon">
-              ⚠️
-            </span>
-
-            <span className="risk-tab-label">
-              Risk Confidence:
-            </span>
-
-            <span className="risk-tab-value">
-              96.8%
-            </span>
-
-          </div>
-        )}
+        <span className="source-badge">
+          WEB SOURCE
+        </span>
 
       </div>
 
       {/* =========================================
           TITLE
       ========================================= */}
-
-      <h3>
-        {result.title || "Untitled Research Result"}
+      <h3 className="search-result-title">
+        {result.title ||
+          "Untitled Research Result"}
       </h3>
 
       {/* =========================================
-          DESCRIPTION / CONTENT
+          SUMMARY
       ========================================= */}
-
-      <p>
-        {result.content ||
-          result.description ||
-          "No additional information was provided for this source."}
+      <p className="search-result-summary">
+        {summary}
       </p>
 
       {/* =========================================
-          SOURCE URL
+          TARGET CUSTOMER
       ========================================= */}
+      <div className="target-customer-box">
 
-      {result.url && (
-        <a
-          href={result.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`View source for ${
-            result.title || "research result"
-          }`}
-        >
-          View Source
-        </a>
-      )}
+        <span className="target-customer-icon">
+          👥
+        </span>
+
+        <div>
+          <span className="target-customer-label">
+            TARGET
+          </span>
+
+          <strong>
+            {userTargetCustomer}
+          </strong>
+        </div>
+
+      </div>
+
+      {/* =========================================
+          KEY INSIGHT
+      ========================================= */}
+      <div className="key-insight-box">
+
+        <div className="key-insight-label">
+          <span>💡</span>
+          KEY INSIGHT
+        </div>
+
+        <p>
+          {keyInsight}
+        </p>
+
+      </div>
+
+      {/* =========================================
+          CARD FOOTER
+      ========================================= */}
+      <div className="search-card-footer">
+
+        {metric ? (
+          <div className="research-metric">
+            <span>
+              SIGNAL
+            </span>
+
+            <strong>
+              {metric}
+            </strong>
+          </div>
+        ) : (
+          <div className="research-metric">
+            <span>
+              SIGNAL
+            </span>
+
+            <strong>
+              RELEVANT
+            </strong>
+          </div>
+        )}
+
+        {result.url && (
+          <a
+            href={result.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="source-link"
+          >
+            View Source
+            <span>→</span>
+          </a>
+        )}
+
+      </div>
 
     </article>
   );
