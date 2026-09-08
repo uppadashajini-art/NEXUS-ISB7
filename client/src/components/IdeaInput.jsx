@@ -51,6 +51,7 @@ function IdeaInput({ onSubmit, loading }) {
       <div className="idea-input-wrapper">
         <label htmlFor="startup-idea">
           Enter your startup idea
+          <span className="required-label">Required</span>
         </label>
 
         <textarea
@@ -73,7 +74,6 @@ function IdeaInput({ onSubmit, loading }) {
           </span>
         </div>
       </div>
-
 
       {/* =========================================
           TARGET CUSTOMERS
@@ -109,7 +109,6 @@ function IdeaInput({ onSubmit, loading }) {
 
       </div>
 
-
       {/* =========================================
           ERROR
       ========================================= */}
@@ -120,7 +119,6 @@ function IdeaInput({ onSubmit, loading }) {
           <p>{error}</p>
         </div>
       )}
-
 
       {/* =========================================
           SUBMIT BUTTON
@@ -144,7 +142,6 @@ function IdeaInput({ onSubmit, loading }) {
           </>
         )}
       </button>
-
 
       {/* =========================================
           HINT
