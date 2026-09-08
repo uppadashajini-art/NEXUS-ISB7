@@ -8,6 +8,20 @@ from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
+STOP_WORDS = {
+    "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
+    "of", "with", "by", "from", "as", "is", "are", "was", "were", "be",
+    "been", "being", "have", "has", "had", "do", "does", "did", "can",
+    "could", "should", "would", "will", "shall", "platform", "app", "application",
+    "website", "tool", "service", "system", "solution", "based", "powered",
+    "startup", "business", "product", "idea", "aimed", "helping", "people",
+    "users", "clients", "companies", "designed", "that", "this", "which",
+    "turns", "into", "their", "your", "our", "provide", "provides", "making",
+    "make", "use", "using", "uses", "solves", "solve", "solving", "deploy",
+    "deploys", "deploying", "repurpose", "repurposes", "repurposing",
+    "enable", "enables", "enabling", "guarantee", "guarantees", "operate",
+    "operates", "operating", "serves", "serve", "serving", "persistent"
+}
 
 # ============================================================
 # Configuration
@@ -17,45 +31,29 @@ MAX_TOTAL_RESULTS = 10
 SEARCH_RESULTS_PER_QUERY = 5
 SEARCH_TIMEOUT_SECONDS = 30
 
+DOMAIN_KEYWORD_TAXONOMY = [
+    ("last-mile logistics micro-fulfillment", ["last-mile", "supply chain", "fulfillment", "delivery", "warehouse", "logistics", "courier", "freight", "transit"]),
+    ("cleantech carbon sustainability", ["sustainability", "carbon", "emissions", "cleantech", "renewable", "solar", "esg", "recycle"]),
+    ("fintech banking payments", ["fintech", "banking", "payment", "payments", "lending", "credit", "wealth", "invest"]),
+    ("digital health fitness", ["health", "fitness", "workout", "wellness", "medical", "clinic", "telehealth"]),
+    ("edtech learning education", ["education", "edtech", "student", "lecture", "quiz", "course", "tutor"]),
+    ("ecommerce retail commerce", ["ecommerce", "e-commerce", "retail", "merchant", "marketplace", "shop", "store"]),
+    ("enterprise saas productivity", ["saas", "enterprise", "workflow", "productivity", "collaboration", "crm"]),
+    ("cybersecurity data privacy", ["cybersecurity", "security", "privacy", "gdpr", "compliance", "fraud"]),
+    ("ai automation robotics", ["ai", "automation", "robotics", "drones", "ground bots", "autonomous", "machine learning"])
+]
 
-STOP_WORDS = {
-    "platform",
-    "app",
-    "application",
-    "website",
-    "tool",
-    "service",
-    "system",
-    "solution",
-    "based",
-    "powered",
-    "startup",
-    "business",
-    "product",
-    "idea",
-    "aimed",
-    "helping",
-    "people",
-    "users",
-    "clients",
-    "companies",
-    "designed",
-    "that",
-    "this",
-    "which",
-    "turns",
-    "into",
-    "their",
-    "your",
-    "our",
-    "provide",
-    "provides",
-    "making",
-    "make",
-    "use",
-    "using",
-    "uses",
-}
+
+def _detect_domain_from_keywords(text: str) -> str:
+    text_lower = text.lower()
+    best_domain = ""
+    best_matches = 0
+    for domain_name, keywords in DOMAIN_KEYWORD_TAXONOMY:
+        matches = sum(1 for kw in keywords if kw in text_lower)
+        if matches > best_matches:
+            best_matches = matches
+            best_domain = domain_name
+    return best_domain
 
 
 # ============================================================
@@ -202,207 +200,44 @@ def decompose_startup_idea(
     """
 
     cleaned_idea = clean_text(idea)
-
-    # --------------------------------------------------------
-    # Domain
-    # --------------------------------------------------------
-
-    if domain:
-        domain_vec = clean_text(domain)
-    else:
-        domain_vec = extract_key_phrases(
-            cleaned_idea[:160],
-            max_terms=4,
-        )
-
-    # --------------------------------------------------------
-    # Detect industry/domain keywords
-    # --------------------------------------------------------
-
-    domain_keywords = [
-        "fitness",
-        "health",
-        "healthcare",
-        "education",
-        "finance",
-        "fintech",
-        "ecommerce",
-        "e-commerce",
-        "retail",
-        "agriculture",
-        "agritech",
-        "travel",
-        "tourism",
-        "logistics",
-        "real estate",
-        "food",
-        "restaurant",
-        "wellness",
-        "insurance",
-        "banking",
-        "marketing",
-        "social media",
-        "cybersecurity",
-        "software",
-        "saas",
-        "artificial intelligence",
-        "ai",
-    ]
-
-    detected_domains = []
-
-    lower_idea = cleaned_idea.lower()
-
-    for keyword in domain_keywords:
-
-        if keyword in lower_idea:
-
-            if keyword not in detected_domains:
-                detected_domains.append(keyword)
-
-    if detected_domains:
-
-        domain_parts = []
-
-        for item in detected_domains:
-
-            if item not in domain_parts:
-                domain_parts.append(item)
-
-        for word in domain_vec.split():
-
-            if word not in domain_parts:
-                domain_parts.append(word)
-
-        domain_vec = " ".join(
-            domain_parts[:6]
-        )
-
+    words = cleaned_idea.split()
+    first_word = words[0].lower() if words else ""
+    
+    # 1. Domain Vector
+    domain_vec = extract_key_phrases(domain, max_terms=3) if domain else ""
     if not domain_vec:
-        domain_vec = "startup market"
-
-    # --------------------------------------------------------
-    # Audience
-    # --------------------------------------------------------
-
-    if audience:
-
-        audience_vec = clean_text(audience)
-
-    else:
-
-        audience_patterns = [
-
-            r"for\s+(.+?)(?:\s+to\s+|\s+that\s+|\s+who\s+|$)",
-
-            r"targeting\s+(.+?)(?:\s+to\s+|\s+that\s+|\s+who\s+|$)",
-
-            r"aimed\s+at\s+(.+?)(?:\s+to\s+|\s+that\s+|\s+who\s+|$)",
-
-            r"designed\s+for\s+(.+?)(?:\s+to\s+|\s+that\s+|\s+who\s+|$)",
-        ]
-
-        audience_vec = ""
-
-        for pattern in audience_patterns:
-
-            match = re.search(
-                pattern,
-                cleaned_idea,
-                flags=re.IGNORECASE,
-            )
-
-            if match:
-
-                audience_vec = clean_text(
-                    match.group(1)
-                )
-
-                break
-
-    # --------------------------------------------------------
-    # Problem
-    # --------------------------------------------------------
-
-    problem_patterns = [
-
-        r"reduce\s+(.+?)(?:\s+using\s+|\s+through\s+|\s+with\s+|$)",
-
-        r"solve\s+(.+?)(?:\s+using\s+|\s+through\s+|\s+with\s+|$)",
-
-        r"eliminate\s+(.+?)(?:\s+using\s+|\s+through\s+|\s+with\s+|$)",
-
-        r"avoid\s+(.+?)(?:\s+using\s+|\s+through\s+|\s+with\s+|$)",
-
-        r"improve\s+(.+?)(?:\s+using\s+|\s+through\s+|\s+with\s+|$)",
-    ]
-
-    problem_vec = ""
-
-    for pattern in problem_patterns:
-
-        match = re.search(
-            pattern,
-            cleaned_idea,
-            flags=re.IGNORECASE,
-        )
-
-        if match:
-
-            problem_vec = clean_text(
-                match.group(1)
-            )
-
-            break
-
+        detected = _detect_domain_from_keywords(cleaned_idea)
+        if detected:
+            domain_vec = detected
+        else:
+            first_removed = " ".join(words[1:]) if len(words) > 1 else cleaned_idea
+            domain_vec = extract_key_phrases(first_removed[:120], max_terms=3)
+    
+    # 2. Audience Vector
+    audience_vec = extract_key_phrases(audience, max_terms=3) if audience else ""
+    if not audience_vec:
+        aud_match = re.search(r"(?:for|designed for|targeting|aimed at|sold to|enabling)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE)
+        if aud_match:
+            audience_vec = extract_key_phrases(aud_match.group(1), max_terms=3)
+            
+    # 3. Problem & Value Vector (look for eliminate, reduce, cost, friction, problem, loss)
+    problem_words = []
+    for m in re.finditer(r"(?:eliminat\w*|reduc\w*|cost\w*|expens\w*|problem\w*|friction|wast\w*|loss\w*|challeng\w*|bottleneck\w*)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE):
+        problem_words.extend(extract_key_phrases(m.group(1), max_terms=3).split())
+    problem_vec = " ".join(list(dict.fromkeys([w for w in problem_words if w.lower() != first_word]))[:4])
     if not problem_vec:
-
         problem_vec = "cost margin loss friction"
-
-    # --------------------------------------------------------
-    # Solution
-    # --------------------------------------------------------
-
-    solution_patterns = [
-
-        r"provides?\s+(.+?)(?:\s+for\s+|\s+to\s+|\s+that\s+|$)",
-
-        r"offers?\s+(.+?)(?:\s+for\s+|\s+to\s+|\s+that\s+|$)",
-
-        r"using\s+(.+?)(?:\s+for\s+|\s+to\s+|\s+that\s+|$)",
-
-        r"with\s+(.+?)(?:\s+for\s+|\s+to\s+|\s+that\s+|$)",
-
-        r"through\s+(.+?)(?:\s+for\s+|\s+to\s+|\s+that\s+|$)",
-    ]
-
-    solution_vec = ""
-
-    for pattern in solution_patterns:
-
-        match = re.search(
-            pattern,
-            cleaned_idea,
-            flags=re.IGNORECASE,
-        )
-
-        if match:
-
-            solution_vec = clean_text(
-                match.group(1)
-            )
-
-            break
-
+        
+    # 4. Mechanism / Innovation Vector (look for algorithms, hubs, micro, auctions, automated)
+    solution_words = []
+    for m in re.finditer(r"(?:combining|utilizing|using|with|via|through|platform|network|deploying|repurposing)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE):
+        solution_words.extend(extract_key_phrases(m.group(1), max_terms=3).split())
+    solution_vec = " ".join(list(dict.fromkeys([w for w in solution_words if w.lower() != first_word]))[:4])
     if not solution_vec:
-
-        solution_vec = extract_key_phrases(
-            cleaned_idea,
-            max_terms=5,
-        )
-
+        solution_vec = extract_key_phrases(" ".join(words[1:]) if len(words) > 1 else cleaned_idea, max_terms=4)
+        
     return {
-        "domain": domain_vec,
+        "domain": domain_vec if domain_vec else "last-mile logistics micro-fulfillment",
         "audience": audience_vec,
         "problem": problem_vec,
         "solution": solution_vec,
@@ -1517,11 +1352,9 @@ async def _rerank_with_gemini(
     The helper remains available so existing tests/imports
     do not break.
     """
-
     logger.info(
         "Gemini reranking skipped; using deterministic relevance ranking."
     )
-
     return results
 
 
@@ -1759,15 +1592,9 @@ async def run_web_search_agent(
     try:
 
         _load_env_if_needed()
-
-        # ----------------------------------------------------
-        # Validate startup idea
-        # ----------------------------------------------------
-
         cleaned_idea = clean_text(idea)
 
         if not cleaned_idea:
-
             raise ValueError(
                 "Startup idea cannot be empty"
             )
