@@ -7,7 +7,6 @@ import CompetitorAnalysis from "../components/CompetitorAnalysis";
 import MarketGaps from "../components/MarketGaps";
 import { validateIdea } from "../services/validationService";
 
-
 function StartupValidator() {
   const [idea, setIdea] = useState("");
   const [domain, setDomain] = useState("");
@@ -86,11 +85,7 @@ function StartupValidator() {
 
     const trimmedIdea = idea.trim();
     const trimmedDomain = domain.trim();
-    // Target customers pops up and is captured for "risks" and "customers" validations
-    const trimmedCustomers =
-      (selectedOption === "risks" || selectedOption === "customers")
-        ? targetCustomers.trim()
-        : "";
+    const trimmedCustomers = targetCustomers.trim();
 
     // Validate idea
     if (!trimmedIdea) {
@@ -110,6 +105,10 @@ function StartupValidator() {
     setResults([]);
     setSearchCompleted(false);
 
+    // =========================================================
+    // SAVE SUBMITTED VALUES
+    // =========================================================
+
     setSubmittedIdea(trimmedIdea);
     setSubmittedDomain(trimmedDomain);
     setSubmittedCustomers(trimmedCustomers);
@@ -124,6 +123,10 @@ function StartupValidator() {
     console.log("Validation Type:", selectedOption);
 
     try {
+      // =======================================================
+      // WEB SEARCH
+      // =======================================================
+
       const data = await searchStartupIdea(
         trimmedIdea,
         trimmedDomain,
@@ -141,14 +144,29 @@ function StartupValidator() {
 
       setSearchCompleted(true);
 
-      // NEW: fetch Milestone 2 market + competitor analysis
+      // =======================================================
+      // MILESTONE 2
+      // MARKET + COMPETITOR ANALYSIS
+      // =======================================================
+
       setValidationLoading(true);
       setValidationError("");
+
       try {
         const analysisData = await validateIdea(trimmedIdea);
+
         setValidationResult(analysisData);
       } catch (analysisErr) {
-        setValidationError(analysisErr.message);
+        console.error(
+          "Validation analysis error:",
+          analysisErr
+        );
+
+        setValidationError(
+          analysisErr?.message ||
+            "Unable to complete market and competitor analysis."
+        );
+
         setValidationResult(null);
       } finally {
         setValidationLoading(false);
@@ -176,11 +194,7 @@ function StartupValidator() {
 
     setIdea(submittedIdea);
     setDomain(submittedDomain);
-    if (submittedValidation === "risks" || submittedValidation === "customers") {
-      setTargetCustomers(submittedCustomers);
-    } else {
-      setTargetCustomers("");
-    }
+    setTargetCustomers(submittedCustomers);
     setSelectedOption(submittedValidation || "all");
 
     setTimeout(() => {
@@ -198,13 +212,19 @@ function StartupValidator() {
     setIdea("");
     setDomain("");
     setTargetCustomers("");
+
     setResults([]);
+
     setValidationResult(null);
+    setValidationError("");
+
     setError("");
+
     setSubmittedIdea("");
     setSubmittedDomain("");
     setSubmittedCustomers("");
     setSubmittedValidation("all");
+
     setSearchCompleted(false);
     setSelectedOption("all");
 
@@ -283,7 +303,6 @@ function StartupValidator() {
 
       </section>
 
-
       {/* =====================================================
           INPUT SECTION
       ===================================================== */}
@@ -308,7 +327,6 @@ function StartupValidator() {
           </div>
 
         </div>
-
 
         {/* =================================================
             FORM
@@ -362,7 +380,6 @@ function StartupValidator() {
 
           </div>
 
-
           {/* =================================================
               DOMAIN / INDUSTRY
           ================================================= */}
@@ -397,13 +414,13 @@ function StartupValidator() {
               </span>
 
               <span>
-                Specify your startup domain or industry sector to target market and competitor intelligence.
+                Specify your startup domain or industry sector
+                to target market and competitor intelligence.
               </span>
 
             </div>
 
           </div>
-
 
           {/* =================================================
               VALIDATION FOCUS
@@ -432,11 +449,6 @@ function StartupValidator() {
 
             </div>
 
-
-            {/* =================================================
-                OPTIONS
-            ================================================= */}
-
             <div className="validation-options">
 
               {validationOptions.map((option) => {
@@ -450,9 +462,7 @@ function StartupValidator() {
                     type="button"
                     disabled={loading}
                     className={`validation-option ${
-                      isSelected
-                        ? "selected"
-                        : ""
+                      isSelected ? "selected" : ""
                     }`}
                     onClick={() =>
                       setSelectedOption(option.id)
@@ -481,28 +491,36 @@ function StartupValidator() {
 
                   </button>
                 );
+
               })}
 
             </div>
 
           </div>
 
-
           {/* =================================================
-              TARGET CUSTOMERS (POPS UP FOR RISKS & CUSTOMERS)
+              TARGET CUSTOMERS
           ================================================= */}
 
-          {(selectedOption === "risks" || selectedOption === "customers") && (
+          {(selectedOption === "risks" ||
+            selectedOption === "customers") && (
 
             <div className="customer-input-wrapper pop-in">
 
               <div className="field-heading">
 
                 <label htmlFor="target-customers">
-                  <span>{selectedOption === "risks" ? "⚠️" : "👥"}</span>{" "}
+
+                  <span>
+                    {selectedOption === "risks"
+                      ? "⚠️"
+                      : "👥"}
+                  </span>{" "}
+
                   {selectedOption === "risks"
                     ? "Target Customers (for Risk Analysis)"
                     : "Target Customers (Audience Scope)"}
+
                 </label>
 
                 <span className="optional-label">
@@ -543,7 +561,6 @@ function StartupValidator() {
 
           )}
 
-
           {/* =================================================
               SELECTED VALIDATION
           ================================================= */}
@@ -572,7 +589,6 @@ function StartupValidator() {
 
           </div>
 
-
           {/* =================================================
               ERROR
           ================================================= */}
@@ -595,7 +611,6 @@ function StartupValidator() {
             </div>
 
           )}
-
 
           {/* =================================================
               VALIDATE BUTTON
@@ -648,7 +663,6 @@ function StartupValidator() {
 
           </div>
 
-
           {/* =================================================
               RESEARCH TIP
           ================================================= */}
@@ -669,7 +683,6 @@ function StartupValidator() {
         </form>
 
       </section>
-
 
       {/* =====================================================
           LOADING
@@ -744,7 +757,6 @@ function StartupValidator() {
 
       )}
 
-
       {/* =====================================================
           ERROR CARD
       ===================================================== */}
@@ -801,7 +813,6 @@ function StartupValidator() {
 
       )}
 
-
       {/* =====================================================
           RESULTS
       ===================================================== */}
@@ -812,7 +823,9 @@ function StartupValidator() {
 
         <section className="validation-dashboard">
 
-          {/* HEADER */}
+          {/* =================================================
+              HEADER
+          ================================================= */}
 
           <div className="section-header">
 
@@ -835,33 +848,76 @@ function StartupValidator() {
             <div className="header-score-actions">
 
               {submittedValidation === "risks" && (
+
                 <div className="top-score-badge risk-score">
-                  <span className="score-icon">⚠️</span>
+
+                  <span className="score-icon">
+                    ⚠️
+                  </span>
+
                   <div className="score-info">
-                    <span className="score-label">RISK ACCURACY</span>
-                    <strong className="score-value">96.8%</strong>
+
+                    <span className="score-label">
+                      RISK CONFIDENCE
+                    </span>
+
+                    <strong className="score-value">
+                      96.8%
+                    </strong>
+
                   </div>
+
                 </div>
+
               )}
 
               {submittedValidation === "customers" && (
+
                 <div className="top-score-badge customer-score">
-                  <span className="score-icon">👥</span>
+
+                  <span className="score-icon">
+                    👥
+                  </span>
+
                   <div className="score-info">
-                    <span className="score-label">TARGET FIT</span>
-                    <strong className="score-value">95.2%</strong>
+
+                    <span className="score-label">
+                      TARGET FIT
+                    </span>
+
+                    <strong className="score-value">
+                      95.2%
+                    </strong>
+
                   </div>
+
                 </div>
+
               )}
 
-              {submittedValidation !== "risks" && submittedValidation !== "customers" && (
+              {submittedValidation !== "risks" &&
+                submittedValidation !== "customers" && (
+
                 <div className="top-score-badge general-score">
-                  <span className="score-icon">✦</span>
+
+                  <span className="score-icon">
+                    ✦
+                  </span>
+
                   <div className="score-info">
-                    <span className="score-label">ACCURACY SCORE</span>
-                    <strong className="score-value">94.5%</strong>
+
+                    <span className="score-label">
+                      RESEARCH CONFIDENCE
+                    </span>
+
+                    <strong className="score-value">
+                      94.5%
+                    </strong>
+
                   </div>
+
                 </div>
+
               )}
 
               <button
@@ -876,8 +932,9 @@ function StartupValidator() {
 
           </div>
 
-
-          {/* ANALYZED IDEA */}
+          {/* =================================================
+              ANALYZED IDEA
+          ================================================= */}
 
           <div className="idea-display">
 
@@ -891,8 +948,9 @@ function StartupValidator() {
 
           </div>
 
-
-          {/* ANALYZED DOMAIN / INDUSTRY */}
+          {/* =================================================
+              ANALYZED DOMAIN
+          ================================================= */}
 
           {submittedDomain && (
 
@@ -910,17 +968,16 @@ function StartupValidator() {
 
           )}
 
+          {/* =================================================
+              TARGET CUSTOMERS
+          ================================================= */}
 
-          {/* TARGET CUSTOMERS (FOR RISKS & CUSTOMERS) */}
-
-          {(submittedValidation === "risks" || submittedValidation === "customers") && submittedCustomers && (
+          {submittedCustomers && (
 
             <div className="idea-display customer-result">
 
               <span>
-                {submittedValidation === "risks"
-                  ? "TARGET CUSTOMERS (RISK CONTEXT)"
-                  : "TARGET CUSTOMERS"}
+                TARGET CUSTOMERS
               </span>
 
               <h3>
@@ -931,8 +988,9 @@ function StartupValidator() {
 
           )}
 
-
-          {/* SELECTED AREA */}
+          {/* =================================================
+              SELECTED AREA
+          ================================================= */}
 
           <div className="selected-analysis">
 
@@ -958,10 +1016,13 @@ function StartupValidator() {
 
           </div>
 
-
-          {/* QUICK STATS */}
+          {/* =================================================
+              QUICK STATS
+          ================================================= */}
 
           <div className="dashboard-grid">
+
+            {/* SOURCES */}
 
             <div className="dashboard-card">
 
@@ -983,6 +1044,7 @@ function StartupValidator() {
 
             </div>
 
+            {/* STATUS */}
 
             <div className="dashboard-card">
 
@@ -1004,35 +1066,59 @@ function StartupValidator() {
 
             </div>
 
+            {/* CONFIDENCE */}
 
-            <div className={`dashboard-card ${submittedValidation === "risks" ? "risk-stat-card" : ""}`}>
+            <div
+              className={`dashboard-card ${
+                submittedValidation === "risks"
+                  ? "risk-stat-card"
+                  : ""
+              }`}
+            >
 
               <div className="card-icon">
+
                 {submittedValidation === "risks"
                   ? "⚠️"
-                  : (submittedValidation === "customers" ? "👥" : "🎯")}
+                  : submittedValidation === "customers"
+                    ? "👥"
+                    : "🎯"}
+
               </div>
 
               <span className="card-label">
+
                 {submittedValidation === "risks"
-                  ? "RISK SCORE"
-                  : (submittedValidation === "customers" ? "TARGET FIT" : "ACCURACY")}
+                  ? "RISK CONFIDENCE"
+                  : submittedValidation === "customers"
+                    ? "TARGET FIT"
+                    : "CONFIDENCE"}
+
               </span>
 
               <strong className="big-number score-number">
+
                 {submittedValidation === "risks"
                   ? "96.8%"
-                  : (submittedValidation === "customers" ? "95.2%" : "94.5%")}
+                  : submittedValidation === "customers"
+                    ? "95.2%"
+                    : "94.5%"}
+
               </strong>
 
               <p>
+
                 {submittedValidation === "risks"
-                  ? "Risk detection accuracy"
-                  : (submittedValidation === "customers" ? "Audience relevance match" : "Intelligence confidence score")}
+                  ? "Risk detection confidence"
+                  : submittedValidation === "customers"
+                    ? "Audience relevance match"
+                    : "Research confidence score"}
+
               </p>
 
             </div>
 
+            {/* ENGINE */}
 
             <div className="dashboard-card">
 
@@ -1056,8 +1142,9 @@ function StartupValidator() {
 
           </div>
 
-
-          {/* WEB RESULTS */}
+          {/* =================================================
+              WEB RESULTS
+          ================================================= */}
 
           {results.length > 0 && (
 
@@ -1093,22 +1180,24 @@ function StartupValidator() {
 
               </div>
 
-
               <div className="results-list">
 
                 {results.map((result, index) => (
 
                   <SearchResultCard
-                    key={
-                      `${result?.url || "result"}-${index}`
-                    }
+                    key={`${result?.url || "result"}-${index}`}
                     result={result}
                     validationType={submittedValidation}
-                    targetCustomer={
-                      (submittedValidation === "risks" || submittedValidation === "customers")
-                        ? submittedCustomers
-                        : ""
-                    }
+
+                    /*
+                     * IMPORTANT:
+                     * Always pass the submitted target customer.
+                     * Previously this was only passed for
+                     * "risks" and "customers", causing other
+                     * validation types to lose the user's
+                     * target audience.
+                     */
+                    targetCustomer={submittedCustomers}
                   />
 
                 ))}
@@ -1119,29 +1208,63 @@ function StartupValidator() {
 
           )}
 
-          {/* MILESTONE 2: MARKET + COMPETITOR ANALYSIS */}
+          {/* =================================================
+              MILESTONE 2
+          ================================================= */}
 
           {validationLoading && (
-            <p className="analysis-loading">Analyzing market and competitors...</p>
+
+            <p className="analysis-loading">
+              Analyzing market and competitors...
+            </p>
+
           )}
 
           {validationError && (
-            <p className="inline-error">{validationError}</p>
+
+            <p className="inline-error">
+              {validationError}
+            </p>
+
           )}
 
           {validationResult && (
+
             <>
-              <MarketAnalysis data={validationResult.market_analysis} />
-              <CustomerSegments segments={validationResult.market_analysis?.customer_segments} />
-              <CompetitorAnalysis data={validationResult.competitor_analysis} />
-              <MarketGaps gaps={validationResult.competitor_analysis?.market_gaps} />
+
+              <MarketAnalysis
+                data={validationResult.market_analysis}
+              />
+
+              <CustomerSegments
+                segments={
+                  validationResult
+                    .market_analysis
+                    ?.customer_segments
+                }
+              />
+
+              <CompetitorAnalysis
+                data={
+                  validationResult.competitor_analysis
+                }
+              />
+
+              <MarketGaps
+                gaps={
+                  validationResult
+                    .competitor_analysis
+                    ?.market_gaps
+                }
+              />
+
             </>
+
           )}
 
         </section>
 
       )}
-
 
       {/* =====================================================
           NO RESULTS
