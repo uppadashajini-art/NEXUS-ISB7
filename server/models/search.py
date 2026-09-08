@@ -1,47 +1,47 @@
-from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from typing import Optional
+
+from server.agents.web_search_agent import run_web_search_agent
+
+
+router = APIRouter(
+    prefix="/api",
+    tags=["Search"],
+)
 
 
 class SearchRequest(BaseModel):
-    idea: str = Field(
-        ...,
-        min_length=1,
-        description="The startup idea to validate",
-    )
-
-    domain: Optional[str] = Field(
-        default=None,
-        description="Optional startup domain / industry",
-    )
-
-    target_customer: Optional[str] = Field(
-        default=None,
-        description="Optional target customer segment",
-    )
-
-    validation_type: Optional[str] = Field(
-        default="all",
-        description=(
-            "Validation focus area: "
-            "all, market, competition, customers, business, risks"
-        ),
-    )
+    query: str
+    max_results: Optional[int] = 5
 
 
-class SearchResultItem(BaseModel):
-    title: str
-    url: str
-    content: str
+@router.post("/search")
+async def search(request: SearchRequest):
+    """
+    Search the web for information related to a startup idea.
+    """
 
-    target_audience: Optional[str] = Field(
-        default=None,
-        description=(
-            "Inferred target audience or buyer segment "
-            "for this specific finding"
-        ),
-    )
+    if not request.query or not request.query.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Search query cannot be empty.",
+        )
 
+    try:
+        results = await run_web_search_agent(
+            query=request.query.strip(),
+            max_results=request.max_results or 5,
+        )
 
-class SearchResponse(BaseModel):
-    results: List[SearchResultItem]
+        return {
+            "query": request.query,
+            "results": results,
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Search failed: {str(e)}",
+        )
