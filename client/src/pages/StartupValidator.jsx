@@ -1,16 +1,20 @@
+
 import { useState } from "react";
+
 import SearchResultCard from "../components/SearchResultCard";
 import MarketAnalysis from "../components/MarketAnalysis";
 import CustomerSegments from "../components/CustomerSegments";
 import CompetitorAnalysis from "../components/CompetitorAnalysis";
 import MarketGaps from "../components/MarketGaps";
 import DeepValidationCard from "../components/DeepValidationCard";
+
 import { validateIdea } from "../services/validationService";
 
 function StartupValidator() {
   // =========================================
   // FORM STATE
   // =========================================
+
   const [idea, setIdea] = useState("");
   const [domain, setDomain] = useState("");
   const [targetCustomers, setTargetCustomers] = useState("");
@@ -18,15 +22,15 @@ function StartupValidator() {
   // =========================================
   // SEARCH STATE
   // =========================================
+
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   // =========================================
   // SUBMITTED VALUES
-  // Keep these separate so result cards
-  // always use the values submitted by user
   // =========================================
+
   const [submittedIdea, setSubmittedIdea] = useState("");
   const [submittedDomain, setSubmittedDomain] = useState("");
   const [submittedCustomers, setSubmittedCustomers] = useState("");
@@ -36,6 +40,7 @@ function StartupValidator() {
   // =========================================
   // VALIDATION STATE
   // =========================================
+
   const [searchCompleted, setSearchCompleted] = useState(false);
   const [selectedOption, setSelectedOption] = useState("all");
 
@@ -51,6 +56,7 @@ function StartupValidator() {
   // =========================================
   // VALIDATION OPTIONS
   // =========================================
+
   const validationOptions = [
     {
       id: "all",
@@ -99,6 +105,7 @@ function StartupValidator() {
   // =========================================
   // SELECTED VALIDATION
   // =========================================
+
   const selectedValidation =
     validationOptions.find(
       (option) => option.id === selectedOption
@@ -107,6 +114,7 @@ function StartupValidator() {
   // =========================================
   // FORM SUBMIT
   // =========================================
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -117,6 +125,7 @@ function StartupValidator() {
     // -----------------------------------------
     // IDEA VALIDATION
     // -----------------------------------------
+
     if (!trimmedIdea) {
       setError("Please enter your startup idea.");
       return;
@@ -132,79 +141,114 @@ function StartupValidator() {
     // -----------------------------------------
     // START LOADING
     // -----------------------------------------
+
     setLoading(true);
+    setValidationLoading(true);
+
     setError("");
+    setValidationError("");
+
     setResults([]);
     setSearchCompleted(false);
-
     setValidationResult(null);
-    setValidationError("");
 
     // -----------------------------------------
     // SAVE SUBMITTED VALUES
     // -----------------------------------------
+
     setSubmittedIdea(trimmedIdea);
     setSubmittedDomain(trimmedDomain);
     setSubmittedCustomers(trimmedCustomers);
     setSubmittedValidation(selectedOption);
 
+    // -----------------------------------------
+    // DEBUG LOGS
+    // -----------------------------------------
+
     console.log("=================================");
     console.log("NEXUS STARTUP VALIDATION");
     console.log("=================================");
+
     console.log("Startup Idea:", trimmedIdea);
     console.log("Domain / Industry:", trimmedDomain);
+    console.log("Target Customers:", trimmedCustomers);
+    console.log("Validation Type:", selectedOption);
+
     console.log(
-      "Target Customers:",
-      trimmedCustomers
-    );
-    console.log(
-      "Validation Type:",
-      selectedOption
+      "API Endpoint:",
+      "https://nexus-server-staging.onrender.com/api/validate"
     );
 
     try {
       // =========================================
-      // SINGLE CALL: /api/validate
-      // Returns market_analysis, competitor_analysis,
-      // AND search_results (the exact results the agents used).
+      // CALL BACKEND
       // =========================================
-      setValidationLoading(true);
-      setValidationError("");
+      // IMPORTANT:
+      // selectedOption is passed as validationType
+      // =========================================
 
       const analysisData = await validateIdea(
         trimmedIdea,
         trimmedDomain,
-        trimmedCustomers
+        trimmedCustomers,
+        selectedOption
       );
 
-      console.log("Validation response:", analysisData);
+      console.log(
+        "Validation response:",
+        analysisData
+      );
 
-      // Research Sources — from the same payload the agents used
-      const searchResults = Array.isArray(analysisData?.search_results)
-        ? analysisData.search_results
-        : [];
+      // =========================================
+      // RESEARCH SOURCES
+      // =========================================
+
+      const searchResults =
+        Array.isArray(
+          analysisData?.search_results
+        )
+          ? analysisData.search_results
+          : [];
 
       setResults(searchResults);
-      setSearchCompleted(true);
+
+      // =========================================
+      // VALIDATION RESULT
+      // =========================================
+
       setValidationResult(analysisData);
 
-    } catch (err) {
-      console.error("Validation error:", err);
+      setSearchCompleted(true);
 
-      const isAnalysisError = err?.message?.includes("analysis");
+    } catch (err) {
+      console.error(
+        "Validation error:",
+        err
+      );
+
+      const errorMessage =
+        err?.message ||
+        "Unable to validate the startup idea. Please try again.";
+
+      const isAnalysisError =
+        errorMessage
+          .toLowerCase()
+          .includes("analysis");
+
       if (isAnalysisError) {
         setValidationError(
-          err?.message ||
-            "Unable to complete market and competitor analysis."
+          errorMessage
         );
+
         setValidationResult(null);
       } else {
         setError(
-          err?.message ||
-            "Unable to validate the startup idea. Please try again."
+          errorMessage
         );
+
         setSearchCompleted(false);
       }
+
     } finally {
       setLoading(false);
       setValidationLoading(false);
@@ -214,6 +258,7 @@ function StartupValidator() {
   // =========================================
   // RETRY
   // =========================================
+
   const handleRetry = () => {
     if (!submittedIdea) {
       return;
@@ -222,6 +267,7 @@ function StartupValidator() {
     setIdea(submittedIdea);
     setDomain(submittedDomain);
     setTargetCustomers(submittedCustomers);
+
     setSelectedOption(
       submittedValidation || "all"
     );
@@ -236,6 +282,7 @@ function StartupValidator() {
   // =========================================
   // CLEAR
   // =========================================
+
   const handleClear = () => {
     setIdea("");
     setDomain("");
@@ -266,6 +313,7 @@ function StartupValidator() {
   // =========================================
   // IDEA CHANGE
   // =========================================
+
   const handleIdeaChange = (e) => {
     setIdea(e.target.value);
 
@@ -277,6 +325,7 @@ function StartupValidator() {
   // =========================================
   // TARGET CUSTOMER CHANGE
   // =========================================
+
   const handleCustomerChange = (e) => {
     setTargetCustomers(e.target.value);
 
@@ -285,13 +334,19 @@ function StartupValidator() {
     }
   };
 
+  // =========================================
+  // RENDER
+  // =========================================
+
   return (
     <main className="startup-validator">
 
       {/* =========================================
           HERO
       ========================================= */}
+
       <section className="hero">
+
         <div className="hero-badge">
           <span className="status-dot"></span>
           NEXUS AI • STARTUP INTELLIGENCE
@@ -308,6 +363,7 @@ function StartupValidator() {
         </p>
 
         <div className="hero-features">
+
           <div className="hero-feature">
             <span>✦</span>
             Market Research
@@ -322,20 +378,25 @@ function StartupValidator() {
             <span>⌁</span>
             AI Insights
           </div>
+
         </div>
+
       </section>
 
       {/* =========================================
           INPUT SECTION
       ========================================= */}
+
       <section className="input-section">
 
         <div className="section-header">
+
           <div className="section-number">
             01
           </div>
 
           <div>
+
             <h2>
               Describe Your Startup
             </h2>
@@ -344,7 +405,9 @@ function StartupValidator() {
               Enter your startup idea and provide optional
               customer details for better validation.
             </p>
+
           </div>
+
         </div>
 
         <form
@@ -356,9 +419,11 @@ function StartupValidator() {
           {/* =========================================
               STARTUP IDEA
           ========================================= */}
+
           <div className="idea-input-wrapper">
 
             <div className="field-heading">
+
               <label htmlFor="startup-idea">
                 Enter your startup idea
               </label>
@@ -366,6 +431,7 @@ function StartupValidator() {
               <span className="required-label">
                 Required
               </span>
+
             </div>
 
             <textarea
@@ -379,6 +445,7 @@ function StartupValidator() {
             />
 
             <div className="textarea-footer">
+
               <span>
                 {idea.length} characters
               </span>
@@ -386,15 +453,19 @@ function StartupValidator() {
               <span>
                 Be specific for better results
               </span>
+
             </div>
+
           </div>
 
           {/* =========================================
               DOMAIN / INDUSTRY
           ========================================= */}
+
           <div className="domain-input-wrapper">
 
             <div className="field-heading">
+
               <label htmlFor="startup-domain">
                 Domain / Industry
               </label>
@@ -402,6 +473,7 @@ function StartupValidator() {
               <span className="optional-label">
                 Optional
               </span>
+
             </div>
 
             <input
@@ -416,6 +488,7 @@ function StartupValidator() {
             />
 
             <div className="input-description">
+
               <span className="description-icon">
                 🌐
               </span>
@@ -425,13 +498,15 @@ function StartupValidator() {
                 sector to target market and competitor
                 intelligence.
               </span>
+
             </div>
+
           </div>
 
           {/* =========================================
               TARGET CUSTOMERS
-              ALWAYS VISIBLE
           ========================================= */}
+
           <div className="customer-input-wrapper">
 
             <div className="field-heading">
@@ -470,11 +545,13 @@ function StartupValidator() {
               </span>
 
             </div>
+
           </div>
 
           {/* =========================================
               VALIDATION FOCUS
           ========================================= */}
+
           <div className="validation-focus">
 
             <div className="options-header">
@@ -540,9 +617,11 @@ function StartupValidator() {
                       </div>
 
                       <div className="option-check">
+
                         {isSelected
                           ? "✓"
                           : "→"}
+
                       </div>
 
                     </button>
@@ -551,11 +630,13 @@ function StartupValidator() {
               )}
 
             </div>
+
           </div>
 
           {/* =========================================
               SELECTED VALIDATION
           ========================================= */}
+
           <div className="selected-validation">
 
             <div className="selected-icon">
@@ -583,11 +664,14 @@ function StartupValidator() {
           {/* =========================================
               ERROR
           ========================================= */}
+
           {error && (
+
             <div
               className="inline-error"
               role="alert"
             >
+
               <span>
                 !
               </span>
@@ -595,12 +679,15 @@ function StartupValidator() {
               <p>
                 {error}
               </p>
+
             </div>
+
           )}
 
           {/* =========================================
               SUBMIT BUTTON
           ========================================= */}
+
           <div className="validate-action">
 
             <button
@@ -617,11 +704,14 @@ function StartupValidator() {
             >
 
               {loading ? (
+
                 <>
                   <span className="button-spinner"></span>
                   Researching...
                 </>
+
               ) : (
+
                 <>
                   <span>
                     ✦
@@ -633,6 +723,7 @@ function StartupValidator() {
                     →
                   </span>
                 </>
+
               )}
 
             </button>
@@ -647,6 +738,7 @@ function StartupValidator() {
           {/* =========================================
               INPUT HINT
           ========================================= */}
+
           <div className="input-hint">
 
             <span>
@@ -662,12 +754,15 @@ function StartupValidator() {
           </div>
 
         </form>
+
       </section>
 
       {/* =========================================
           LOADING
       ========================================= */}
+
       {loading && (
+
         <section className="loading-section">
 
           <div className="loading-card">
@@ -703,8 +798,8 @@ function StartupValidator() {
 
               </div>
 
-              {/* TARGET CUSTOMER DURING LOADING */}
               {targetCustomers.trim() && (
+
                 <div className="research-target">
 
                   <span>
@@ -716,6 +811,7 @@ function StartupValidator() {
                   </strong>
 
                 </div>
+
               )}
 
               <div className="loading-steps">
@@ -743,15 +839,19 @@ function StartupValidator() {
               </div>
 
             </div>
+
           </div>
 
         </section>
+
       )}
 
       {/* =========================================
           ERROR SECTION
       ========================================= */}
+
       {error && !loading && (
+
         <section className="error-section">
 
           <div className="error-card">
@@ -799,11 +899,13 @@ function StartupValidator() {
           </div>
 
         </section>
+
       )}
 
       {/* =========================================
           RESULTS
       ========================================= */}
+
       {searchCompleted &&
         !loading &&
         !error && (
@@ -811,6 +913,7 @@ function StartupValidator() {
           <section className="validation-dashboard">
 
             {/* HEADER */}
+
             <div className="section-header">
 
               <div className="section-number">
@@ -864,6 +967,7 @@ function StartupValidator() {
             </div>
 
             {/* IDEA */}
+
             <div className="idea-display">
 
               <span>
@@ -877,7 +981,9 @@ function StartupValidator() {
             </div>
 
             {/* DOMAIN */}
+
             {submittedDomain && (
+
               <div className="idea-display domain-result">
 
                 <span>
@@ -889,10 +995,13 @@ function StartupValidator() {
                 </h3>
 
               </div>
+
             )}
 
-            {/* TARGET CUSTOMER */}
+            {/* TARGET CUSTOMERS */}
+
             {submittedCustomers && (
+
               <div className="idea-display customer-result">
 
                 <span>
@@ -904,9 +1013,11 @@ function StartupValidator() {
                 </h3>
 
               </div>
+
             )}
 
             {/* SELECTED ANALYSIS */}
+
             <div className="selected-analysis">
 
               <div className="selected-analysis-icon">
@@ -932,6 +1043,7 @@ function StartupValidator() {
             </div>
 
             {/* DASHBOARD */}
+
             <div className="dashboard-grid">
 
               <div className="dashboard-card">
@@ -1019,6 +1131,7 @@ function StartupValidator() {
             {/* =========================================
                 WEB RESEARCH SOURCES
             ========================================= */}
+
             {results.length > 0 && (
 
               <div className="results-section">
@@ -1078,35 +1191,54 @@ function StartupValidator() {
                 </div>
 
               </div>
+
             )}
 
             {/* =========================================
                 AI ANALYSIS LOADING
             ========================================= */}
+
             {validationLoading && (
+
               <p className="analysis-loading">
                 Analyzing market and competitors...
               </p>
+
             )}
 
             {/* =========================================
                 AI ANALYSIS ERROR
             ========================================= */}
+
             {validationError && (
+
               <p className="inline-error">
                 {validationError}
               </p>
+
             )}
 
             {/* =========================================
                 AI ANALYSIS RESULTS
             ========================================= */}
+
             {validationResult && (
+
               <>
+
                 <DeepValidationCard
-                  technical={validationResult.technical_feasibility}
-                  scientific={validationResult.scientific_validation}
-                  regulatory={validationResult.regulatory_risk}
+                  technical={
+                    validationResult
+                      .technical_feasibility
+                  }
+                  scientific={
+                    validationResult
+                      .scientific_validation
+                  }
+                  regulatory={
+                    validationResult
+                      .regulatory_risk
+                  }
                 />
 
                 <MarketAnalysis
@@ -1139,14 +1271,17 @@ function StartupValidator() {
                 />
 
               </>
+
             )}
 
           </section>
+
         )}
 
       {/* =========================================
           NO RESULTS
       ========================================= */}
+
       {!loading &&
         !error &&
         searchCompleted &&
@@ -1177,10 +1312,10 @@ function StartupValidator() {
             </button>
 
           </section>
+
         )}
 
     </main>
   );
 }
-
 export default StartupValidator;
