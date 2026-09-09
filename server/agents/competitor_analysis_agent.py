@@ -1,4 +1,3 @@
-
 """
 Competitor Analysis Agent
 
@@ -36,10 +35,13 @@ import json
 import logging
 import os
 import re
+import urllib.parse
 from typing import Any, Dict, List, Optional
+
 import httpx
 
 logger = logging.getLogger(__name__)
+
 
 # ============================================================
 # CONFIGURATION
@@ -47,24 +49,69 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_COMPETITOR_LIMIT = 5
 MAX_COMPETITOR_LIMIT = 5
+MAX_INDIRECT_COMPETITORS = 2
+MAX_SEARCH_RESULTS_FOR_GEMINI = 8
+
+
+# ============================================================
+# GENERIC / INVALID CUSTOMER VALUES
+# ============================================================
+
+GENERIC_AUDIENCES = {
+    "",
+    "people",
+    "person",
+    "users",
+    "user",
+    "customers",
+    "customer",
+    "consumers",
+    "consumer",
+    "businesses",
+    "business",
+    "everyone",
+    "all users",
+    "general users",
+    "general market",
+    "target audience",
+    "target customers",
+    "general customers",
+    "all customers",
+}
 
 
 # ============================================================
 # STRONG DIGITAL PRODUCT SIGNALS
 # ============================================================
 
-# IMPORTANT:
-# These phrases indicate that the RESULT ITSELF is a digital
-# product. Generic mentions such as "fitness apps" are NOT
-# included because an indirect competitor may mention apps.
 STRONG_DIGITAL_PHRASES = [
-    "is an app", "is a app", "is a mobile app", "is a web app", "is an application",
-    "is a platform", "is software", "is a saas", "is a tool", "is a studio", "is an engine",
-    "mobile app", "web app", "3d studio", "webgl engine", "spatial web platform",
-    "design tool", "developer tool", "no-code platform", "zero-code studio",
-    "digital platform", "online platform", "software platform", "cloud platform",
-    "provides an app", "provides a platform", "provides software", "offers a tool",
-    "offers an app", "offers a platform", "offers software", "offers a service"
+    "is an app",
+    "is a app",
+    "is a mobile app",
+    "is a web app",
+    "is an application",
+    "is a platform",
+    "is software",
+    "is a saas",
+    "is a tool",
+    "is a studio",
+    "is an engine",
+    "mobile app",
+    "web app",
+    "design tool",
+    "developer tool",
+    "no-code platform",
+    "zero-code studio",
+    "digital platform",
+    "online platform",
+    "software platform",
+    "cloud platform",
+    "provides an app",
+    "provides a platform",
+    "provides software",
+    "offers an app",
+    "offers a platform",
+    "offers software",
 ]
 
 
@@ -73,8 +120,23 @@ STRONG_DIGITAL_PHRASES = [
 # ============================================================
 
 DIGITAL_KEYWORDS = [
-    "app", "application", "platform", "software", "saas", "digital", "mobile", "online",
-    "studio", "engine", "tool", "sdk", "api", "framework", "cloud", "no-code", "zero-code"
+    "app",
+    "application",
+    "platform",
+    "software",
+    "saas",
+    "digital",
+    "mobile",
+    "online",
+    "studio",
+    "engine",
+    "tool",
+    "sdk",
+    "api",
+    "framework",
+    "cloud",
+    "no-code",
+    "zero-code",
 ]
 
 
@@ -83,10 +145,22 @@ DIGITAL_KEYWORDS = [
 # ============================================================
 
 DIRECT_SERVICE_PHRASES = [
-    "3d web", "webgl", "spatial web", "motion design", "shaders", "creative studio",
-    "developer tools", "design tools", "automation platform", "ai platform",
-    "personalized platform", "analytics platform", "management software",
-    "workflow automation", "cloud service", "software solution"
+    "3d web",
+    "webgl",
+    "spatial web",
+    "motion design",
+    "shaders",
+    "creative studio",
+    "developer tools",
+    "design tools",
+    "automation platform",
+    "ai platform",
+    "personalized platform",
+    "analytics platform",
+    "management software",
+    "workflow automation",
+    "cloud service",
+    "software solution",
 ]
 
 
@@ -95,9 +169,23 @@ DIRECT_SERVICE_PHRASES = [
 # ============================================================
 
 INDIRECT_SERVICE_PHRASES = [
-    "agency", "agencies", "consultancy", "consulting", "freelancer", "freelancers",
-    "manual spreadsheet", "excel template", "custom development studio",
-    "traditional service", "in-house team", "manual workflow", "paper-based process"
+    "agency",
+    "agencies",
+    "consultancy",
+    "consulting",
+    "freelancer",
+    "freelancers",
+    "manual spreadsheet",
+    "excel template",
+    "custom development studio",
+    "traditional service",
+    "in-house team",
+    "manual workflow",
+    "paper-based process",
+    "local provider",
+    "local service",
+    "offline service",
+    "traditional method",
 ]
 
 
@@ -110,27 +198,26 @@ PRICING_KEYWORDS = [
     "pricing",
     "cost",
     "costs",
-
     "subscription",
     "premium subscription",
-
     "monthly",
     "per month",
-
     "annual",
     "yearly",
     "per year",
-
     "free trial",
-
     "plan starts",
     "plans start",
-
     "$",
     "₹",
     "rs.",
     "inr",
     "usd",
+    "per meal",
+    "per day",
+    "daily rate",
+    "monthly plan",
+    "meal plan",
 ]
 
 
@@ -141,33 +228,29 @@ PRICING_KEYWORDS = [
 FEATURE_KEYWORDS = [
     "feature",
     "features",
-
     "provides",
     "offers",
     "includes",
-
     "allows users",
     "helps users",
-
-    "workout tracking",
-    "fitness tracking",
-
-    "personalized workout",
-    "personalized training",
-
-    "training plans",
-    "workout plans",
-
+    "supports",
+    "delivery",
+    "ordering",
+    "subscription",
+    "meal plans",
+    "meal delivery",
+    "home cooked",
+    "home-cooked",
+    "customization",
+    "customized",
+    "personalized",
+    "tracking",
     "recommendations",
-    "ai recommendations",
-
     "coaching",
     "progress tracking",
-
-    "goal tracking",
-    "exercise tracking",
-
-    "workout recommendations",
+    "online ordering",
+    "digital payments",
+    "delivery tracking",
 ]
 
 
@@ -178,32 +261,28 @@ FEATURE_KEYWORDS = [
 STRENGTH_KEYWORDS = [
     "strength",
     "strengths",
-
     "advantage",
     "advantages",
-
     "benefit",
     "benefits",
-
     "popular",
     "leading",
     "trusted",
-
     "large user base",
-
     "personalized",
     "easy to use",
     "advanced",
-
     "ai-powered",
     "ai powered",
     "artificial intelligence",
-
     "real-time",
     "real time",
-
     "effective",
     "convenient",
+    "established",
+    "wide selection",
+    "large network",
+    "fast delivery",
 ]
 
 
@@ -214,44 +293,34 @@ STRENGTH_KEYWORDS = [
 WEAKNESS_KEYWORDS = [
     "weakness",
     "weaknesses",
-
     "limitation",
     "limitations",
-
     "disadvantage",
     "disadvantages",
-
     "expensive",
     "costly",
-
     "lack",
     "lacks",
-
     "limited",
-
     "complex",
     "difficult",
-
     "complaints",
-
     "drawback",
     "drawbacks",
-
     "requires subscription",
     "subscription required",
-
     "poor",
-
     "problem",
     "problems",
-
     "issue",
     "issues",
+    "inflexible",
+    "rigid",
 ]
 
 
 # ============================================================
-# IRRELEVANT SOURCE SIGNALS & ACADEMIC BLACKLIST
+# IRRELEVANT SOURCE DOMAINS
 # ============================================================
 
 IRRELEVANT_SOURCE_DOMAINS = [
@@ -304,6 +373,11 @@ IRRELEVANT_SOURCE_DOMAINS = [
     "towardsdatascience.com",
     "dev.to",
 ]
+
+
+# ============================================================
+# IRRELEVANT SOURCE PHRASES
+# ============================================================
 
 IRRELEVANT_SOURCE_PHRASES = [
     "market research report",
@@ -365,10 +439,7 @@ IRRELEVANT_SOURCE_PHRASES = [
 # ============================================================
 
 def _safe_text(value: Any) -> str:
-    """
-    Safely convert a value to string.
-    """
-
+    """Safely convert a value to a trimmed string."""
     if value is None:
         return ""
 
@@ -378,32 +449,64 @@ def _safe_text(value: Any) -> str:
     return str(value).strip()
 
 
-# ============================================================
-# URL NORMALIZATION
-# ============================================================
-
 def _normalize_url(url: Any) -> str:
-    """
-    Normalize URL for duplicate detection.
-    """
-
+    """Normalize URL for duplicate detection."""
     value = _safe_text(url).lower().strip()
 
     if not value:
         return ""
 
-    return value.rstrip("/")
+    value = value.rstrip("/")
 
+    # Remove common tracking parameters.
+    try:
+        parsed = urllib.parse.urlparse(value)
 
-# ============================================================
-# NAME NORMALIZATION
-# ============================================================
+        clean_query = urllib.parse.parse_qs(
+            parsed.query,
+            keep_blank_values=False,
+        )
+
+        ignored_params = {
+            "utm_source",
+            "utm_medium",
+            "utm_campaign",
+            "utm_term",
+            "utm_content",
+            "fbclid",
+            "gclid",
+        }
+
+        clean_query = {
+            key: values
+            for key, values in clean_query.items()
+            if key not in ignored_params
+        }
+
+        query = urllib.parse.urlencode(
+            clean_query,
+            doseq=True,
+        )
+
+        value = urllib.parse.urlunparse(
+            (
+                parsed.scheme,
+                parsed.netloc,
+                parsed.path.rstrip("/"),
+                "",
+                query,
+                "",
+            )
+        ).rstrip("/")
+
+    except Exception:
+        pass
+
+    return value
+
 
 def _normalize_name(name: Any) -> str:
-    """
-    Normalize competitor name.
-    """
-
+    """Normalize competitor name."""
     value = _safe_text(name).lower()
 
     value = re.sub(
@@ -421,6 +524,73 @@ def _normalize_name(name: Any) -> str:
     return value.strip()
 
 
+def _clean_list(values: Any, limit: int = 5) -> List[str]:
+    """
+    Convert a list/string into a clean unique list.
+    """
+    if values is None:
+        return []
+
+    if isinstance(values, str):
+        raw_values = re.split(
+            r"[;\n•]+",
+            values,
+        )
+    elif isinstance(values, list):
+        raw_values = values
+    else:
+        raw_values = [values]
+
+    cleaned: List[str] = []
+    seen = set()
+
+    for value in raw_values:
+        text = _safe_text(value)
+
+        if not text:
+            continue
+
+        # Remove markdown bullets.
+        text = re.sub(
+            r"^[\-\*\d\.\)\s]+",
+            "",
+            text,
+        ).strip()
+
+        if not text:
+            continue
+
+        normalized = text.lower()
+
+        if normalized in seen:
+            continue
+
+        seen.add(normalized)
+        cleaned.append(text)
+
+        if len(cleaned) >= limit:
+            break
+
+    return cleaned
+
+
+def _clean_customer_value(value: Any) -> str:
+    """
+    Remove generic target-customer values.
+    """
+    text = _safe_text(value)
+
+    if not text:
+        return ""
+
+    normalized = text.lower().strip()
+
+    if normalized in GENERIC_AUDIENCES:
+        return ""
+
+    return text
+
+
 # ============================================================
 # SEARCH TEXT
 # ============================================================
@@ -428,9 +598,7 @@ def _normalize_name(name: Any) -> str:
 def _get_search_text(
     result: Dict[str, Any],
 ) -> str:
-    """
-    Combine useful search result fields.
-    """
+    """Combine useful search result fields."""
 
     parts = [
         _safe_text(result.get("title")),
@@ -467,7 +635,7 @@ def _find_matching_sentences(
     if not text:
         return []
 
-    # Split on normal sentence endings and new lines.
+    # Correct sentence/newline splitting.
     sentences = re.split(
         r"(?<=[.!?])\s+|\n+",
         text,
@@ -482,7 +650,6 @@ def _find_matching_sentences(
     ]
 
     for sentence in sentences:
-
         clean = re.sub(
             r"\s+",
             " ",
@@ -499,14 +666,8 @@ def _find_matching_sentences(
             for keyword in lower_keywords
         ):
             if lower_sentence not in seen:
-
-                seen.add(
-                    lower_sentence
-                )
-
-                matches.append(
-                    clean
-                )
+                seen.add(lower_sentence)
+                matches.append(clean)
 
         if len(matches) >= limit:
             break
@@ -522,33 +683,14 @@ def _has_strong_digital_identity(
     text: str,
 ) -> bool:
     """
-    Determine whether the RESULT ITSELF is clearly a
-    digital product/platform.
+    Determine whether the result itself represents
+    a digital product/platform.
 
-    IMPORTANT FIX:
-
-    A sentence such as:
-
-        "Traditional coaching is an alternative to fitness apps."
-
-    mentions "fitness apps", but the result itself is NOT
-    a fitness app.
-
-    Therefore generic plural mentions such as:
-        fitness apps
-        workout apps
-        training apps
-
-    must not automatically classify the result as digital.
-
-    We first look for explicit product identity phrases.
+    Generic mentions such as "fitness apps" are not
+    sufficient evidence that the result itself is an app.
     """
 
     lower = _safe_text(text).lower()
-
-    # --------------------------------------------------------
-    # Explicit self-identification
-    # --------------------------------------------------------
 
     explicit_patterns = [
         r"\bis an app\b",
@@ -556,95 +698,29 @@ def _has_strong_digital_identity(
         r"\bis a mobile app\b",
         r"\bis a web app\b",
         r"\bis an application\b",
-
         r"\bis a platform\b",
         r"\bis software\b",
         r"\bis a saas\b",
         r"\bis a tool\b",
-
         r"\bprovides an app\b",
         r"\bprovides a platform\b",
         r"\bprovides software\b",
-
         r"\boffers an app\b",
         r"\boffers a platform\b",
         r"\boffers software\b",
-
-        r"\bis a fitness app\b",
-        r"\bis a workout app\b",
-        r"\bis a training app\b",
-
-        r"\bis a fitness platform\b",
-        r"\bis a workout platform\b",
-        r"\bis a training platform\b",
-
-        r"\bis an ai fitness\b",
-        r"\bis an ai fitness app\b",
-        r"\bis an ai fitness platform\b",
-
-        r"\bis an ai fitness coach\b",
-        r"\bis an ai coach\b",
-
-        r"\bai fitness app\b",
-        r"\bai fitness platform\b",
-
-        r"\bdigital platform\b",
-        r"\bonline platform\b",
-        r"\bsoftware platform\b",
-
-        r"\bdigital coaching platform\b",
-        r"\bonline fitness platform\b",
-        r"\bonline fitness app\b",
-
-        r"\bpersonalized fitness platform\b",
-        r"\bpersonalized workout platform\b",
-
-        r"\bpersonalized workout plans\b",
-        r"\bpersonalized training plans\b",
-
-        r"\bprovides personalized workout plans\b",
-        r"\bprovides personalized training plans\b",
+        r"\bis a digital platform\b",
+        r"\bis an online platform\b",
+        r"\bis a software platform\b",
     ]
 
     for pattern in explicit_patterns:
         if re.search(pattern, lower):
             return True
 
-    # --------------------------------------------------------
-    # Strong product phrase check.
-    #
-    # Do NOT treat generic plural mentions as identity.
-    # --------------------------------------------------------
+    # Remove generic plural mentions before checking
+    # broader identity phrases.
+    cleaned_text = lower
 
-    identity_phrases = [
-        "fitness app",
-        "workout app",
-        "training app",
-
-        "fitness platform",
-        "workout platform",
-        "training platform",
-
-        "ai fitness app",
-        "ai fitness platform",
-
-        "personalized fitness platform",
-        "personalized workout platform",
-
-        "digital platform",
-        "online platform",
-        "software platform",
-
-        "digital coaching",
-
-        "mobile app",
-        "web app",
-        "software",
-        "saas",
-    ]
-
-    # Generic phrases that should NOT be considered proof
-    # that the result itself is digital.
     generic_mentions = [
         "fitness apps",
         "workout apps",
@@ -652,15 +728,36 @@ def _has_strong_digital_identity(
         "fitness platforms",
         "workout platforms",
         "training platforms",
+        "food delivery apps",
+        "meal delivery apps",
+        "restaurant apps",
+        "delivery platforms",
     ]
-
-    cleaned_text = lower
 
     for phrase in generic_mentions:
         cleaned_text = cleaned_text.replace(
             phrase,
             "",
         )
+
+    identity_phrases = [
+        "fitness app",
+        "workout app",
+        "training app",
+        "fitness platform",
+        "workout platform",
+        "training platform",
+        "mobile app",
+        "web app",
+        "digital platform",
+        "online platform",
+        "software platform",
+        "software",
+        "saas",
+        "meal delivery platform",
+        "food delivery platform",
+        "online ordering platform",
+    ]
 
     for phrase in identity_phrases:
         if phrase in cleaned_text:
@@ -675,14 +772,17 @@ def _has_strong_digital_identity(
 
 def _is_article_title(title: str) -> bool:
     """
-    Checks if a result title matches non-entity article patterns such as
-    pricing guides, cost breakdowns, comparisons, top N lists, or how-to guides.
+    Detect generic article/list/guide titles that are not
+    competitor entities.
     """
+
     if not title:
         return False
+
     t_clean = title.strip().lower()
+
     patterns = [
-        r"\bhow\s+much\s+(?:does|is|do)\b",
+        r"\bhow\s+much\s+(does|is|do)\b",
         r"\bpricing\s+guide\b",
         r"\bcost\s+guide\b",
         r"\bcost\s+breakdown\b",
@@ -693,10 +793,13 @@ def _is_article_title(title: str) -> bool:
         r"\balternatives?\b",
         r"\bbuyer['’]?s?\s+guide\b",
         r"\bwhat\s+is\b",
+        r"\bhow\s+to\b",
     ]
-    for pat in patterns:
-        if re.search(pat, t_clean):
+
+    for pattern in patterns:
+        if re.search(pattern, t_clean):
             return True
+
     return False
 
 
@@ -704,7 +807,8 @@ def _is_irrelevant_source(
     result: Dict[str, Any],
 ) -> bool:
     """
-    Filter research/reference/gift pages.
+    Filter research/reference/article pages that are unlikely
+    to represent actual commercial competitors.
     """
 
     title = _safe_text(
@@ -722,48 +826,42 @@ def _is_irrelevant_source(
     if _is_article_title(title):
         return True
 
-    # --------------------------------------------------------
     # Wikipedia
-    # --------------------------------------------------------
-
     if "wikipedia.org" in url:
         return True
 
     if "wikipedia" in title:
         return True
 
-    # --------------------------------------------------------
-    # Academic & Research Publishers Blacklist
-    # --------------------------------------------------------
-
-    if any(domain in url for domain in IRRELEVANT_SOURCE_DOMAINS):
+    # Academic / research / market-report domains.
+    if any(
+        domain in url
+        for domain in IRRELEVANT_SOURCE_DOMAINS
+    ):
         return True
 
-    if re.search(r"\[\d{4}\.\d{4,5}\]", title):
+    # Academic identifier patterns.
+    if re.search(
+        r"\bdoi\b|\bmdpi\b|\barxiv\b|\bspringer\b|\bwiley\b|\bfrontiersin\b",
+        title,
+    ):
         return True
 
-    if re.search(r"\bdoi\b|\bmdpi\b|\barxiv\b|\bspringer\b|\bwiley\b|\bfrontiersin\b", title):
+    if re.search(
+        r"\bdoi\b|\bmdpi\b|\barxiv\b|\bspringer\b|\bwiley\b|\bfrontiersin\b",
+        url,
+    ):
         return True
 
-    if re.search(r"\bdoi\b|\bmdpi\b|\barxiv\b|\bspringer\b|\bwiley\b|\bfrontiersin\b", url):
-        return True
-
-    # --------------------------------------------------------
-    # Obvious irrelevant sources
-    # --------------------------------------------------------
-
+    # Obvious irrelevant source phrases.
     for phrase in IRRELEVANT_SOURCE_PHRASES:
-
         if phrase in title:
             return True
 
         if phrase in url:
             return True
 
-    # --------------------------------------------------------
-    # Research content
-    # --------------------------------------------------------
-
+    # Research content.
     research_signals = [
         "market size",
         "market research",
@@ -803,14 +901,9 @@ def _is_irrelevant_source(
 def _is_valid_search_result(
     result: Any,
 ) -> bool:
-    """
-    Validate search result.
-    """
+    """Validate search result."""
 
-    if not isinstance(
-        result,
-        dict,
-    ):
+    if not isinstance(result, dict):
         return False
 
     title = _safe_text(
@@ -864,20 +957,11 @@ def _looks_like_direct_competitor(
         f"{target}"
     ).lower()
 
-    # --------------------------------------------------------
-    # 1. Strong digital identity.
-    # --------------------------------------------------------
-
+    # Strong digital product identity.
     if _has_strong_digital_identity(text):
         return True
 
-    # --------------------------------------------------------
-    # 2. Traditional service should be indirect.
-    #
-    # IMPORTANT:
-    # Check this BEFORE broad direct phrases.
-    # --------------------------------------------------------
-
+    # Traditional/legacy services should be indirect.
     indirect_matches = sum(
         1
         for phrase in INDIRECT_SERVICE_PHRASES
@@ -887,10 +971,7 @@ def _looks_like_direct_competitor(
     if indirect_matches > 0:
         return False
 
-    # --------------------------------------------------------
-    # 3. Direct product/service phrases.
-    # --------------------------------------------------------
-
+    # Direct service/product phrases.
     direct_matches = sum(
         1
         for phrase in DIRECT_SERVICE_PHRASES
@@ -901,14 +982,8 @@ def _looks_like_direct_competitor(
         return True
 
     # --------------------------------------------------------
-    # 4. Digital keyword + idea overlap.
+    # Idea overlap
     # --------------------------------------------------------
-
-    digital_matches = sum(
-        1
-        for keyword in DIGITAL_KEYWORDS
-        if keyword in text
-    )
 
     idea_lower = _safe_text(
         idea
@@ -936,10 +1011,47 @@ def _looks_like_direct_competitor(
         text_terms
     )
 
+    digital_matches = sum(
+        1
+        for keyword in DIGITAL_KEYWORDS
+        if keyword in text
+    )
+
     if (
         digital_matches >= 1
         and len(overlap) >= 1
     ):
+        return True
+
+    # --------------------------------------------------------
+    # Domain/service overlap for non-digital businesses.
+    #
+    # This is important for ideas like:
+    # "home cooked meal delivery".
+    # --------------------------------------------------------
+
+    idea_service_terms = {
+        "meal",
+        "meals",
+        "food",
+        "tiffin",
+        "delivery",
+        "kitchen",
+        "catering",
+        "restaurant",
+        "lunch",
+        "dinner",
+        "diet",
+        "subscription",
+    }
+
+    idea_service_overlap = (
+        idea_service_terms.intersection(
+            text_terms
+        )
+    )
+
+    if len(idea_service_overlap) >= 2:
         return True
 
     return False
@@ -955,16 +1067,6 @@ def _looks_like_indirect_competitor(
 ) -> bool:
     """
     Determine whether a result represents an indirect competitor.
-
-    Examples:
-
-    Personal trainer       -> INDIRECT
-    Gym                     -> INDIRECT
-    Traditional coaching   -> INDIRECT
-    Fitness classes        -> INDIRECT
-
-    Freeletics AI platform -> DIRECT
-    Fitbod fitness app    -> DIRECT
     """
 
     title = _safe_text(
@@ -987,68 +1089,84 @@ def _looks_like_indirect_competitor(
         f"{target}"
     ).lower()
 
-    # --------------------------------------------------------
-    # Digital product must remain DIRECT.
-    #
-    # IMPORTANT:
-    # _has_strong_digital_identity() no longer treats
-    # "fitness apps" as a digital identity when it is only
-    # mentioned as an alternative.
-    # --------------------------------------------------------
-
+    # Digital products should remain direct.
     if _has_strong_digital_identity(text):
         return False
 
-    # --------------------------------------------------------
     # Explicit indirect phrases.
-    # --------------------------------------------------------
-
     for phrase in INDIRECT_SERVICE_PHRASES:
-
         if phrase in text:
             return True
-
-    # --------------------------------------------------------
-    # Additional traditional-service terms.
-    # --------------------------------------------------------
 
     traditional_terms = [
         "trainer",
         "trainers",
-
         "coach",
         "coaches",
         "coaching",
-
         "gym",
         "gyms",
-
         "fitness center",
         "fitness centre",
-
         "fitness club",
         "fitness clubs",
-
         "fitness class",
         "fitness classes",
-
         "personal training",
-
         "workout class",
         "workout classes",
-
         "exercise class",
         "exercise classes",
-
         "studio",
         "fitness studio",
-
         "local fitness",
+        "local mess",
+        "mess hall",
+        "pg mess",
+        "hostel mess",
+        "home cooking",
+        "self cooking",
+        "cook at home",
+        "cooking at home",
     ]
 
     for term in traditional_terms:
-
         if term in text:
+            return True
+
+    # Generic food alternatives.
+    idea_lower = _safe_text(
+        idea
+    ).lower()
+
+    if any(
+        keyword in idea_lower
+        for keyword in [
+            "meal",
+            "food",
+            "tiffin",
+            "cooked",
+            "kitchen",
+            "lunch",
+            "dinner",
+        ]
+    ):
+        alternative_terms = [
+            "restaurant",
+            "mess",
+            "canteen",
+            "pg",
+            "hostel",
+            "self cooking",
+            "cook yourself",
+            "local caterer",
+            "catering service",
+        ]
+
+        if any(
+            term in text
+            for term in alternative_terms
+        ):
             return True
 
     return False
@@ -1062,18 +1180,12 @@ def _extract_product_service(
     content: str,
     title: str = "",
 ) -> str:
-    """
-    Extract product/service description.
-    """
+    """Extract product/service description."""
 
-    text = _safe_text(
-        content
-    )
+    text = _safe_text(content)
 
     if not text:
-        return _safe_text(
-            title
-        )
+        return _safe_text(title)
 
     matches = _find_matching_sentences(
         text,
@@ -1082,20 +1194,22 @@ def _extract_product_service(
             "is an",
             "provides",
             "offers",
+            "includes",
             "platform",
             "app",
             "software",
             "service",
-            "coaching",
-            "training",
+            "delivery",
+            "meal",
+            "food",
+            "tiffin",
+            "catering",
         ],
         limit=2,
     )
 
     if matches:
-        return " ".join(
-            matches
-        )
+        return " ".join(matches)
 
     return text[:500].strip()
 
@@ -1108,20 +1222,19 @@ def _extract_target_customers(
     result: Dict[str, Any],
     content: str,
 ) -> str:
-    """
-    Extract target customer information.
-    """
+    """Extract target customer information."""
 
-    explicit = (
-        result.get("target_audience")
-        or result.get("target_customers")
-        or result.get("target_customer")
-    )
+    explicit_values = [
+        result.get("target_audience"),
+        result.get("target_customers"),
+        result.get("target_customer"),
+    ]
 
-    if explicit:
-        return _safe_text(
-            explicit
-        )
+    for value in explicit_values:
+        cleaned = _clean_customer_value(value)
+
+        if cleaned:
+            return cleaned
 
     matches = _find_matching_sentences(
         content,
@@ -1131,19 +1244,21 @@ def _extract_target_customers(
             "designed for",
             "built for",
             "for users",
-            "for athletes",
-            "for beginners",
+            "for students",
             "for professionals",
-            "fitness users",
-            "fitness enthusiasts",
+            "for families",
+            "for office workers",
+            "for working professionals",
+            "for busy families",
+            "for bachelors",
+            "for migrants",
+            "for residents",
         ],
         limit=2,
     )
 
     if matches:
-        return " ".join(
-            matches
-        )
+        return " ".join(matches)
 
     return ""
 
@@ -1157,6 +1272,9 @@ def _extract_pricing(
 ) -> str:
     """
     Extract pricing information.
+
+    If pricing cannot be found, return an explicit
+    evidence-aware message instead of inventing a price.
     """
 
     matches = _find_matching_sentences(
@@ -1166,11 +1284,9 @@ def _extract_pricing(
     )
 
     if not matches:
-        return ""
+        return "Not available in retrieved sources"
 
-    return " ".join(
-        matches
-    )
+    return " ".join(matches)
 
 
 # ============================================================
@@ -1180,9 +1296,7 @@ def _extract_pricing(
 def _extract_features(
     content: str,
 ) -> List[str]:
-    """
-    Extract key features.
-    """
+    """Extract key features."""
 
     return _find_matching_sentences(
         content,
@@ -1198,9 +1312,7 @@ def _extract_features(
 def _extract_strengths(
     content: str,
 ) -> List[str]:
-    """
-    Extract strengths.
-    """
+    """Extract strengths."""
 
     return _find_matching_sentences(
         content,
@@ -1216,9 +1328,7 @@ def _extract_strengths(
 def _extract_weaknesses(
     content: str,
 ) -> List[str]:
-    """
-    Extract weaknesses.
-    """
+    """Extract weaknesses."""
 
     return _find_matching_sentences(
         content,
@@ -1228,65 +1338,137 @@ def _extract_weaknesses(
 
 
 # ============================================================
-# BUILD COMPETITOR
+# CORPORATE ENTITY NAME CLEANING
 # ============================================================
 
 def _clean_corporate_entity_name(
     title: str,
     url: str,
-    raw_name: Optional[str] = None
+    raw_name: Optional[str] = None,
 ) -> str:
     """
-    Extracts a clean corporate/product brand name and discards blog titles,
-    news headlines, or market analyst publishers.
-    """
-    import urllib.parse
+    Extract a clean corporate/product brand name.
 
-    # 1. Inspect URL domain for brand name
+    Rejects article titles and research publishers.
+    """
+
+    # --------------------------------------------------------
+    # 1. URL domain
+    # --------------------------------------------------------
+
     if url:
         try:
             parsed = urllib.parse.urlparse(url)
-            netloc = parsed.netloc.lower().replace("www.", "")
+
+            netloc = (
+                parsed.netloc
+                .lower()
+                .replace("www.", "")
+            )
+
             parts = netloc.split(".")
+
             if len(parts) >= 2:
                 brand = parts[0]
-                if brand not in {
-                    "medium", "substack", "hubspot", "linkedin", "github", "news",
-                    "blog", "app", "docs", "en", "article", "tech", "post", "report"
-                } and len(brand) >= 3:
+
+                blocked_brands = {
+                    "medium",
+                    "substack",
+                    "hubspot",
+                    "linkedin",
+                    "github",
+                    "news",
+                    "blog",
+                    "app",
+                    "docs",
+                    "en",
+                    "article",
+                    "tech",
+                    "post",
+                    "report",
+                    "www",
+                }
+
+                if (
+                    brand not in blocked_brands
+                    and len(brand) >= 3
+                ):
                     return brand.capitalize()
+
         except Exception:
             pass
 
-    # 2. Inspect raw_name or title
-    candidate = (raw_name or title or "").strip()
-    for sep in [" | ", " - ", " – ", " — ", " : ", " • "]:
-        if sep in candidate:
-            chunks = candidate.split(sep)
-            for c in chunks:
-                c_clean = c.strip()
-                words = c_clean.split()
-                if 1 <= len(words) <= 3 and not any(
-                    k in c_clean.lower() for k in [
-                        "how to", "best", "top 10", "review", "pricing", "guide",
-                        "overview", "report", "market", "analysis", "vs", "versus"
-                    ]
+    # --------------------------------------------------------
+    # 2. Raw name / title
+    # --------------------------------------------------------
+
+    candidate = (
+        _safe_text(raw_name)
+        or _safe_text(title)
+    )
+
+    for separator in [
+        " | ",
+        " - ",
+        " – ",
+        " — ",
+        " : ",
+        " • ",
+    ]:
+        if separator in candidate:
+            chunks = candidate.split(separator)
+
+            for chunk in chunks:
+                cleaned = chunk.strip()
+
+                words = cleaned.split()
+
+                if (
+                    1 <= len(words) <= 4
+                    and not any(
+                        keyword in cleaned.lower()
+                        for keyword in [
+                            "how to",
+                            "best",
+                            "top 10",
+                            "top 5",
+                            "review",
+                            "pricing",
+                            "guide",
+                            "overview",
+                            "report",
+                            "market",
+                            "analysis",
+                            "comparison",
+                            "versus",
+                        ]
+                    )
                 ):
-                    return c_clean
+                    return cleaned
 
-    candidate = re.sub(r"^(top \d+|best \d+|the future of|how to|guide to)\s+", "", candidate, flags=re.IGNORECASE)
+    candidate = re.sub(
+        r"^(top \d+|best \d+|the future of|how to|guide to)\s+",
+        "",
+        candidate,
+        flags=re.IGNORECASE,
+    )
+
     words = candidate.split()
-    if words:
-        return " ".join(words[:2]).title()
-    return "Enterprise Platform"
 
+    if words:
+        return " ".join(words[:3]).title()
+
+    return "Unknown Competitor"
+
+
+# ============================================================
+# BUILD COMPETITOR FROM SEARCH RESULT
+# ============================================================
 
 def _build_competitor(
     result: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """
-    Convert search result into competitor object with aggressive entity cleaning.
-    """
+    """Convert search result into competitor object."""
 
     title = _safe_text(
         result.get("title")
@@ -1303,39 +1485,107 @@ def _build_competitor(
     name = _clean_corporate_entity_name(
         title=title,
         url=url,
-        raw_name=result.get("name")
+        raw_name=result.get("name"),
     )
 
     return {
         "name": name,
-
-        "url": url,
-
+        "url": url or None,
         "product_service": _extract_product_service(
             content=content,
             title=title,
         ),
-
         "target_customers": _extract_target_customers(
             result=result,
             content=content,
         ),
-
         "pricing": _extract_pricing(
             content
         ),
-
         "key_features": _extract_features(
             content
         ),
-
         "strengths": _extract_strengths(
             content
         ),
-
         "weaknesses": _extract_weaknesses(
             content
         ),
+    }
+
+
+# ============================================================
+# COMPETITOR NORMALIZATION
+# ============================================================
+
+def _normalize_competitor(
+    competitor: Any,
+) -> Optional[Dict[str, Any]]:
+    """
+    Normalize Gemini-generated competitor data to the
+    expected schema.
+    """
+
+    if not isinstance(
+        competitor,
+        dict,
+    ):
+        return None
+
+    name = _safe_text(
+        competitor.get("name")
+    )
+
+    if not name:
+        return None
+
+    url = _safe_text(
+        competitor.get("url")
+        or competitor.get("website")
+    )
+
+    target_customers = _clean_customer_value(
+        competitor.get("target_customers")
+        or competitor.get("target_audience")
+    )
+
+    pricing = _safe_text(
+        competitor.get("pricing")
+    )
+
+    if not pricing:
+        pricing = "Not available in retrieved sources"
+
+    key_features = _clean_list(
+        competitor.get("key_features"),
+        limit=5,
+    )
+
+    strengths = _clean_list(
+        competitor.get("strengths"),
+        limit=5,
+    )
+
+    weaknesses = _clean_list(
+        competitor.get("weaknesses"),
+        limit=5,
+    )
+
+    product_service = _safe_text(
+        competitor.get("product_service")
+        or competitor.get("product")
+        or competitor.get("service")
+    )
+
+    return {
+        "name": name,
+        "url": url or None,
+        "product_service": product_service,
+        "target_customers": target_customers,
+        "pricing": pricing,
+        "key_features": key_features,
+        "strengths": strengths,
+        "weaknesses": weaknesses,
     }
 
 
@@ -1347,9 +1597,7 @@ def _is_duplicate(
     competitor: Dict[str, Any],
     competitors: List[Dict[str, Any]],
 ) -> bool:
-    """
-    Detect duplicate competitor by URL or name.
-    """
+    """Detect duplicate competitor by URL or name."""
 
     current_url = _normalize_url(
         competitor.get("url")
@@ -1360,7 +1608,6 @@ def _is_duplicate(
     )
 
     for existing in competitors:
-
         existing_url = _normalize_url(
             existing.get("url")
         )
@@ -1369,7 +1616,7 @@ def _is_duplicate(
             existing.get("name")
         )
 
-        # Same URL
+        # Same URL.
         if (
             current_url
             and existing_url
@@ -1377,7 +1624,7 @@ def _is_duplicate(
         ):
             return True
 
-        # Same name
+        # Same name.
         if (
             current_name
             and existing_name
@@ -1389,15 +1636,57 @@ def _is_duplicate(
 
 
 # ============================================================
+# DEDUPLICATE COMPETITOR LIST
+# ============================================================
+
+def _deduplicate_competitors(
+    competitors: Any,
+    limit: int,
+) -> List[Dict[str, Any]]:
+    """
+    Normalize and deduplicate competitors.
+    """
+
+    if not isinstance(
+        competitors,
+        list,
+    ):
+        return []
+
+    unique: List[Dict[str, Any]] = []
+
+    for raw in competitors:
+        competitor = _normalize_competitor(
+            raw
+        )
+
+        if not competitor:
+            continue
+
+        if _is_duplicate(
+            competitor,
+            unique,
+        ):
+            continue
+
+        unique.append(
+            competitor
+        )
+
+        if len(unique) >= limit:
+            break
+
+    return unique
+
+
+# ============================================================
 # VALUE JOINING
 # ============================================================
 
 def _join_values(
     values: Any,
 ) -> str:
-    """
-    Convert list/string into a clean string.
-    """
+    """Convert list/string into a clean string."""
 
     if values is None:
         return ""
@@ -1412,9 +1701,7 @@ def _join_values(
             if _safe_text(value)
         )
 
-    return _safe_text(
-        values
-    )
+    return _safe_text(values)
 
 
 # ============================================================
@@ -1423,51 +1710,57 @@ def _join_values(
 
 def _build_comparison(
     direct_competitors: List[Dict[str, Any]],
+    indirect_competitors: Optional[List[Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
     """
-    Generate comparison table data.
+    Generate structured competitor comparison.
+
+    Includes pricing because pricing is an explicit
+    Milestone 2 requirement.
     """
 
-    comparison = []
+    comparison: List[Dict[str, Any]] = []
 
-    for competitor in direct_competitors:
+    all_competitors = list(
+        direct_competitors
+    )
 
+    if indirect_competitors:
+        all_competitors.extend(
+            indirect_competitors
+        )
+
+    for competitor in all_competitors:
         comparison.append(
             {
                 "competitor": competitor.get(
                     "name",
                     "",
                 ),
-
                 "product_service": competitor.get(
                     "product_service",
                     "",
                 ),
-
                 "target_customers": competitor.get(
                     "target_customers",
                     "",
                 ),
-
                 "pricing": competitor.get(
                     "pricing",
-                    "",
+                    "Not available in retrieved sources",
                 ),
-
                 "key_features": _join_values(
                     competitor.get(
                         "key_features",
                         [],
                     )
                 ),
-
                 "strengths": _join_values(
                     competitor.get(
                         "strengths",
                         [],
                     )
                 ),
-
                 "weaknesses": _join_values(
                     competitor.get(
                         "weaknesses",
@@ -1490,13 +1783,10 @@ def _build_market_gaps(
     idea: Optional[str] = "",
 ) -> List[str]:
     """
-    Generate conservative, evidence-based market gaps.
+    Generate conservative, evidence-aware market gaps.
 
-    If weaknesses are available, derive potential gaps from
-    those weaknesses.
-
-    If weaknesses are not available, do NOT invent a specific
-    competitor weakness.
+    Market gaps are framed as potential opportunities,
+    not guaranteed facts.
     """
 
     gaps: List[str] = []
@@ -1504,11 +1794,10 @@ def _build_market_gaps(
     weakness_sentences: List[str] = []
 
     # --------------------------------------------------------
-    # Collect weaknesses
+    # Collect weaknesses from direct competitors.
     # --------------------------------------------------------
 
     for competitor in direct_competitors:
-
         weaknesses = competitor.get(
             "weaknesses",
             [],
@@ -1518,9 +1807,7 @@ def _build_market_gaps(
             weaknesses,
             list,
         ):
-
             for weakness in weaknesses:
-
                 clean = _safe_text(
                     weakness
                 )
@@ -1531,7 +1818,6 @@ def _build_market_gaps(
                     )
 
         elif weaknesses:
-
             clean = _safe_text(
                 weaknesses
             )
@@ -1542,17 +1828,13 @@ def _build_market_gaps(
                 )
 
     # --------------------------------------------------------
-    # Generate gaps from weaknesses
+    # Convert evidence into potential gaps.
     # --------------------------------------------------------
 
     for weakness in weakness_sentences:
-
         lower = weakness.lower()
 
-        # ----------------------------------------------------
-        # Pricing gap
-        # ----------------------------------------------------
-
+        # Pricing.
         if any(
             word in lower
             for word in [
@@ -1566,16 +1848,13 @@ def _build_market_gaps(
                 "cost",
             ]
         ):
-
             gaps.append(
-                "There may be potential for a more "
-                "affordable pricing option."
+                "Potential pricing gap: there may be an "
+                "opportunity for a more affordable option "
+                "for price-sensitive customers."
             )
 
-        # ----------------------------------------------------
-        # Limited functionality
-        # ----------------------------------------------------
-
+        # Limited functionality.
         elif any(
             word in lower
             for word in [
@@ -1585,17 +1864,14 @@ def _build_market_gaps(
                 "limitation",
             ]
         ):
-
             gaps.append(
-                "There may be potential to address "
-                "capabilities that competitors currently "
-                "provide only in a limited way."
+                "Potential capability gap: there may be an "
+                "opportunity to address capabilities that "
+                "competitors currently provide only in a "
+                "limited way."
             )
 
-        # ----------------------------------------------------
-        # Complexity
-        # ----------------------------------------------------
-
+        # Complexity.
         elif any(
             word in lower
             for word in [
@@ -1603,16 +1879,13 @@ def _build_market_gaps(
                 "difficult",
             ]
         ):
-
             gaps.append(
-                "There may be potential for a simpler "
-                "and more user-friendly experience."
+                "Potential usability gap: there may be an "
+                "opportunity for a simpler and more "
+                "user-friendly experience."
             )
 
-        # ----------------------------------------------------
-        # Complaints / problems
-        # ----------------------------------------------------
-
+        # Complaints / issues.
         elif any(
             word in lower
             for word in [
@@ -1624,16 +1897,28 @@ def _build_market_gaps(
                 "poor",
             ]
         ):
-
             gaps.append(
-                "There may be potential to address "
-                "existing competitor limitations and "
-                "user pain points."
+                "Potential customer-experience gap: there "
+                "may be an opportunity to address reported "
+                "competitor limitations or customer pain points."
+            )
+
+        # Inflexibility.
+        elif any(
+            word in lower
+            for word in [
+                "inflexible",
+                "rigid",
+            ]
+        ):
+            gaps.append(
+                "Potential flexibility gap: there may be an "
+                "opportunity to provide more customizable "
+                "options around customer needs."
             )
 
     # --------------------------------------------------------
-    # --------------------------------------------------------
-    # Remove duplicate gaps
+    # Remove duplicates.
     # --------------------------------------------------------
 
     unique_gaps: List[str] = []
@@ -1643,8 +1928,8 @@ def _build_market_gaps(
             unique_gaps.append(gap)
 
     # --------------------------------------------------------
-    # Domain-Aware Intelligent White-Space Synthesis
-    # (Purged generic e-commerce / personalization fallback)
+    # If evidence did not reveal gaps, use domain-aware
+    # synthesis.
     # --------------------------------------------------------
 
     if not unique_gaps:
@@ -1654,8 +1939,26 @@ def _build_market_gaps(
             indirect_competitors=indirect_competitors,
         )
 
-    return unique_gaps
+    # --------------------------------------------------------
+    # Always add validation disclaimer.
+    # --------------------------------------------------------
 
+    if not any(
+        "primary research" in gap.lower()
+        for gap in unique_gaps
+    ):
+        unique_gaps.append(
+            "Further primary customer research and "
+            "competitor benchmarking are recommended to "
+            "validate these potential white-space opportunities."
+        )
+
+    return unique_gaps[:5]
+
+
+# ============================================================
+# DOMAIN-AWARE MARKET GAPS
+# ============================================================
 
 def _synthesize_domain_aware_market_gaps(
     idea: str,
@@ -1663,72 +1966,187 @@ def _synthesize_domain_aware_market_gaps(
     indirect_competitors: List[Dict[str, Any]],
 ) -> List[str]:
     """
-    Synthesizes domain-specific white-space market gaps tailored precisely
-    to the startup's operational domain, replacing generic templates.
+    Generate domain-aware fallback gaps.
+
+    IMPORTANT:
+    Avoid unrelated enterprise/technical templates.
     """
+
     idea_lower = (idea or "").lower()
 
-    if any(k in idea_lower for k in ["cool", "thermal", "datacenter", "data center", "liquid", "server", "chip", "pue", "immersion"]):
-        gaps = [
-            "Potential telemetry unification gap: Incumbent cooling systems remain bound to proprietary OEM protocols, lacking multi-vendor ingestion (Redfish API, Modbus TCP, BACnet/IP).",
-            "Potential sub-second predictive modeling gap: Reactive BMS controls fail to prevent GPU thermal throttling during sudden LLM compute burst barriers.",
-            "Potential compliance automation gap: Absence of automated real-time PUE and heat-reuse telemetry mapped directly to ASHRAE TC 9.9 and EU Energy Efficiency Directive standards."
+    # --------------------------------------------------------
+    # Food / tiffin / meal delivery.
+    # --------------------------------------------------------
+
+    if any(
+        keyword in idea_lower
+        for keyword in [
+            "tiffin",
+            "meal",
+            "food",
+            "home cooked",
+            "home-cooked",
+            "kitchen",
+            "lunch",
+            "dinner",
+            "catering",
         ]
-    elif any(k in idea_lower for k in ["agri", "farm", "crop", "drone", "vineyard", "orchard", "spore", "fungal", "spray"]):
-        gaps = [
-            "Potential precision targeting gap: Legacy agricultural solutions rely on broad broadcast chemical spraying rather than real-time edge spore detection and micro-dosing.",
-            "Potential ruggedized connectivity gap: Inability to maintain reliable low-power mesh sensor telemetry across rolling topography without expensive cellular backhaul.",
-            "Potential regulatory compliance gap: Absence of automated flight logging, weather-adjusted drift calculations, and EPA FIFRA compliance reporting for autonomous dispensing."
-        ]
-    elif any(k in idea_lower for k in ["gut", "acoustic", "phono", "bowel", "health", "microbiome", "patient", "clinical", "biomarker"]):
-        gaps = [
-            "Potential clinical accuracy gap: High false-positive rates due to ambient noise and lack of standardized acoustic impedance calibration across consumer smartphones.",
-            "Potential biomarker correlation gap: Absence of prospective randomized clinical trials correlating non-invasive acoustic transients with gold-standard metagenomic sequencing.",
-            "Potential workflow integration gap: Lack of HIPAA-compliant SMART on FHIR electronic health record integration for automated longitudinal clinician review."
-        ]
-    elif any(k in idea_lower for k in ["security", "cyber", "privacy", "fraud", "auth", "zero-trust"]):
-        gaps = [
-            "Potential zero-trust enforcement gap: Disjointed identity perimeters causing latency and coverage blindspots across heterogeneous cloud-native workloads.",
-            "Potential automated auditability gap: Prohibitive manual overhead required to aggregate continuous compliance evidence for SOC 2 Type II and ISO 27001 audits.",
-            "Potential real-time threat mitigation gap: Static rule-based alerts generating excessive noise without automated context-aware containment actions."
-        ]
-    else:
-        gaps = [
-            "Potential enterprise integration gap: Incumbent solutions operate in closed silos, lacking turn-key enterprise API integrations and zero-trust security audit trails.",
-            "Potential deterministic performance gap: Excessive reliance on manual heuristics rather than adaptive, predictive real-time optimization.",
-            "Potential commercial access gap: Prohibitive upfront enterprise licensing and inflexible multi-year contracts creating an underserved mid-market segment."
+    ):
+        return [
+            "Potential affordability gap: daily meal services "
+            "could better target budget-conscious students and "
+            "office workers with predictable low-cost plans.",
+            "Potential personalization gap: customers may value "
+            "easy WhatsApp-based customization for portion size, "
+            "dietary preferences, and next-day meal changes.",
+            "Potential local-trust gap: a hyper-local home-kitchen "
+            "model could differentiate through transparent menus, "
+            "consistent quality, and direct customer relationships.",
         ]
 
-    gaps.append(
-        "Further primary customer discovery and technical benchmarking recommended to validate potential market white-space."
-    )
-    return gaps
+    # --------------------------------------------------------
+    # Agriculture.
+    # --------------------------------------------------------
 
+    if any(
+        keyword in idea_lower
+        for keyword in [
+            "agri",
+            "farm",
+            "crop",
+            "drone",
+            "vineyard",
+            "orchard",
+            "fungal",
+            "spray",
+        ]
+    ):
+        return [
+            "Potential precision-targeting gap: existing solutions "
+            "may not fully support affordable, localized treatment "
+            "recommendations for small and medium farms.",
+            "Potential connectivity gap: rural users may need "
+            "reliable operation with limited connectivity.",
+            "Potential affordability gap: lower-cost solutions "
+            "could improve accessibility for smaller farms.",
+        ]
+
+    # --------------------------------------------------------
+    # Cybersecurity.
+    # --------------------------------------------------------
+
+    if any(
+        keyword in idea_lower
+        for keyword in [
+            "security",
+            "cyber",
+            "privacy",
+            "fraud",
+            "auth",
+            "zero-trust",
+        ]
+    ):
+        return [
+            "Potential integration gap: fragmented security tools "
+            "may create an opportunity for a simpler unified workflow.",
+            "Potential automation gap: organizations may benefit "
+            "from reducing manual compliance and monitoring work.",
+            "Potential accessibility gap: simpler security tooling "
+            "could better serve smaller organizations with limited "
+            "security teams.",
+        ]
+
+    # --------------------------------------------------------
+    # Fitness.
+    # --------------------------------------------------------
+
+    if any(
+        keyword in idea_lower
+        for keyword in [
+            "fitness",
+            "workout",
+            "exercise",
+            "gym",
+            "training",
+        ]
+    ):
+        return [
+            "Potential personalization gap: users may benefit from "
+            "more adaptive recommendations based on individual goals.",
+            "Potential affordability gap: lower-cost personalized "
+            "training could serve users who cannot afford one-to-one coaching.",
+            "Potential engagement gap: stronger progress feedback "
+            "could improve long-term adherence.",
+        ]
+
+    # --------------------------------------------------------
+    # Generic but domain-neutral fallback.
+    # --------------------------------------------------------
+
+    return [
+        "Potential affordability gap: there may be an underserved "
+        "customer segment seeking a lower-cost alternative.",
+        "Potential personalization gap: there may be an opportunity "
+        "to better adapt the solution to individual customer needs.",
+        "Potential usability gap: there may be an opportunity to "
+        "simplify the existing customer experience.",
+    ]
+
+
+# ============================================================
+# GEMINI COMPETITOR ANALYSIS
+# ============================================================
 
 async def _run_gemini_competitor_analysis(
     idea: str,
     search_results: List[Dict[str, Any]],
     api_key: str,
-    max_competitors: int = 5,
+    max_competitors: int = DEFAULT_COMPETITOR_LIMIT,
 ) -> Optional[Dict[str, Any]]:
+
     import random
 
     formatted_evidence = []
-    if search_results:
-        for idx, item in enumerate(search_results[:8], 1):
-            formatted_evidence.append({
+
+    for idx, item in enumerate(
+        search_results[:MAX_SEARCH_RESULTS_FOR_GEMINI],
+        1,
+    ):
+        formatted_evidence.append(
+            {
                 "source_id": idx,
-                "title": item.get("title", ""),
-                "url": item.get("url", ""),
-                "target_audience": item.get("target_audience", ""),
-                "snippet": item.get("content", "")[:350]
-            })
+                "title": _safe_text(
+                    item.get("title")
+                ),
+                "url": _safe_text(
+                    item.get("url")
+                ),
+                "target_audience": _safe_text(
+                    item.get("target_audience")
+                ),
+                "target_customers": _safe_text(
+                    item.get("target_customers")
+                ),
+                "snippet": _safe_text(
+                    item.get("content")
+                )[:500],
+            }
+        )
 
-    evidence_json = json.dumps(formatted_evidence, indent=2) if formatted_evidence else "No search evidence available."
+    evidence_json = (
+        json.dumps(
+            formatted_evidence,
+            indent=2,
+            ensure_ascii=False,
+        )
+        if formatted_evidence
+        else "No search evidence available."
+    )
 
-    prompt = f"""You are a Lead Competitive Intelligence Analyst and Market Benchmarking Specialist.
+    prompt = f"""
+You are a Lead Competitive Intelligence Analyst.
 
-Analyze the following startup idea and grounded web research evidence to produce a high-accuracy Competitor & Market Gap Analysis.
+Analyze the startup idea using ONLY the supplied web research evidence.
 
 STARTUP IDEA:
 "{idea}"
@@ -1736,143 +2154,351 @@ STARTUP IDEA:
 RETRIEVED WEB RESEARCH EVIDENCE:
 {evidence_json}
 
-CRITICAL RULES FOR COMPETITOR IDENTIFICATION:
-0. PRIMARY BUSINESS FUNCTION FIRST: Identify the PRIMARY business function first — what does this company actually DO and WHO does it connect or serve — before considering secondary features like payment processing, AI, subscriptions, or monetization mechanics. Do not classify based on HOW the company monetizes or WHAT TECHNOLOGY it uses — focus on WHAT PROBLEM it solves and for WHOM.
-1. ONLY identify REAL commercial companies, startups, software products, autonomous platforms, or equipment manufacturers (e.g. Vertiv, Phaidra, CoolIT Systems, Schneider Electric, Submer, Orchard Robotics).
-2. AGGRESSIVE COMPANY ENTITY CLEANING: STRICTLY FORBIDDEN: DO NOT use academic research papers, scientific articles, university publications, arXiv/MDPI titles, or market research report firms (e.g. IDTechEx, MarketsAndMarkets, Grand View Research, Mordor Intelligence, Technavio, HubSpot, Substack) as competitor names!
-3. If an evidence snippet is from an academic paper or report discussing automation, extract the real commercial company or platform benchmarked in that industry.
-4. The competitor "name" MUST be a clean, concise company/product brand name (e.g. "Vertiv", "CoolIT Systems"), NOT a long research title or article headline.
-5. PURGE GENERIC E-COMMERCE / PERSONALIZATION TEMPLATES: Generate domain-specific, actionable white-space market gaps tailored precisely to the startup idea's technical domain.
+IMPORTANT COMPETITOR RULES:
 
-INSTRUCTIONS:
-1. Identify up to {max_competitors} DIRECT COMPETITORS (real commercial companies/products offering direct solutions).
-2. Identify up to 2 INDIRECT COMPETITORS (manual workarounds, traditional methods, or adjacent legacy platforms).
-3. For each competitor, extract actual company/product name, clean domain or URL, product/service description, target customers, key features (list of strings), pricing model, strengths (list of strings), and weaknesses (list of strings).
-4. Build a competitor comparison array where each element has: competitor (clean company name), target_customers, key_features, strengths, weaknesses.
-5. Produce 3-5 sharp, highly specific market_gaps that highlight white-space opportunities uniquely addressed by this startup idea.
+1. Identify REAL commercial companies, products, services,
+   platforms, or traditional alternatives.
 
-OUTPUT FORMAT:
-Return ONLY a valid JSON object matching this exact schema:
+2. Do not use:
+   - academic papers
+   - universities
+   - research papers
+   - market research companies
+   - blog publishers
+   - news publishers
+   - generic articles
+   - comparison articles
+   - "best X" lists
+   - "top X" lists
+
+3. The competitor name must be a clean company/product name.
+
+4. Identify competitors based on the PRIMARY BUSINESS FUNCTION:
+   what problem they solve and for whom.
+
+5. Do not classify a company merely because it uses AI,
+   subscriptions, payments, or another technology.
+
+6. DIRECT competitors provide substantially similar products/services
+   solving the same core customer problem.
+
+7. INDIRECT competitors solve the same customer problem through
+   another method, traditional service, or alternative solution.
+
+8. Identify up to {max_competitors} direct competitors.
+
+9. Identify no more than 2 indirect competitors.
+
+10. Do NOT invent pricing.
+    If pricing is not available in the supplied evidence,
+    return:
+    "Not available in retrieved sources"
+
+11. Do NOT invent weaknesses.
+    If no weakness is supported by the evidence, return
+    an empty list.
+
+12. Do NOT invent target customers.
+    If the evidence does not support a specific target audience,
+    return an empty string.
+
+13. Market gaps must be phrased as POTENTIAL opportunities,
+    not guaranteed facts.
+
+14. Avoid generic white-space statements.
+    Make the gaps specific to the startup idea.
+
+OUTPUT ONLY VALID JSON.
+
+Required schema:
+
 {{
   "competitor_analysis": {{
     "direct_competitors": [
       {{
-        "name": "Clean Commercial Company Name",
+        "name": "Clean Company/Product Name",
         "url": "https://example.com",
-        "product_service": "Brief product description",
-        "target_customers": "Target audience",
-        "key_features": ["Feature 1", "Feature 2"],
-        "pricing": "Pricing detail or tier",
-        "strengths": ["Strength 1", "Strength 2"],
-        "weaknesses": ["Weakness 1", "Weakness 2"]
+        "product_service": "Brief description",
+        "target_customers": "Specific target customers",
+        "key_features": [
+          "Feature 1",
+          "Feature 2"
+        ],
+        "pricing": "Pricing detail or Not available in retrieved sources",
+        "strengths": [
+          "Evidence-supported strength"
+        ],
+        "weaknesses": [
+          "Evidence-supported weakness"
+        ]
       }}
     ],
+
     "indirect_competitors": [
       {{
-        "name": "Indirect Competitor or Traditional Method",
+        "name": "Alternative",
         "url": null,
-        "product_service": "Description of alternative approach",
-        "target_customers": "Audience",
-        "key_features": ["Feature 1"],
-        "pricing": "Pricing or cost",
-        "strengths": ["Strength 1"],
-        "weaknesses": ["Weakness 1"]
+        "product_service": "Alternative approach",
+        "target_customers": "Specific audience",
+        "key_features": [
+          "Feature"
+        ],
+        "pricing": "Pricing detail or Not available in retrieved sources",
+        "strengths": [
+          "Strength"
+        ],
+        "weaknesses": [
+          "Weakness"
+        ]
       }}
     ],
+
     "comparison": [
       {{
         "competitor": "Company Name",
+        "product_service": "Product/service",
         "target_customers": "Target audience",
-        "key_features": "Summary of key features",
-        "strengths": "Main strength",
-        "weaknesses": "Main weakness"
+        "pricing": "Pricing",
+        "key_features": "Feature summary",
+        "strengths": "Strength summary",
+        "weaknesses": "Weakness summary"
       }}
     ],
+
     "market_gaps": [
-      "Specific unfulfilled market gap 1",
-      "Specific unfulfilled market gap 2",
-      "Specific unfulfilled market gap 3"
+      "Potential market gap 1",
+      "Potential market gap 2",
+      "Potential market gap 3"
     ]
   }}
 }}
 """
 
     models = [
-        "gemini-3.6-flash",         # confirmed working, has quota
-        "gemini-3-flash-preview",   # confirmed working, has quota
-        "gemini-flash-lite-latest", # confirmed working, has quota
-        "gemini-2.5-flash",         # last resort — quota resets daily
-        # "gemini-3.1-pro-preview", # pro-tier fallback — currently at 0 quota, re-enable after reset
+        "gemini-3.6-flash",
+        "gemini-3-flash-preview",
+        "gemini-flash-lite-latest",
+        "gemini-2.5-flash",
     ]
 
     for model in models:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key.strip()}"
+
+        url = (
+            "https://generativelanguage.googleapis.com/"
+            f"v1beta/models/{model}:generateContent"
+            f"?key={api_key.strip()}"
+        )
+
         payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "text": prompt
+                        }
+                    ]
+                }
+            ],
             "generationConfig": {
                 "temperature": 0.2,
-                "responseMimeType": "application/json"
-            }
+                "responseMimeType": "application/json",
+            },
         }
+
         for attempt in range(3):
+
             try:
-                timeout_config = httpx.Timeout(30.0, connect=5.0)
-                async with httpx.AsyncClient(timeout=timeout_config) as client:
-                    resp = await client.post(url, json=payload)
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        candidates = data.get("candidates", [])
-                        if candidates:
-                            parts = candidates[0].get("content", {}).get("parts", [])
-                            if parts:
-                                raw_text = parts[0].get("text", "").strip()
-                                if raw_text.startswith("```"):
-                                    raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text, flags=re.MULTILINE)
-                                    raw_text = re.sub(r"\s*```$", "", raw_text, flags=re.MULTILINE)
-                                parsed = json.loads(raw_text.strip())
-                                if isinstance(parsed, dict):
-                                    comp_dict = parsed.get("competitor_analysis", parsed)
-                                    if "direct_competitors" in comp_dict:
-                                        # Sanitize direct competitor entities
-                                        clean_directs = []
-                                        for d in comp_dict.get("direct_competitors", []):
-                                            c_name = str(d.get("name", "")).strip()
-                                            if not any(b in c_name.lower() for b in [
-                                                "marketsandmarkets", "grand view", "idtechex",
-                                                "mordor", "technavio", "substack", "hubspot"
-                                            ]):
-                                                clean_directs.append(d)
-                                        comp_dict["direct_competitors"] = clean_directs
-                                        return {"competitor_analysis": comp_dict}
+                timeout_config = httpx.Timeout(
+                    30.0,
+                    connect=5.0,
+                )
+
+                async with httpx.AsyncClient(
+                    timeout=timeout_config
+                ) as client:
+
+                    response = await client.post(
+                        url,
+                        json=payload,
+                    )
+
+                if response.status_code == 200:
+
+                    data = response.json()
+
+                    candidates = data.get(
+                        "candidates",
+                        [],
+                    )
+
+                    if not candidates:
                         break
-                    elif resp.status_code in (400, 401, 403):
-                        logger.warning(f"Gemini API returned HTTP {resp.status_code} (Authentication/Project error). Aborting API retries.")
-                        return None
-                    elif resp.status_code in (429, 500, 502, 503, 504):
-                        delay = (0.5 * (2 ** attempt)) + random.uniform(0.1, 0.3)
-                        logger.warning(f"Gemini model {model} HTTP {resp.status_code}, retrying in {delay:.2f}s (attempt {attempt+1}/3)...")
-                        await asyncio.sleep(delay)
-                        continue
-                    elif resp.status_code == 404:
-                        logger.warning(f"Gemini model {model} returned 404, trying next model.")
+
+                    parts = (
+                        candidates[0]
+                        .get("content", {})
+                        .get("parts", [])
+                    )
+
+                    if not parts:
                         break
-                    else:
-                        logger.warning(f"Gemini model {model} returned HTTP {resp.status_code}")
+
+                    raw_text = _safe_text(
+                        parts[0].get("text")
+                    )
+
+                    if not raw_text:
                         break
-            except (httpx.ConnectError, httpx.ConnectTimeout, httpx.NetworkError) as net_err:
-                logger.warning(f"Gemini model {model} connection failed ({net_err}). Trying next model.")
-                break  # try next model in the fallback list
-            except httpx.TimeoutException as timeout_err:
-                if attempt < 2:
-                    logger.warning(f"Gemini model {model} timeout (attempt {attempt+1}/3), retrying...")
-                    await asyncio.sleep(1.0)
+
+                    # Remove accidental Markdown fences.
+                    raw_text = re.sub(
+                        r"^```(?:json)?\s*",
+                        "",
+                        raw_text,
+                        flags=re.IGNORECASE,
+                    )
+
+                    raw_text = re.sub(
+                        r"\s*```$",
+                        "",
+                        raw_text,
+                    )
+
+                    try:
+                        parsed = json.loads(
+                            raw_text.strip()
+                        )
+                    except json.JSONDecodeError as exc:
+                        logger.warning(
+                            "Gemini returned invalid JSON "
+                            "for model %s: %s",
+                            model,
+                            exc,
+                        )
+                        break
+
+                    if not isinstance(
+                        parsed,
+                        dict,
+                    ):
+                        break
+
+                    comp_dict = parsed.get(
+                        "competitor_analysis",
+                        parsed,
+                    )
+
+                    if not isinstance(
+                        comp_dict,
+                        dict,
+                    ):
+                        break
+
+                    return {
+                        "competitor_analysis": comp_dict
+                    }
+
+                elif response.status_code in (
+                    400,
+                    401,
+                    403,
+                ):
+                    logger.warning(
+                        "Gemini API returned HTTP %s. "
+                        "Aborting Gemini retries.",
+                        response.status_code,
+                    )
+                    return None
+
+                elif response.status_code in (
+                    429,
+                    500,
+                    502,
+                    503,
+                    504,
+                ):
+                    delay = (
+                        0.5 * (2 ** attempt)
+                    ) + random.uniform(
+                        0.1,
+                        0.3,
+                    )
+
+                    logger.warning(
+                        "Gemini model %s returned HTTP %s. "
+                        "Retrying in %.2fs.",
+                        model,
+                        response.status_code,
+                        delay,
+                    )
+
+                    await asyncio.sleep(
+                        delay
+                    )
+
                     continue
-                logger.warning(f"Gemini model {model} timed out after 3 attempts. Trying next model.")
-                break  # try next model
+
+                elif response.status_code == 404:
+                    logger.warning(
+                        "Gemini model %s returned 404. "
+                        "Trying next model.",
+                        model,
+                    )
+                    break
+
+                else:
+                    logger.warning(
+                        "Gemini model %s returned HTTP %s.",
+                        model,
+                        response.status_code,
+                    )
+                    break
+
+            except (
+                httpx.ConnectError,
+                httpx.ConnectTimeout,
+                httpx.NetworkError,
+            ) as exc:
+
+                logger.warning(
+                    "Gemini model %s connection failed: %s",
+                    model,
+                    exc,
+                )
+
+                break
+
+            except httpx.TimeoutException as exc:
+
+                if attempt < 2:
+                    logger.warning(
+                        "Gemini model %s timeout. "
+                        "Retrying.",
+                        model,
+                    )
+
+                    await asyncio.sleep(
+                        1.0
+                    )
+
+                    continue
+
+                logger.warning(
+                    "Gemini model %s timed out after 3 attempts.",
+                    model,
+                )
+
+                break
+
             except Exception as exc:
-                logger.warning(f"Gemini call to {model} failed: {exc}")
-                await asyncio.sleep(0.3)
-                continue
+
+                logger.warning(
+                    "Gemini call to %s failed: %s",
+                    model,
+                    exc,
+                )
+
+                break
 
     return None
 
@@ -1890,13 +2516,61 @@ async def run_competitor_analysis_agent(
     Run competitor analysis.
     """
 
-    idea = _safe_text(idea)
+    idea = _safe_text(
+        idea
+    )
 
-    valid_results = []
-    if isinstance(search_results, list):
+    # --------------------------------------------------------
+    # Clamp competitor limit.
+    # --------------------------------------------------------
+
+    try:
+        max_competitors = int(
+            max_competitors
+        )
+    except (
+        TypeError,
+        ValueError,
+    ):
+        max_competitors = DEFAULT_COMPETITOR_LIMIT
+
+    max_competitors = max(
+        1,
+        min(
+            max_competitors,
+            MAX_COMPETITOR_LIMIT,
+        ),
+    )
+
+    # --------------------------------------------------------
+    # Validate and filter search results.
+    # --------------------------------------------------------
+
+    valid_results: List[Dict[str, Any]] = []
+
+    if isinstance(
+        search_results,
+        list,
+    ):
         for item in search_results:
-            if _is_valid_search_result(item) and not _is_irrelevant_source(item):
-                valid_results.append(item)
+
+            if not _is_valid_search_result(
+                item
+            ):
+                continue
+
+            if _is_irrelevant_source(
+                item
+            ):
+                continue
+
+            valid_results.append(
+                item
+            )
+
+    # --------------------------------------------------------
+    # No evidence.
+    # --------------------------------------------------------
 
     if not valid_results:
         return {
@@ -1905,67 +2579,258 @@ async def run_competitor_analysis_agent(
                 "indirect_competitors": [],
                 "comparison": [],
                 "market_gaps": [
-                    "There is potential for further market research to identify specific competitor white-space opportunities."
+                    "Potential competitor white-space could not "
+                    "be established from the retrieved evidence. "
+                    "Further primary and web research is recommended."
                 ],
             }
         }
 
-    api_key = os.getenv("GEMINI_API_KEY")
-    if api_key and api_key.strip():
-        gemini_result = await _run_gemini_competitor_analysis(
-            idea=idea,
-            search_results=valid_results,
-            api_key=api_key.strip(),
-            max_competitors=max_competitors
-        )
-        if gemini_result:
-            comp_data = gemini_result.get("competitor_analysis", gemini_result)
-            directs = comp_data.get("direct_competitors", [])
-            
-            # Targeted per-competitor audience matching (avoid positional cross-contamination)
-            generic_audiences = {"general market", "enterprise customers", "businesses", "consumers", "target audience", "users", "customers", "all users", ""}
-            if valid_results and directs:
-                for comp in directs:
-                    curr_aud = str(comp.get("target_customers") or "").strip().lower()
-                    is_generic = (not curr_aud) or (curr_aud in generic_audiences) or ("target audience" in curr_aud)
-                    if is_generic:
-                        comp_name = str(comp.get("name") or "").strip().lower()
-                        comp_url = str(comp.get("website") or comp.get("url") or "").strip().lower()
-                        matched_aud = None
-                        for r in valid_results:
-                            r_url = str(r.get("url") or "").strip().lower()
-                            r_title = str(r.get("title") or "").strip().lower()
-                            aud = r.get("target_audience")
-                            if not aud:
-                                continue
-                            if comp_url and r_url and (comp_url in r_url or r_url in comp_url):
-                                matched_aud = aud
-                                break
-                            if comp_name and len(comp_name) > 3 and comp_name in r_title:
-                                matched_aud = aud
-                                break
-                        if matched_aud:
-                            comp["target_customers"] = matched_aud
-                        
-            gaps = comp_data.get("market_gaps", [])
-            gap_str = " ".join(gaps).lower()
-            if not any(k in gap_str for k in ["potential", "further", "validated", "no explicit"]):
-                comp_data.setdefault("market_gaps", []).append(
-                    "Further primary research recommended to validate potential white-space opportunities."
-                )
-                
-            return {
-                "competitor_analysis": {
-                    "direct_competitors": comp_data.get("direct_competitors", []),
-                    "indirect_competitors": comp_data.get("indirect_competitors", []),
-                    "comparison": comp_data.get("comparison", []),
-                    "market_gaps": comp_data.get("market_gaps", []),
-                }
-            }
+    # ========================================================
+    # GEMINI ANALYSIS
+    # ========================================================
 
-    # --------------------------------------------------------
-    # Containers
-    # --------------------------------------------------------
+    api_key = os.getenv(
+        "GEMINI_API_KEY"
+    )
+
+    if api_key and api_key.strip():
+
+        gemini_result = (
+            await _run_gemini_competitor_analysis(
+                idea=idea,
+                search_results=valid_results,
+                api_key=api_key.strip(),
+                max_competitors=max_competitors,
+            )
+        )
+
+        if gemini_result:
+
+            comp_data = gemini_result.get(
+                "competitor_analysis",
+                gemini_result,
+            )
+
+            if isinstance(
+                comp_data,
+                dict,
+            ):
+
+                # ------------------------------------------------
+                # Normalize direct competitors.
+                # ------------------------------------------------
+
+                directs = _deduplicate_competitors(
+                    comp_data.get(
+                        "direct_competitors",
+                        [],
+                    ),
+                    limit=max_competitors,
+                )
+
+                # ------------------------------------------------
+                # Normalize indirect competitors.
+                # Requirement: maximum 2.
+                # ------------------------------------------------
+
+                indirects = _deduplicate_competitors(
+                    comp_data.get(
+                        "indirect_competitors",
+                        [],
+                    ),
+                    limit=MAX_INDIRECT_COMPETITORS,
+                )
+
+                # ------------------------------------------------
+                # Improve missing generic target customers using
+                # source-specific matching.
+                # ------------------------------------------------
+
+                if valid_results and directs:
+
+                    for competitor in directs:
+
+                        current_audience = (
+                            _clean_customer_value(
+                                competitor.get(
+                                    "target_customers"
+                                )
+                            )
+                        )
+
+                        if current_audience:
+                            continue
+
+                        competitor_name = (
+                            _normalize_name(
+                                competitor.get(
+                                    "name"
+                                )
+                            )
+                        )
+
+                        competitor_url = (
+                            _normalize_url(
+                                competitor.get(
+                                    "url"
+                                )
+                            )
+                        )
+
+                        matched_audience = ""
+
+                        for result in valid_results:
+
+                            result_url = (
+                                _normalize_url(
+                                    result.get(
+                                        "url"
+                                    )
+                                )
+                            )
+
+                            result_title = (
+                                _safe_text(
+                                    result.get(
+                                        "title"
+                                    )
+                                ).lower()
+                            )
+
+                            result_audience = (
+                                _clean_customer_value(
+                                    result.get(
+                                        "target_audience"
+                                    )
+                                    or result.get(
+                                        "target_customers"
+                                    )
+                                    or result.get(
+                                        "target_customer"
+                                    )
+                                )
+                            )
+
+                            if not result_audience:
+                                continue
+
+                            # URL match.
+                            if (
+                                competitor_url
+                                and result_url
+                                and (
+                                    competitor_url
+                                    in result_url
+                                    or result_url
+                                    in competitor_url
+                                )
+                            ):
+                                matched_audience = (
+                                    result_audience
+                                )
+                                break
+
+                            # Name in title.
+                            if (
+                                competitor_name
+                                and len(competitor_name) > 3
+                                and competitor_name
+                                in result_title
+                            ):
+                                matched_audience = (
+                                    result_audience
+                                )
+                                break
+
+                        if matched_audience:
+                            competitor[
+                                "target_customers"
+                            ] = matched_audience
+
+                # ------------------------------------------------
+                # Build comparison ourselves.
+                #
+                # This guarantees that pricing and all fields
+                # are present even if Gemini forgets them.
+                # ------------------------------------------------
+
+                comparison = _build_comparison(
+                    direct_competitors=directs,
+                    indirect_competitors=indirects,
+                )
+
+                # ------------------------------------------------
+                # Clean Gemini market gaps.
+                # ------------------------------------------------
+
+                raw_gaps = comp_data.get(
+                    "market_gaps",
+                    [],
+                )
+
+                market_gaps = _clean_list(
+                    raw_gaps,
+                    limit=5,
+                )
+
+                # Ensure gaps are framed conservatively.
+                normalized_gaps: List[str] = []
+
+                for gap in market_gaps:
+
+                    lower = gap.lower()
+
+                    if (
+                        "potential" not in lower
+                        and "may " not in lower
+                        and "could " not in lower
+                        and "opportunity" not in lower
+                    ):
+                        gap = (
+                            "Potential opportunity: "
+                            + gap
+                        )
+
+                    normalized_gaps.append(
+                        gap
+                    )
+
+                if not normalized_gaps:
+
+                    normalized_gaps = (
+                        _build_market_gaps(
+                            direct_competitors=directs,
+                            indirect_competitors=indirects,
+                            idea=idea,
+                        )
+                    )
+
+                elif not any(
+                    "primary research"
+                    in gap.lower()
+                    for gap in normalized_gaps
+                ):
+
+                    normalized_gaps.append(
+                        "Further primary customer research "
+                        "and competitor benchmarking are "
+                        "recommended to validate these "
+                        "potential market gaps."
+                    )
+
+                return {
+                    "competitor_analysis": {
+                        "direct_competitors": directs,
+                        "indirect_competitors": indirects,
+                        "comparison": comparison,
+                        "market_gaps": normalized_gaps[:5],
+                    }
+                }
+
+    # ========================================================
+    # FALLBACK RULE-BASED ANALYSIS
+    # ========================================================
 
     direct_competitors: List[
         Dict[str, Any]
@@ -1975,35 +2840,14 @@ async def run_competitor_analysis_agent(
         Dict[str, Any]
     ] = []
 
-    # ========================================================
-    # PROCESS SEARCH RESULTS
-    # ========================================================
+    # --------------------------------------------------------
+    # Process search results.
+    # --------------------------------------------------------
 
-    for result in search_results:
-
-        # ----------------------------------------------------
-        # Invalid result
-        # ----------------------------------------------------
-
-        if not _is_valid_search_result(
-            result
-        ):
-            continue
-
-        # ----------------------------------------------------
-        # Irrelevant source
-        # ----------------------------------------------------
-
-        if _is_irrelevant_source(
-            result
-        ):
-            continue
+    for result in valid_results:
 
         # ----------------------------------------------------
         # DIRECT
-        #
-        # Check direct first because digital products should
-        # remain direct competitors.
         # ----------------------------------------------------
 
         if _looks_like_direct_competitor(
@@ -2048,16 +2892,20 @@ async def run_competitor_analysis_agent(
                     competitor
                 )
 
-    # ========================================================
-    # APPLY LIMIT
-    # ========================================================
+    # --------------------------------------------------------
+    # Apply limits.
+    # --------------------------------------------------------
 
     direct_competitors = (
-        direct_competitors[:max_competitors]
+        direct_competitors[
+            :max_competitors
+        ]
     )
 
     indirect_competitors = (
-        indirect_competitors[:max_competitors]
+        indirect_competitors[
+            :MAX_INDIRECT_COMPETITORS
+        ]
     )
 
     # ========================================================
@@ -2065,7 +2913,8 @@ async def run_competitor_analysis_agent(
     # ========================================================
 
     comparison = _build_comparison(
-        direct_competitors
+        direct_competitors=direct_competitors,
+        indirect_competitors=indirect_competitors,
     )
 
     # ========================================================
