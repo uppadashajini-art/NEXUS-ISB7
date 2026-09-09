@@ -1,17 +1,13 @@
 
 const API_BASE_URL = "https://nexus-server-staging.onrender.com";
 
-export async function validateIdea(idea, domain, targetCustomer) {
+export async function validateIdea(idea) {
   const response = await fetch(`${API_BASE_URL}/api/validate`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      idea,
-      domain: domain || undefined,
-      target_customer: targetCustomer || undefined,
-    }),
+    body: JSON.stringify({ idea }),
   });
 
   if (!response.ok) {
