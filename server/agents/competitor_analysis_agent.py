@@ -1,4 +1,4 @@
-﻿
+
 """
 Competitor Analysis Agent
 
@@ -31,9 +31,15 @@ Expected return format:
 
 from __future__ import annotations
 
+import asyncio
+import json
+import logging
+import os
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+import httpx
 
+logger = logging.getLogger(__name__)
 
 # ============================================================
 # CONFIGURATION
@@ -52,60 +58,13 @@ MAX_COMPETITOR_LIMIT = 5
 # product. Generic mentions such as "fitness apps" are NOT
 # included because an indirect competitor may mention apps.
 STRONG_DIGITAL_PHRASES = [
-    "is an app",
-    "is a app",
-    "is a mobile app",
-    "is a web app",
-    "is an application",
-    "is a platform",
-    "is software",
-    "is a saas",
-    "is a tool",
-
-    "mobile app",
-    "web app",
-
-    "fitness app",
-    "workout app",
-    "training app",
-
-    "fitness platform",
-    "workout platform",
-    "training platform",
-
-    "ai fitness",
-    "ai fitness app",
-    "ai fitness platform",
-    "ai fitness coach",
-
-    "ai coach",
-    "ai-powered coach",
-    "ai powered coach",
-
-    "digital platform",
-    "online platform",
-    "software platform",
-    "digital coaching",
-
-    "personalized fitness platform",
-    "personalized workout platform",
-
-    "personalized workout plans",
-    "personalized training plans",
-
-    "provides an app",
-    "provides a platform",
-    "provides software",
-
-    "offers an app",
-    "offers a platform",
-    "offers software",
-
-    "provides personalized workout plans",
-    "provides personalized training plans",
-
-    "online fitness platform",
-    "online fitness app",
+    "is an app", "is a app", "is a mobile app", "is a web app", "is an application",
+    "is a platform", "is software", "is a saas", "is a tool", "is a studio", "is an engine",
+    "mobile app", "web app", "3d studio", "webgl engine", "spatial web platform",
+    "design tool", "developer tool", "no-code platform", "zero-code studio",
+    "digital platform", "online platform", "software platform", "cloud platform",
+    "provides an app", "provides a platform", "provides software", "offers a tool",
+    "offers an app", "offers a platform", "offers software", "offers a service"
 ]
 
 
@@ -114,14 +73,8 @@ STRONG_DIGITAL_PHRASES = [
 # ============================================================
 
 DIGITAL_KEYWORDS = [
-    "app",
-    "application",
-    "platform",
-    "software",
-    "saas",
-    "digital",
-    "mobile",
-    "online",
+    "app", "application", "platform", "software", "saas", "digital", "mobile", "online",
+    "studio", "engine", "tool", "sdk", "api", "framework", "cloud", "no-code", "zero-code"
 ]
 
 
@@ -130,31 +83,10 @@ DIGITAL_KEYWORDS = [
 # ============================================================
 
 DIRECT_SERVICE_PHRASES = [
-    "personalized workout",
-    "personalized training",
-    "personalized workout plans",
-    "personalized training plans",
-
-    "workout plans",
-    "training plans",
-
-    "fitness tracking",
-    "workout tracking",
-
-    "fitness recommendations",
-    "training recommendations",
-
-    "ai recommendations",
-    "personalized recommendations",
-
-    "online fitness",
-    "digital fitness",
-    "digital training",
-
-    "fitness tracking app",
-    "workout tracking app",
-
-    "personalized fitness",
+    "3d web", "webgl", "spatial web", "motion design", "shaders", "creative studio",
+    "developer tools", "design tools", "automation platform", "ai platform",
+    "personalized platform", "analytics platform", "management software",
+    "workflow automation", "cloud service", "software solution"
 ]
 
 
@@ -163,105 +95,9 @@ DIRECT_SERVICE_PHRASES = [
 # ============================================================
 
 INDIRECT_SERVICE_PHRASES = [
-    # --------------------------------------------------------
-    # Personal trainers
-    # --------------------------------------------------------
-    "personal trainer",
-    "personal trainers",
-
-    "personal training",
-    "personal training service",
-    "personal training services",
-
-    "trainer service",
-    "trainer services",
-
-    "training service",
-    "training services",
-
-    # --------------------------------------------------------
-    # Traditional coaching
-    # --------------------------------------------------------
-    "traditional coaching",
-    "traditional coach",
-    "traditional coaches",
-
-    "traditional personal training",
-
-    "fitness coach",
-    "fitness coaches",
-
-    "fitness coaching",
-    "personal coaching",
-
-    "coaching service",
-    "coaching services",
-
-    # --------------------------------------------------------
-    # Offline / physical
-    # --------------------------------------------------------
-    "in-person coaching",
-    "in person coaching",
-
-    "in-person training",
-    "in person training",
-
-    "offline coaching",
-    "offline training",
-    "offline fitness",
-
-    "face-to-face training",
-    "face to face training",
-
-    "face-to-face coaching",
-    "face to face coaching",
-
-    # --------------------------------------------------------
-    # Gyms
-    # --------------------------------------------------------
-    "gym membership",
-    "gym memberships",
-
-    "fitness center",
-    "fitness centre",
-
-    "fitness club",
-    "fitness clubs",
-
-    "local gym",
-    "local gyms",
-
-    "gym service",
-    "gym services",
-
-    "gym",
-
-    # --------------------------------------------------------
-    # One-to-one
-    # --------------------------------------------------------
-    "one-on-one training",
-    "one on one training",
-
-    "one-on-one coaching",
-    "one on one coaching",
-
-    "one-to-one training",
-    "one to one training",
-
-    "one-to-one coaching",
-    "one to one coaching",
-
-    # --------------------------------------------------------
-    # Classes
-    # --------------------------------------------------------
-    "fitness classes",
-    "fitness class",
-
-    "group fitness",
-    "group training",
-
-    "yoga classes",
-    "workout classes",
+    "agency", "agencies", "consultancy", "consulting", "freelancer", "freelancers",
+    "manual spreadsheet", "excel template", "custom development studio",
+    "traditional service", "in-house team", "manual workflow", "paper-based process"
 ]
 
 
@@ -415,33 +251,112 @@ WEAKNESS_KEYWORDS = [
 
 
 # ============================================================
-# IRRELEVANT SOURCE SIGNALS
+# IRRELEVANT SOURCE SIGNALS & ACADEMIC BLACKLIST
 # ============================================================
+
+IRRELEVANT_SOURCE_DOMAINS = [
+    "mdpi.com",
+    "arxiv.org",
+    "biorxiv.org",
+    "medrxiv.org",
+    "sciencedirect.com",
+    "springer.com",
+    "wiley.com",
+    "frontiersin.org",
+    "nature.com",
+    "ieee.org",
+    "researchgate.net",
+    "academia.edu",
+    "ncbi.nlm.nih.gov",
+    "pubmed.ncbi.nlm.nih.gov",
+    "jstor.org",
+    "semanticscholar.org",
+    "tandfonline.com",
+    "cell.com",
+    "maximizemarketresearch.com",
+    "grandviewresearch.com",
+    "marketsandmarkets.com",
+    "verifiedmarketresearch.com",
+    "alliedmarketresearch.com",
+    "polarismarketresearch.com",
+    "fortunebusinessinsights.com",
+    "statista.com",
+    "globenewswire.com",
+    "prnewswire.com",
+    "businesswire.com",
+    "idtechex.com",
+    "mordorintelligence.com",
+    "researchandmarkets.com",
+    "technavio.com",
+    "gartner.com",
+    "forrester.com",
+    "einpresswire.com",
+    "marketwatch.com",
+    "substack.com",
+    "medium.com",
+    "hubspot.com",
+    "linkedin.com",
+    "reddit.com",
+    "quora.com",
+    "youtube.com",
+    "twitter.com",
+    "x.com",
+    "towardsdatascience.com",
+    "dev.to",
+]
 
 IRRELEVANT_SOURCE_PHRASES = [
     "market research report",
     "market research",
-
     "industry report",
     "industry research",
-
     "research report",
-
     "market analysis",
     "industry analysis",
-
     "market size",
     "market forecast",
     "market trends",
-
     "wikipedia",
     "encyclopedia",
-
+    "special issue",
+    "special issues",
+    "reprint",
+    "mdpi books",
+    "benefits of publishing",
+    "special issue editors",
+    "systematic review",
+    "meta-analysis",
+    "published in",
+    "journal of",
+    "proceedings of",
+    "arxiv",
+    "doi:",
+    "issn",
+    "pmid",
+    "editorial board",
+    "peer-reviewed",
     "gift ideas",
     "gift guide",
     "best gifts",
     "birthday gifts",
     "christmas gifts",
+    "idtechex",
+    "marketsandmarkets",
+    "grand view research",
+    "mordor intelligence",
+    "research and markets",
+    "technavio",
+    "gartner",
+    "forrester",
+    "substack",
+    "hubspot",
+    "medium.com",
+    "linkedin pulse",
+    "top 10 ",
+    "top 5 ",
+    "the future of ",
+    "comprehensive guide",
+    "ultimate guide",
 ]
 
 
@@ -758,6 +673,33 @@ def _has_strong_digital_identity(
 # SOURCE FILTERING
 # ============================================================
 
+def _is_article_title(title: str) -> bool:
+    """
+    Checks if a result title matches non-entity article patterns such as
+    pricing guides, cost breakdowns, comparisons, top N lists, or how-to guides.
+    """
+    if not title:
+        return False
+    t_clean = title.strip().lower()
+    patterns = [
+        r"\bhow\s+much\s+(?:does|is|do)\b",
+        r"\bpricing\s+guide\b",
+        r"\bcost\s+guide\b",
+        r"\bcost\s+breakdown\b",
+        r"\bcost\s+of\b",
+        r"\bvs\.?\b|\bversus\b|\bcomparison\b",
+        r"\bbest\s+[\w\s]{1,30}\s+for\b",
+        r"\btop\s+\d+\b|\bbest\s+\d+\b",
+        r"\balternatives?\b",
+        r"\bbuyer['’]?s?\s+guide\b",
+        r"\bwhat\s+is\b",
+    ]
+    for pat in patterns:
+        if re.search(pat, t_clean):
+            return True
+    return False
+
+
 def _is_irrelevant_source(
     result: Dict[str, Any],
 ) -> bool:
@@ -777,6 +719,9 @@ def _is_irrelevant_source(
         result.get("content")
     ).lower()
 
+    if _is_article_title(title):
+        return True
+
     # --------------------------------------------------------
     # Wikipedia
     # --------------------------------------------------------
@@ -785,6 +730,22 @@ def _is_irrelevant_source(
         return True
 
     if "wikipedia" in title:
+        return True
+
+    # --------------------------------------------------------
+    # Academic & Research Publishers Blacklist
+    # --------------------------------------------------------
+
+    if any(domain in url for domain in IRRELEVANT_SOURCE_DOMAINS):
+        return True
+
+    if re.search(r"\[\d{4}\.\d{4,5}\]", title):
+        return True
+
+    if re.search(r"\bdoi\b|\bmdpi\b|\barxiv\b|\bspringer\b|\bwiley\b|\bfrontiersin\b", title):
+        return True
+
+    if re.search(r"\bdoi\b|\bmdpi\b|\barxiv\b|\bspringer\b|\bwiley\b|\bfrontiersin\b", url):
         return True
 
     # --------------------------------------------------------
@@ -812,6 +773,11 @@ def _is_irrelevant_source(
         "market trends",
         "industry analysis",
         "revenue forecast",
+        "special issue",
+        "special issues",
+        "systematic review",
+        "meta-analysis",
+        "proceedings of",
     ]
 
     strong_product = _has_strong_digital_identity(
@@ -1265,11 +1231,61 @@ def _extract_weaknesses(
 # BUILD COMPETITOR
 # ============================================================
 
+def _clean_corporate_entity_name(
+    title: str,
+    url: str,
+    raw_name: Optional[str] = None
+) -> str:
+    """
+    Extracts a clean corporate/product brand name and discards blog titles,
+    news headlines, or market analyst publishers.
+    """
+    import urllib.parse
+
+    # 1. Inspect URL domain for brand name
+    if url:
+        try:
+            parsed = urllib.parse.urlparse(url)
+            netloc = parsed.netloc.lower().replace("www.", "")
+            parts = netloc.split(".")
+            if len(parts) >= 2:
+                brand = parts[0]
+                if brand not in {
+                    "medium", "substack", "hubspot", "linkedin", "github", "news",
+                    "blog", "app", "docs", "en", "article", "tech", "post", "report"
+                } and len(brand) >= 3:
+                    return brand.capitalize()
+        except Exception:
+            pass
+
+    # 2. Inspect raw_name or title
+    candidate = (raw_name or title or "").strip()
+    for sep in [" | ", " - ", " – ", " — ", " : ", " • "]:
+        if sep in candidate:
+            chunks = candidate.split(sep)
+            for c in chunks:
+                c_clean = c.strip()
+                words = c_clean.split()
+                if 1 <= len(words) <= 3 and not any(
+                    k in c_clean.lower() for k in [
+                        "how to", "best", "top 10", "review", "pricing", "guide",
+                        "overview", "report", "market", "analysis", "vs", "versus"
+                    ]
+                ):
+                    return c_clean
+
+    candidate = re.sub(r"^(top \d+|best \d+|the future of|how to|guide to)\s+", "", candidate, flags=re.IGNORECASE)
+    words = candidate.split()
+    if words:
+        return " ".join(words[:2]).title()
+    return "Enterprise Platform"
+
+
 def _build_competitor(
     result: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
-    Convert search result into competitor object.
+    Convert search result into competitor object with aggressive entity cleaning.
     """
 
     title = _safe_text(
@@ -1284,12 +1300,10 @@ def _build_competitor(
         result.get("content")
     )
 
-    name = (
-        title
-        or _safe_text(
-            result.get("name")
-        )
-        or "Unknown Competitor"
+    name = _clean_corporate_entity_name(
+        title=title,
+        url=url,
+        raw_name=result.get("name")
     )
 
     return {
@@ -1473,6 +1487,7 @@ def _build_comparison(
 def _build_market_gaps(
     direct_competitors: List[Dict[str, Any]],
     indirect_competitors: List[Dict[str, Any]],
+    idea: Optional[str] = "",
 ) -> List[str]:
     """
     Generate conservative, evidence-based market gaps.
@@ -1617,49 +1632,249 @@ def _build_market_gaps(
             )
 
     # --------------------------------------------------------
+    # --------------------------------------------------------
     # Remove duplicate gaps
     # --------------------------------------------------------
 
     unique_gaps: List[str] = []
 
     for gap in gaps:
-
         if gap not in unique_gaps:
-            unique_gaps.append(
-                gap
-            )
+            unique_gaps.append(gap)
 
     # --------------------------------------------------------
-    # Conservative fallback
+    # Domain-Aware Intelligent White-Space Synthesis
+    # (Purged generic e-commerce / personalization fallback)
     # --------------------------------------------------------
 
     if not unique_gaps:
-
-        if indirect_competitors:
-
-            unique_gaps.append(
-                "There is potential to differentiate by "
-                "combining digital personalization with "
-                "needs currently served by traditional "
-                "alternatives."
-            )
-
-        elif direct_competitors:
-
-            unique_gaps.append(
-                "Further competitor research is needed "
-                "to confirm a specific market gap."
-            )
-
-        else:
-
-            unique_gaps.append(
-                "There is potential for further market "
-                "research to identify a specific competitor "
-                "gap."
-            )
+        unique_gaps = _synthesize_domain_aware_market_gaps(
+            idea=idea if isinstance(idea, str) else "",
+            direct_competitors=direct_competitors,
+            indirect_competitors=indirect_competitors,
+        )
 
     return unique_gaps
+
+
+def _synthesize_domain_aware_market_gaps(
+    idea: str,
+    direct_competitors: List[Dict[str, Any]],
+    indirect_competitors: List[Dict[str, Any]],
+) -> List[str]:
+    """
+    Synthesizes domain-specific white-space market gaps tailored precisely
+    to the startup's operational domain, replacing generic templates.
+    """
+    idea_lower = (idea or "").lower()
+
+    if any(k in idea_lower for k in ["cool", "thermal", "datacenter", "data center", "liquid", "server", "chip", "pue", "immersion"]):
+        gaps = [
+            "Potential telemetry unification gap: Incumbent cooling systems remain bound to proprietary OEM protocols, lacking multi-vendor ingestion (Redfish API, Modbus TCP, BACnet/IP).",
+            "Potential sub-second predictive modeling gap: Reactive BMS controls fail to prevent GPU thermal throttling during sudden LLM compute burst barriers.",
+            "Potential compliance automation gap: Absence of automated real-time PUE and heat-reuse telemetry mapped directly to ASHRAE TC 9.9 and EU Energy Efficiency Directive standards."
+        ]
+    elif any(k in idea_lower for k in ["agri", "farm", "crop", "drone", "vineyard", "orchard", "spore", "fungal", "spray"]):
+        gaps = [
+            "Potential precision targeting gap: Legacy agricultural solutions rely on broad broadcast chemical spraying rather than real-time edge spore detection and micro-dosing.",
+            "Potential ruggedized connectivity gap: Inability to maintain reliable low-power mesh sensor telemetry across rolling topography without expensive cellular backhaul.",
+            "Potential regulatory compliance gap: Absence of automated flight logging, weather-adjusted drift calculations, and EPA FIFRA compliance reporting for autonomous dispensing."
+        ]
+    elif any(k in idea_lower for k in ["gut", "acoustic", "phono", "bowel", "health", "microbiome", "patient", "clinical", "biomarker"]):
+        gaps = [
+            "Potential clinical accuracy gap: High false-positive rates due to ambient noise and lack of standardized acoustic impedance calibration across consumer smartphones.",
+            "Potential biomarker correlation gap: Absence of prospective randomized clinical trials correlating non-invasive acoustic transients with gold-standard metagenomic sequencing.",
+            "Potential workflow integration gap: Lack of HIPAA-compliant SMART on FHIR electronic health record integration for automated longitudinal clinician review."
+        ]
+    elif any(k in idea_lower for k in ["security", "cyber", "privacy", "fraud", "auth", "zero-trust"]):
+        gaps = [
+            "Potential zero-trust enforcement gap: Disjointed identity perimeters causing latency and coverage blindspots across heterogeneous cloud-native workloads.",
+            "Potential automated auditability gap: Prohibitive manual overhead required to aggregate continuous compliance evidence for SOC 2 Type II and ISO 27001 audits.",
+            "Potential real-time threat mitigation gap: Static rule-based alerts generating excessive noise without automated context-aware containment actions."
+        ]
+    else:
+        gaps = [
+            "Potential enterprise integration gap: Incumbent solutions operate in closed silos, lacking turn-key enterprise API integrations and zero-trust security audit trails.",
+            "Potential deterministic performance gap: Excessive reliance on manual heuristics rather than adaptive, predictive real-time optimization.",
+            "Potential commercial access gap: Prohibitive upfront enterprise licensing and inflexible multi-year contracts creating an underserved mid-market segment."
+        ]
+
+    gaps.append(
+        "Further primary customer discovery and technical benchmarking recommended to validate potential market white-space."
+    )
+    return gaps
+
+
+async def _run_gemini_competitor_analysis(
+    idea: str,
+    search_results: List[Dict[str, Any]],
+    api_key: str,
+    max_competitors: int = 5,
+) -> Optional[Dict[str, Any]]:
+    import random
+
+    formatted_evidence = []
+    if search_results:
+        for idx, item in enumerate(search_results[:8], 1):
+            formatted_evidence.append({
+                "source_id": idx,
+                "title": item.get("title", ""),
+                "url": item.get("url", ""),
+                "target_audience": item.get("target_audience", ""),
+                "snippet": item.get("content", "")[:350]
+            })
+
+    evidence_json = json.dumps(formatted_evidence, indent=2) if formatted_evidence else "No search evidence available."
+
+    prompt = f"""You are a Lead Competitive Intelligence Analyst and Market Benchmarking Specialist.
+
+Analyze the following startup idea and grounded web research evidence to produce a high-accuracy Competitor & Market Gap Analysis.
+
+STARTUP IDEA:
+"{idea}"
+
+RETRIEVED WEB RESEARCH EVIDENCE:
+{evidence_json}
+
+CRITICAL RULES FOR COMPETITOR IDENTIFICATION:
+0. PRIMARY BUSINESS FUNCTION FIRST: Identify the PRIMARY business function first — what does this company actually DO and WHO does it connect or serve — before considering secondary features like payment processing, AI, subscriptions, or monetization mechanics. Do not classify based on HOW the company monetizes or WHAT TECHNOLOGY it uses — focus on WHAT PROBLEM it solves and for WHOM.
+1. ONLY identify REAL commercial companies, startups, software products, autonomous platforms, or equipment manufacturers (e.g. Vertiv, Phaidra, CoolIT Systems, Schneider Electric, Submer, Orchard Robotics).
+2. AGGRESSIVE COMPANY ENTITY CLEANING: STRICTLY FORBIDDEN: DO NOT use academic research papers, scientific articles, university publications, arXiv/MDPI titles, or market research report firms (e.g. IDTechEx, MarketsAndMarkets, Grand View Research, Mordor Intelligence, Technavio, HubSpot, Substack) as competitor names!
+3. If an evidence snippet is from an academic paper or report discussing automation, extract the real commercial company or platform benchmarked in that industry.
+4. The competitor "name" MUST be a clean, concise company/product brand name (e.g. "Vertiv", "CoolIT Systems"), NOT a long research title or article headline.
+5. PURGE GENERIC E-COMMERCE / PERSONALIZATION TEMPLATES: Generate domain-specific, actionable white-space market gaps tailored precisely to the startup idea's technical domain.
+
+INSTRUCTIONS:
+1. Identify up to {max_competitors} DIRECT COMPETITORS (real commercial companies/products offering direct solutions).
+2. Identify up to 2 INDIRECT COMPETITORS (manual workarounds, traditional methods, or adjacent legacy platforms).
+3. For each competitor, extract actual company/product name, clean domain or URL, product/service description, target customers, key features (list of strings), pricing model, strengths (list of strings), and weaknesses (list of strings).
+4. Build a competitor comparison array where each element has: competitor (clean company name), target_customers, key_features, strengths, weaknesses.
+5. Produce 3-5 sharp, highly specific market_gaps that highlight white-space opportunities uniquely addressed by this startup idea.
+
+OUTPUT FORMAT:
+Return ONLY a valid JSON object matching this exact schema:
+{{
+  "competitor_analysis": {{
+    "direct_competitors": [
+      {{
+        "name": "Clean Commercial Company Name",
+        "url": "https://example.com",
+        "product_service": "Brief product description",
+        "target_customers": "Target audience",
+        "key_features": ["Feature 1", "Feature 2"],
+        "pricing": "Pricing detail or tier",
+        "strengths": ["Strength 1", "Strength 2"],
+        "weaknesses": ["Weakness 1", "Weakness 2"]
+      }}
+    ],
+    "indirect_competitors": [
+      {{
+        "name": "Indirect Competitor or Traditional Method",
+        "url": null,
+        "product_service": "Description of alternative approach",
+        "target_customers": "Audience",
+        "key_features": ["Feature 1"],
+        "pricing": "Pricing or cost",
+        "strengths": ["Strength 1"],
+        "weaknesses": ["Weakness 1"]
+      }}
+    ],
+    "comparison": [
+      {{
+        "competitor": "Company Name",
+        "target_customers": "Target audience",
+        "key_features": "Summary of key features",
+        "strengths": "Main strength",
+        "weaknesses": "Main weakness"
+      }}
+    ],
+    "market_gaps": [
+      "Specific unfulfilled market gap 1",
+      "Specific unfulfilled market gap 2",
+      "Specific unfulfilled market gap 3"
+    ]
+  }}
+}}
+"""
+
+    models = [
+        "gemini-3.6-flash",         # confirmed working, has quota
+        "gemini-3-flash-preview",   # confirmed working, has quota
+        "gemini-flash-lite-latest", # confirmed working, has quota
+        "gemini-2.5-flash",         # last resort — quota resets daily
+        # "gemini-3.1-pro-preview", # pro-tier fallback — currently at 0 quota, re-enable after reset
+    ]
+
+    for model in models:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key.strip()}"
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "temperature": 0.2,
+                "responseMimeType": "application/json"
+            }
+        }
+        for attempt in range(3):
+            try:
+                timeout_config = httpx.Timeout(30.0, connect=5.0)
+                async with httpx.AsyncClient(timeout=timeout_config) as client:
+                    resp = await client.post(url, json=payload)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        candidates = data.get("candidates", [])
+                        if candidates:
+                            parts = candidates[0].get("content", {}).get("parts", [])
+                            if parts:
+                                raw_text = parts[0].get("text", "").strip()
+                                if raw_text.startswith("```"):
+                                    raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text, flags=re.MULTILINE)
+                                    raw_text = re.sub(r"\s*```$", "", raw_text, flags=re.MULTILINE)
+                                parsed = json.loads(raw_text.strip())
+                                if isinstance(parsed, dict):
+                                    comp_dict = parsed.get("competitor_analysis", parsed)
+                                    if "direct_competitors" in comp_dict:
+                                        # Sanitize direct competitor entities
+                                        clean_directs = []
+                                        for d in comp_dict.get("direct_competitors", []):
+                                            c_name = str(d.get("name", "")).strip()
+                                            if not any(b in c_name.lower() for b in [
+                                                "marketsandmarkets", "grand view", "idtechex",
+                                                "mordor", "technavio", "substack", "hubspot"
+                                            ]):
+                                                clean_directs.append(d)
+                                        comp_dict["direct_competitors"] = clean_directs
+                                        return {"competitor_analysis": comp_dict}
+                        break
+                    elif resp.status_code in (400, 401, 403):
+                        logger.warning(f"Gemini API returned HTTP {resp.status_code} (Authentication/Project error). Aborting API retries.")
+                        return None
+                    elif resp.status_code in (429, 500, 502, 503, 504):
+                        delay = (0.5 * (2 ** attempt)) + random.uniform(0.1, 0.3)
+                        logger.warning(f"Gemini model {model} HTTP {resp.status_code}, retrying in {delay:.2f}s (attempt {attempt+1}/3)...")
+                        await asyncio.sleep(delay)
+                        continue
+                    elif resp.status_code == 404:
+                        logger.warning(f"Gemini model {model} returned 404, trying next model.")
+                        break
+                    else:
+                        logger.warning(f"Gemini model {model} returned HTTP {resp.status_code}")
+                        break
+            except (httpx.ConnectError, httpx.ConnectTimeout, httpx.NetworkError) as net_err:
+                logger.warning(f"Gemini model {model} connection failed ({net_err}). Trying next model.")
+                break  # try next model in the fallback list
+            except httpx.TimeoutException as timeout_err:
+                if attempt < 2:
+                    logger.warning(f"Gemini model {model} timeout (attempt {attempt+1}/3), retrying...")
+                    await asyncio.sleep(1.0)
+                    continue
+                logger.warning(f"Gemini model {model} timed out after 3 attempts. Trying next model.")
+                break  # try next model
+            except Exception as exc:
+                logger.warning(f"Gemini call to {model} failed: {exc}")
+                await asyncio.sleep(0.3)
+                continue
+
+    return None
 
 
 # ============================================================
@@ -1673,58 +1888,80 @@ async def run_competitor_analysis_agent(
 ) -> Dict[str, Any]:
     """
     Run competitor analysis.
-
-    Expected result:
-
-    {
-        "competitor_analysis": {
-            "direct_competitors": [],
-            "indirect_competitors": [],
-            "comparison": [],
-            "market_gaps": []
-        }
-    }
     """
 
-    idea = _safe_text(
-        idea
-    )
+    idea = _safe_text(idea)
 
-    # --------------------------------------------------------
-    # Handle invalid search results
-    # --------------------------------------------------------
+    valid_results = []
+    if isinstance(search_results, list):
+        for item in search_results:
+            if _is_valid_search_result(item) and not _is_irrelevant_source(item):
+                valid_results.append(item)
 
-    if not isinstance(
-        search_results,
-        list,
-    ):
-        search_results = []
+    if not valid_results:
+        return {
+            "competitor_analysis": {
+                "direct_competitors": [],
+                "indirect_competitors": [],
+                "comparison": [],
+                "market_gaps": [
+                    "There is potential for further market research to identify specific competitor white-space opportunities."
+                ],
+            }
+        }
 
-    # --------------------------------------------------------
-    # Competitor limit
-    # --------------------------------------------------------
-
-    try:
-
-        limit = int(
-            max_competitors
+    api_key = os.getenv("GEMINI_API_KEY")
+    if api_key and api_key.strip():
+        gemini_result = await _run_gemini_competitor_analysis(
+            idea=idea,
+            search_results=valid_results,
+            api_key=api_key.strip(),
+            max_competitors=max_competitors
         )
-
-    except (
-        TypeError,
-        ValueError,
-    ):
-
-        limit = DEFAULT_COMPETITOR_LIMIT
-
-    # Never allow more than 5
-    limit = max(
-        1,
-        min(
-            limit,
-            MAX_COMPETITOR_LIMIT,
-        ),
-    )
+        if gemini_result:
+            comp_data = gemini_result.get("competitor_analysis", gemini_result)
+            directs = comp_data.get("direct_competitors", [])
+            
+            # Targeted per-competitor audience matching (avoid positional cross-contamination)
+            generic_audiences = {"general market", "enterprise customers", "businesses", "consumers", "target audience", "users", "customers", "all users", ""}
+            if valid_results and directs:
+                for comp in directs:
+                    curr_aud = str(comp.get("target_customers") or "").strip().lower()
+                    is_generic = (not curr_aud) or (curr_aud in generic_audiences) or ("target audience" in curr_aud)
+                    if is_generic:
+                        comp_name = str(comp.get("name") or "").strip().lower()
+                        comp_url = str(comp.get("website") or comp.get("url") or "").strip().lower()
+                        matched_aud = None
+                        for r in valid_results:
+                            r_url = str(r.get("url") or "").strip().lower()
+                            r_title = str(r.get("title") or "").strip().lower()
+                            aud = r.get("target_audience")
+                            if not aud:
+                                continue
+                            if comp_url and r_url and (comp_url in r_url or r_url in comp_url):
+                                matched_aud = aud
+                                break
+                            if comp_name and len(comp_name) > 3 and comp_name in r_title:
+                                matched_aud = aud
+                                break
+                        if matched_aud:
+                            comp["target_customers"] = matched_aud
+                        
+            gaps = comp_data.get("market_gaps", [])
+            gap_str = " ".join(gaps).lower()
+            if not any(k in gap_str for k in ["potential", "further", "validated", "no explicit"]):
+                comp_data.setdefault("market_gaps", []).append(
+                    "Further primary research recommended to validate potential white-space opportunities."
+                )
+                
+            return {
+                "competitor_analysis": {
+                    "direct_competitors": comp_data.get("direct_competitors", []),
+                    "indirect_competitors": comp_data.get("indirect_competitors", []),
+                    "comparison": comp_data.get("comparison", []),
+                    "market_gaps": comp_data.get("market_gaps", []),
+                }
+            }
 
     # --------------------------------------------------------
     # Containers
@@ -1816,11 +2053,11 @@ async def run_competitor_analysis_agent(
     # ========================================================
 
     direct_competitors = (
-        direct_competitors[:limit]
+        direct_competitors[:max_competitors]
     )
 
     indirect_competitors = (
-        indirect_competitors[:limit]
+        indirect_competitors[:max_competitors]
     )
 
     # ========================================================
@@ -1838,6 +2075,7 @@ async def run_competitor_analysis_agent(
     market_gaps = _build_market_gaps(
         direct_competitors=direct_competitors,
         indirect_competitors=indirect_competitors,
+        idea=idea,
     )
 
     # ========================================================

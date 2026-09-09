@@ -1,10 +1,10 @@
 import { useState } from "react";
 import SearchResultCard from "../components/SearchResultCard";
-import { searchStartupIdea } from "../services/api";
 import MarketAnalysis from "../components/MarketAnalysis";
 import CustomerSegments from "../components/CustomerSegments";
 import CompetitorAnalysis from "../components/CompetitorAnalysis";
 import MarketGaps from "../components/MarketGaps";
+import DeepValidationCard from "../components/DeepValidationCard";
 import { validateIdea } from "../services/validationService";
 
 function StartupValidator() {
@@ -164,63 +164,50 @@ function StartupValidator() {
 
     try {
       // =========================================
-      // WEB SEARCH
-      // =========================================
-      const data = await searchStartupIdea(
-        trimmedIdea,
-        trimmedDomain,
-        trimmedCustomers,
-        selectedOption
-      );
-
-      console.log("Backend response:", data);
-
-      const searchResults = Array.isArray(
-        data?.results
-      )
-        ? data.results
-        : [];
-
-      setResults(searchResults);
-      setSearchCompleted(true);
-
-      // =========================================
-      // AI VALIDATION / MILESTONE 2
+      // SINGLE CALL: /api/validate
+      // Returns market_analysis, competitor_analysis,
+      // AND search_results (the exact results the agents used).
       // =========================================
       setValidationLoading(true);
       setValidationError("");
 
-      try {
-        const analysisData =
-          await validateIdea(trimmedIdea);
-
-        setValidationResult(analysisData);
-      } catch (analysisErr) {
-        console.error(
-          "Validation analysis error:",
-          analysisErr
-        );
-
-        setValidationError(
-          analysisErr?.message ||
-            "Unable to complete market and competitor analysis."
-        );
-
-        setValidationResult(null);
-      } finally {
-        setValidationLoading(false);
-      }
-    } catch (err) {
-      console.error("Search error:", err);
-
-      setError(
-        err?.message ||
-          "Unable to validate the startup idea. Please try again."
+      const analysisData = await validateIdea(
+        trimmedIdea,
+        trimmedDomain,
+        trimmedCustomers
       );
 
-      setSearchCompleted(false);
+      console.log("Validation response:", analysisData);
+
+      // Research Sources — from the same payload the agents used
+      const searchResults = Array.isArray(analysisData?.search_results)
+        ? analysisData.search_results
+        : [];
+
+      setResults(searchResults);
+      setSearchCompleted(true);
+      setValidationResult(analysisData);
+
+    } catch (err) {
+      console.error("Validation error:", err);
+
+      const isAnalysisError = err?.message?.includes("analysis");
+      if (isAnalysisError) {
+        setValidationError(
+          err?.message ||
+            "Unable to complete market and competitor analysis."
+        );
+        setValidationResult(null);
+      } else {
+        setError(
+          err?.message ||
+            "Unable to validate the startup idea. Please try again."
+        );
+        setSearchCompleted(false);
+      }
     } finally {
       setLoading(false);
+      setValidationLoading(false);
     }
   };
 
@@ -1116,6 +1103,11 @@ function StartupValidator() {
             ========================================= */}
             {validationResult && (
               <>
+                <DeepValidationCard
+                  technical={validationResult.technical_feasibility}
+                  scientific={validationResult.scientific_validation}
+                  regulatory={validationResult.regulatory_risk}
+                />
 
                 <MarketAnalysis
                   data={

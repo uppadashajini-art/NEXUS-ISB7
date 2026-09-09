@@ -45,7 +45,11 @@ async def validate_idea(request: ValidationRequest):
         )
 
     try:
-        result = await run_orchestrator(request.idea)
+        result = await run_orchestrator(
+            idea=request.idea,
+            domain=request.domain,
+            audience=request.target_customer,
+        )
     except ValueError as e:
         # Raised for bad/invalid input that got past initial validation
         raise HTTPException(status_code=400, detail=str(e))

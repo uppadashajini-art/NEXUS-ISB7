@@ -3,7 +3,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -32,6 +32,12 @@ SEARCH_RESULTS_PER_QUERY = 5
 SEARCH_TIMEOUT_SECONDS = 30
 
 DOMAIN_KEYWORD_TAXONOMY = [
+    ("construction contractor labor marketplace", ["construction", "contractor", "contractors", "subcontractor", "subcontractors", "builder", "builders", "tradesperson", "electrician", "plumber", "jobsite", "field work"]),
+    ("pet care services marketplace", ["pet", "pets", "dog", "cat", "sitter", "sitters", "walker", "walkers", "groomer", "groomers", "veterinary", "animal", "canine", "feline"]),
+    ("3d graphics spatial web studio", ["3d", "webgl", "three.js", "threejs", "spatial", "motion design", "shaders", "portfolio", "creative dev", "canvas", "rendering", "3d web"]),
+    ("devtools developer experience", ["devtools", "developer", "api", "sdk", "code", "ide", "cli", "github", "framework", "open-source"]),
+    ("design tools creative tech", ["design", "figma", "motion", "animation", "ui/ux", "creative", "studio", "prototype", "asset"]),
+    ("creator economy content tech", ["creator", "content", "media", "influencer", "streamer", "video", "monetization"]),
     ("last-mile logistics micro-fulfillment", ["last-mile", "supply chain", "fulfillment", "delivery", "warehouse", "logistics", "courier", "freight", "transit"]),
     ("cleantech carbon sustainability", ["sustainability", "carbon", "emissions", "cleantech", "renewable", "solar", "esg", "recycle"]),
     ("fintech banking payments", ["fintech", "banking", "payment", "payments", "lending", "credit", "wealth", "invest"]),
@@ -43,13 +49,25 @@ DOMAIN_KEYWORD_TAXONOMY = [
     ("ai automation robotics", ["ai", "automation", "robotics", "drones", "ground bots", "autonomous", "machine learning"])
 ]
 
+GENERIC_BUSINESS_MODEL_TERMS = {
+    "subscription", "subscriptions", "payment", "payments", "billing",
+    "monetization", "fintech", "saas", "platform", "platforms", "ai",
+    "automation", "b2b", "b2c", "app", "application", "service", "tool",
+    "marketplace", "software"
+}
+
 
 def _detect_domain_from_keywords(text: str) -> str:
     text_lower = text.lower()
     best_domain = ""
     best_matches = 0
     for domain_name, keywords in DOMAIN_KEYWORD_TAXONOMY:
-        matches = sum(1 for kw in keywords if kw in text_lower)
+        matches = 0
+        for kw in keywords:
+            if kw.lower() in GENERIC_BUSINESS_MODEL_TERMS:
+                continue
+            count = len(re.findall(rf"\b{re.escape(kw)}\b", text_lower))
+            matches += count * 10
         if matches > best_matches:
             best_matches = matches
             best_domain = domain_name
@@ -210,34 +228,35 @@ def decompose_startup_idea(
         if detected:
             domain_vec = detected
         else:
-            first_removed = " ".join(words[1:]) if len(words) > 1 else cleaned_idea
-            domain_vec = extract_key_phrases(first_removed[:120], max_terms=3)
+            domain_vec = extract_key_phrases(cleaned_idea, max_terms=4)
     
     # 2. Audience Vector
     audience_vec = extract_key_phrases(audience, max_terms=3) if audience else ""
     if not audience_vec:
-        aud_match = re.search(r"(?:for|designed for|targeting|aimed at|sold to|enabling)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE)
+        aud_match = re.search(r"(?:for|designed for|targeting|aimed at|sold to|enabling|empowers?|built for|helps?|allows?)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE)
         if aud_match:
             audience_vec = extract_key_phrases(aud_match.group(1), max_terms=3)
             
-    # 3. Problem & Value Vector (look for eliminate, reduce, cost, friction, problem, loss)
+    # 3. Problem & Value Vector
     problem_words = []
-    for m in re.finditer(r"(?:eliminat\w*|reduc\w*|cost\w*|expens\w*|problem\w*|friction|wast\w*|loss\w*|challeng\w*|bottleneck\w*)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE):
+    for m in re.finditer(r"(?:eliminat\w*|reduc\w*|cost\w*|expens\w*|problem\w*|friction|wast\w*|loss\w*|challeng\w*|bottleneck\w*|overcoming?)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE):
         problem_words.extend(extract_key_phrases(m.group(1), max_terms=3).split())
     problem_vec = " ".join(list(dict.fromkeys([w for w in problem_words if w.lower() != first_word]))[:4])
     if not problem_vec:
-        problem_vec = "cost margin loss friction"
+        problem_vec = extract_key_phrases(cleaned_idea, max_terms=3)
         
-    # 4. Mechanism / Innovation Vector (look for algorithms, hubs, micro, auctions, automated)
+    # 4. Mechanism / Innovation Vector
     solution_words = []
-    for m in re.finditer(r"(?:combining|utilizing|using|with|via|through|platform|network|deploying|repurposing)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE):
+    for m in re.finditer(r"(?:combining|utilizing|using|with|via|through|platform|network|deploying|repurposing|studio|engine|tool)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE):
         solution_words.extend(extract_key_phrases(m.group(1), max_terms=3).split())
     solution_vec = " ".join(list(dict.fromkeys([w for w in solution_words if w.lower() != first_word]))[:4])
     if not solution_vec:
         solution_vec = extract_key_phrases(" ".join(words[1:]) if len(words) > 1 else cleaned_idea, max_terms=4)
         
+    fallback_domain = extract_key_phrases(cleaned_idea, max_terms=4) or "software platform service"
+
     return {
-        "domain": domain_vec if domain_vec else "last-mile logistics micro-fulfillment",
+        "domain": domain_vec if domain_vec else fallback_domain,
         "audience": audience_vec,
         "problem": problem_vec,
         "solution": solution_vec,
@@ -390,6 +409,35 @@ def generate_search_queries(
         queries.append(
             f"{core} {problem} "
             f"customer research"
+        )
+
+    # Scientific Validation
+    if validation_type in (
+        "all",
+        "scientific",
+        "risks",
+    ):
+        queries.append(
+            f"{core} scientific validation peer reviewed clinical literature biomarker studies pubmed research"
+        )
+
+    # Technical Feasibility
+    if validation_type in (
+        "all",
+        "technical",
+    ):
+        queries.append(
+            f"{core} technical feasibility acoustic signal processing algorithms sensor constraints audio frequency limits"
+        )
+
+    # Regulatory Risk & Compliance
+    if validation_type in (
+        "all",
+        "regulatory",
+        "risks",
+    ):
+        queries.append(
+            f"{core} FDA SaMD software as a medical device classification clinical trial requirements wellness disclaimer"
         )
 
     # --------------------------------------------------------
@@ -1362,83 +1410,133 @@ async def _rerank_with_gemini(
 # Audience Inference
 # ============================================================
 
+async def _decompose_with_gemini_async(idea: str) -> Optional[Dict[str, str]]:
+    """
+    Decompose startup idea using Gemini with explicit primary business function instructions.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key or not api_key.strip():
+        return None
+
+    import httpx, json
+    prompt = f"""Identify the PRIMARY business function first — what does this company actually DO and WHO does it connect or serve — before considering secondary features like payment processing, AI, subscriptions, or monetization mechanics. A company that connects contractors with subcontractors is a CONSTRUCTION/LABOR MARKETPLACE, even if it charges via subscriptions or processes payments. A company that matches pet owners with sitters is a PET SERVICES MARKETPLACE, even if it uses AI matching. Do not classify based on HOW the company monetizes or WHAT TECHNOLOGY it uses — classify based on WHAT PROBLEM it solves and for WHOM. List the 2-3 core nouns describing what is being connected/served (e.g. 'contractors', 'subcontractors', 'construction projects') and derive industry from those, not from adjacent business-model language.
+
+Analyze this startup idea:
+"{idea}"
+
+Return ONLY a valid JSON object with these exact keys:
+{{
+  "domain": "2-4 core nouns describing the primary business domain (e.g. 'construction contractor labor marketplace', 'pet care services marketplace')",
+  "audience": "Target audience (e.g. 'General Contractors & Subcontractors', 'Pet Owners & Sitters')",
+  "problem": "Core problem solved (e.g. 'managing bidding worker scheduling labor shortages')",
+  "solution": "Core mechanism or solution (e.g. 'bidding and scheduling platform')"
+}}
+"""
+    models = ["gemini-3.6-flash", "gemini-3-flash-preview", "gemini-flash-lite-latest", "gemini-2.5-flash"]
+    for model in models:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key.strip()}"
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"}
+        }
+        try:
+            timeout_config = httpx.Timeout(15.0, connect=3.0)
+            async with httpx.AsyncClient(timeout=timeout_config) as client:
+                resp = await client.post(url, json=payload)
+                if resp.status_code == 200:
+                    cand = resp.json().get("candidates", [])
+                    if cand:
+                        parts = cand[0].get("content", {}).get("parts", [])
+                        if parts:
+                            raw_text = parts[0].get("text", "").strip()
+                            if raw_text.startswith("```"):
+                                raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text, flags=re.MULTILINE)
+                                raw_text = re.sub(r"\s*```$", "", raw_text, flags=re.MULTILINE)
+                            res = json.loads(raw_text.strip())
+                            if isinstance(res, dict) and res.get("domain"):
+                                return {
+                                    "domain": str(res.get("domain", "")).strip(),
+                                    "audience": str(res.get("audience", "")).strip(),
+                                    "problem": str(res.get("problem", "")).strip(),
+                                    "solution": str(res.get("solution", "")).strip(),
+                                }
+        except Exception as exc:
+            logger.warning(f"Gemini decomposition call to {model} failed: {exc}")
+            continue
+    return None
+
+
+# ============================================================
+# Audience Inference
+# ============================================================
+
 def _infer_fallback_audience(
     result: Dict[str, Any],
     domain: str,
+    idea: str = "",
+    decomposed: Optional[Dict[str, str]] = None,
 ) -> str:
     """
-    Infer a generic audience only when an explicit audience
-    was not provided.
+    Infer specific, idea-relevant target audience for search results.
+    Reuses seed audience extraction from idea + snippet matching to prevent 'General Users'.
     """
+    title = str(result.get("title", "")).strip()
+    content = str(result.get("content", "")).strip()
+    full_text = f"{title} {content}".lower()
 
-    text = (
-        f"{result.get('title', '')} "
-        f"{result.get('content', '')}"
-    ).lower()
+    # 1. Extract seed audiences from idea
+    seed_audiences = []
+    if idea:
+        persona_patterns = [
+            r"(?:for|enabling|helping|targeting|sold to|connecting|matches?)\s+([A-Za-z0-9\s-]+?)(?:,|\.|\band\b|through|with|by|$)",
+            r"\b(general contractors|subcontractors|contractors|builders|pet owners|pet sitters|dog walkers|mobile groomers|fleet managers|plant operators|facility managers|homeowners|small businesses|merchants|retailers|students|teachers|patients|doctors|clinics)\b"
+        ]
+        action_verbs = {"leaving", "boarding", "overpaying", "finding", "searching", "buying", "using", "paying", "managing"}
+        for pat in persona_patterns:
+            for m in re.finditer(pat, idea, re.IGNORECASE):
+                val = m.group(0 if m.lastindex is None else 1).strip()
+                clean_val = re.sub(r"^(?:for|enabling|helping|targeting|sold to|connecting|matches?)\s+", "", val, flags=re.IGNORECASE).strip()
+                first_word = clean_val.split()[0].lower() if clean_val.split() else ""
+                if first_word in action_verbs:
+                    continue
+                if len(clean_val) > 3 and len(clean_val.split()) <= 5 and clean_val.lower() not in [s.lower() for s in seed_audiences]:
+                    seed_audiences.append(clean_val.title())
 
-    audience_map = {
+    if decomposed and decomposed.get("audience"):
+        aud_dec = decomposed.get("audience").title()
+        if aud_dec and aud_dec.lower() not in [s.lower() for s in seed_audiences]:
+            seed_audiences.append(aud_dec)
 
-        "fitness": [
-            "fitness enthusiasts",
-            "gym users",
-            "people seeking personalized workouts",
-        ],
+    # 2. Match seed audience terms against snippet
+    for seed in seed_audiences:
+        seed_words = [w for w in seed.lower().split() if len(w) > 3 and w not in STOP_WORDS and w not in GENERIC_BUSINESS_MODEL_TERMS]
+        if any(w in full_text for w in seed_words):
+            return seed
 
-        "health": [
-            "healthcare consumers",
-            "patients",
-            "health-conscious consumers",
-        ],
+    # 3. Industry-specific domain mappings
+    domain_audience_rules = [
+        (["contractor", "subcontractor", "construction", "builder", "jobsite"], "General Contractors & Subcontractors"),
+        (["pet", "dog", "cat", "sitter", "walker", "groomer"], "Pet Owners & Pet Care Providers"),
+        (["fleet", "driver", "courier", "logistics", "freight"], "Logistics Operators & Fleet Managers"),
+        (["patient", "doctor", "clinic", "hospital", "health"], "Healthcare Consumers & Medical Providers"),
+        (["student", "teacher", "school", "course", "tutor"], "Students & Educational Professionals"),
+        (["farmer", "crop", "agri", "vineyard"], "Agricultural Producers & Farm Managers"),
+        (["data center", "cooling", "server", "thermal"], "Data Center Operations & Infrastructure Managers"),
+    ]
 
-        "education": [
-            "students",
-            "teachers",
-            "educators",
-        ],
+    for keywords, target in domain_audience_rules:
+        if any(kw in full_text for kw in keywords):
+            return target
 
-        "finance": [
-            "investors",
-            "businesses",
-            "financial consumers",
-        ],
-
-        "ecommerce": [
-            "online shoppers",
-            "consumers",
-        ],
-
-        "retail": [
-            "consumers",
-            "retail shoppers",
-        ],
-
-        "travel": [
-            "travelers",
-            "tourists",
-        ],
-
-        "agriculture": [
-            "farmers",
-            "agricultural businesses",
-        ],
-
-        "software": [
-            "software users",
-            "businesses",
-        ],
-    }
-
-    for key, audiences in audience_map.items():
-
-        if key in text:
-
-            return audiences[0]
+    if seed_audiences:
+        return seed_audiences[0]
 
     if domain:
+        clean_dom = domain.replace("marketplace", "").replace("services", "").replace("platform", "").strip().title()
+        if clean_dom:
+            return f"{clean_dom} Professionals & Users"
 
-        return f"{domain.title()} Buyers"
-
-    return "Potential Customers"
+    return "Target Industry Buyers & Service Providers"
 
 
 # ============================================================
@@ -1616,6 +1714,9 @@ async def run_web_search_agent(
             "customers",
             "business",
             "risks",
+            "scientific",
+            "technical",
+            "regulatory",
         }
 
         validation_type = (
@@ -1630,16 +1731,17 @@ async def run_web_search_agent(
         # Decompose idea
         # ----------------------------------------------------
 
-        decomposed = decompose_startup_idea(
-            cleaned_idea,
-            domain=domain,
-            audience=audience,
-        )
-
-        logger.info(
-            "Startup idea decomposition: %s",
-            decomposed,
-        )
+        gemini_dec = await _decompose_with_gemini_async(cleaned_idea)
+        if gemini_dec:
+            decomposed = gemini_dec
+            logger.info("Startup idea decomposition via Gemini: %s", decomposed)
+        else:
+            decomposed = decompose_startup_idea(
+                cleaned_idea,
+                domain=domain,
+                audience=audience,
+            )
+            logger.info("Startup idea decomposition via Heuristic: %s", decomposed)
 
         # ----------------------------------------------------
         # Generate queries
@@ -1866,18 +1968,15 @@ async def run_web_search_agent(
                     )
                 )
 
-                result_copy[
-                    "target_audience"
-                ] = (
-                    existing_audience
-                    or _infer_fallback_audience(
+                if existing_audience and existing_audience not in ("General Users", "Potential Customers"):
+                    result_copy["target_audience"] = existing_audience
+                else:
+                    result_copy["target_audience"] = _infer_fallback_audience(
                         result_copy,
-                        decomposed.get(
-                            "domain",
-                            "",
-                        ),
+                        domain=decomposed.get("domain", ""),
+                        idea=cleaned_idea,
+                        decomposed=decomposed,
                     )
-                )
 
             final_results.append(
                 result_copy
