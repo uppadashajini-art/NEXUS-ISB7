@@ -1,98 +1,122 @@
 import { useState } from "react";
 import SearchResultCard from "../components/SearchResultCard";
-import { searchStartupIdea } from "../services/api";
 import MarketAnalysis from "../components/MarketAnalysis";
 import CustomerSegments from "../components/CustomerSegments";
 import CompetitorAnalysis from "../components/CompetitorAnalysis";
 import MarketGaps from "../components/MarketGaps";
+import DeepValidationCard from "../components/DeepValidationCard";
 import { validateIdea } from "../services/validationService";
 
-
 function StartupValidator() {
+  // =========================================
+  // FORM STATE
+  // =========================================
   const [idea, setIdea] = useState("");
   const [domain, setDomain] = useState("");
   const [targetCustomers, setTargetCustomers] = useState("");
 
+  // =========================================
+  // SEARCH STATE
+  // =========================================
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // =========================================
+  // SUBMITTED VALUES
+  // Keep these separate so result cards
+  // always use the values submitted by user
+  // =========================================
   const [submittedIdea, setSubmittedIdea] = useState("");
   const [submittedDomain, setSubmittedDomain] = useState("");
   const [submittedCustomers, setSubmittedCustomers] = useState("");
-  const [submittedValidation, setSubmittedValidation] = useState("all");
+  const [submittedValidation, setSubmittedValidation] =
+    useState("all");
 
+  // =========================================
+  // VALIDATION STATE
+  // =========================================
   const [searchCompleted, setSearchCompleted] = useState(false);
   const [selectedOption, setSelectedOption] = useState("all");
 
-  const [validationResult, setValidationResult] = useState(null);
-  const [validationLoading, setValidationLoading] = useState(false);
-  const [validationError, setValidationError] = useState("");
+  const [validationResult, setValidationResult] =
+    useState(null);
 
-  // =========================================================
+  const [validationLoading, setValidationLoading] =
+    useState(false);
+
+  const [validationError, setValidationError] =
+    useState("");
+
+  // =========================================
   // VALIDATION OPTIONS
-  // =========================================================
-
+  // =========================================
   const validationOptions = [
     {
       id: "all",
       icon: "✦",
       title: "All",
-      description: "Complete validation across all areas",
+      description:
+        "Complete validation across all areas",
     },
     {
       id: "market",
       icon: "📈",
       title: "Market Demand",
-      description: "Analyze market size, demand and trends",
+      description:
+        "Analyze market size, demand and trends",
     },
     {
       id: "competition",
       icon: "🏢",
       title: "Competition",
-      description: "Find competitors and alternative solutions",
+      description:
+        "Find competitors and alternative solutions",
     },
     {
       id: "customers",
       icon: "👥",
       title: "Target Customers",
-      description: "Identify users, needs and pain points",
+      description:
+        "Identify users, needs and pain points",
     },
     {
       id: "business",
       icon: "💰",
       title: "Business Potential",
-      description: "Explore monetization and opportunities",
+      description:
+        "Explore monetization and opportunities",
     },
     {
       id: "risks",
       icon: "⚠️",
       title: "Risks",
-      description: "Identify challenges and potential risks",
+      description:
+        "Identify challenges and potential risks",
     },
   ];
 
+  // =========================================
+  // SELECTED VALIDATION
+  // =========================================
   const selectedValidation =
     validationOptions.find(
       (option) => option.id === selectedOption
     ) || validationOptions[0];
 
-  // =========================================================
-  // SUBMIT
-  // =========================================================
-
+  // =========================================
+  // FORM SUBMIT
+  // =========================================
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     const trimmedIdea = idea.trim();
     const trimmedDomain = domain.trim();
-    // Target customers pops up and is captured for "risks" and "customers" validations
-    const trimmedCustomers =
-      (selectedOption === "risks" || selectedOption === "customers")
-        ? targetCustomers.trim()
-        : "";
+    const trimmedCustomers = targetCustomers.trim();
 
-    // Validate idea
+    // -----------------------------------------
+    // IDEA VALIDATION
+    // -----------------------------------------
     if (!trimmedIdea) {
       setError("Please enter your startup idea.");
       return;
@@ -105,11 +129,20 @@ function StartupValidator() {
       return;
     }
 
+    // -----------------------------------------
+    // START LOADING
+    // -----------------------------------------
     setLoading(true);
     setError("");
     setResults([]);
     setSearchCompleted(false);
 
+    setValidationResult(null);
+    setValidationError("");
+
+    // -----------------------------------------
+    // SAVE SUBMITTED VALUES
+    // -----------------------------------------
     setSubmittedIdea(trimmedIdea);
     setSubmittedDomain(trimmedDomain);
     setSubmittedCustomers(trimmedCustomers);
@@ -120,68 +153,78 @@ function StartupValidator() {
     console.log("=================================");
     console.log("Startup Idea:", trimmedIdea);
     console.log("Domain / Industry:", trimmedDomain);
-    console.log("Target Customers:", trimmedCustomers);
-    console.log("Validation Type:", selectedOption);
+    console.log(
+      "Target Customers:",
+      trimmedCustomers
+    );
+    console.log(
+      "Validation Type:",
+      selectedOption
+    );
 
     try {
-      const data = await searchStartupIdea(
-        trimmedIdea,
-        trimmedDomain,
-        trimmedCustomers,
-        selectedOption
-      );
-
-      console.log("Backend response:", data);
-
-      setResults(
-        Array.isArray(data?.results)
-          ? data.results
-          : []
-      );
-
-      setSearchCompleted(true);
-
-      // NEW: fetch Milestone 2 market + competitor analysis
+      // =========================================
+      // SINGLE CALL: /api/validate
+      // Returns market_analysis, competitor_analysis,
+      // AND search_results (the exact results the agents used).
+      // =========================================
       setValidationLoading(true);
       setValidationError("");
-      try {
-        const analysisData = await validateIdea(trimmedIdea);
-        setValidationResult(analysisData);
-      } catch (analysisErr) {
-        setValidationError(analysisErr.message);
-        setValidationResult(null);
-      } finally {
-        setValidationLoading(false);
-      }
-    } catch (err) {
-      console.error("Search error:", err);
 
-      setError(
-        err?.message ||
-          "Unable to validate the startup idea. Please try again."
+      const analysisData = await validateIdea(
+        trimmedIdea,
+        trimmedDomain,
+        trimmedCustomers
       );
 
-      setSearchCompleted(false);
+      console.log("Validation response:", analysisData);
+
+      // Research Sources — from the same payload the agents used
+      const searchResults = Array.isArray(analysisData?.search_results)
+        ? analysisData.search_results
+        : [];
+
+      setResults(searchResults);
+      setSearchCompleted(true);
+      setValidationResult(analysisData);
+
+    } catch (err) {
+      console.error("Validation error:", err);
+
+      const isAnalysisError = err?.message?.includes("analysis");
+      if (isAnalysisError) {
+        setValidationError(
+          err?.message ||
+            "Unable to complete market and competitor analysis."
+        );
+        setValidationResult(null);
+      } else {
+        setError(
+          err?.message ||
+            "Unable to validate the startup idea. Please try again."
+        );
+        setSearchCompleted(false);
+      }
     } finally {
       setLoading(false);
+      setValidationLoading(false);
     }
   };
 
-  // =========================================================
+  // =========================================
   // RETRY
-  // =========================================================
-
+  // =========================================
   const handleRetry = () => {
-    if (!submittedIdea) return;
+    if (!submittedIdea) {
+      return;
+    }
 
     setIdea(submittedIdea);
     setDomain(submittedDomain);
-    if (submittedValidation === "risks" || submittedValidation === "customers") {
-      setTargetCustomers(submittedCustomers);
-    } else {
-      setTargetCustomers("");
-    }
-    setSelectedOption(submittedValidation || "all");
+    setTargetCustomers(submittedCustomers);
+    setSelectedOption(
+      submittedValidation || "all"
+    );
 
     setTimeout(() => {
       document
@@ -190,21 +233,27 @@ function StartupValidator() {
     }, 0);
   };
 
-  // =========================================================
+  // =========================================
   // CLEAR
-  // =========================================================
-
+  // =========================================
   const handleClear = () => {
     setIdea("");
     setDomain("");
     setTargetCustomers("");
+
     setResults([]);
+
     setValidationResult(null);
+    setValidationLoading(false);
+    setValidationError("");
+
     setError("");
+
     setSubmittedIdea("");
     setSubmittedDomain("");
     setSubmittedCustomers("");
     setSubmittedValidation("all");
+
     setSearchCompleted(false);
     setSelectedOption("all");
 
@@ -214,10 +263,9 @@ function StartupValidator() {
     });
   };
 
-  // =========================================================
-  // INPUT HANDLERS
-  // =========================================================
-
+  // =========================================
+  // IDEA CHANGE
+  // =========================================
   const handleIdeaChange = (e) => {
     setIdea(e.target.value);
 
@@ -226,6 +274,9 @@ function StartupValidator() {
     }
   };
 
+  // =========================================
+  // TARGET CUSTOMER CHANGE
+  // =========================================
   const handleCustomerChange = (e) => {
     setTargetCustomers(e.target.value);
 
@@ -234,19 +285,13 @@ function StartupValidator() {
     }
   };
 
-  // =========================================================
-  // RETURN
-  // =========================================================
-
   return (
     <main className="startup-validator">
 
-      {/* =====================================================
+      {/* =========================================
           HERO
-      ===================================================== */}
-
+      ========================================= */}
       <section className="hero">
-
         <div className="hero-badge">
           <span className="status-dot"></span>
           NEXUS AI • STARTUP INTELLIGENCE
@@ -263,7 +308,6 @@ function StartupValidator() {
         </p>
 
         <div className="hero-features">
-
           <div className="hero-feature">
             <span>✦</span>
             Market Research
@@ -278,20 +322,15 @@ function StartupValidator() {
             <span>⌁</span>
             AI Insights
           </div>
-
         </div>
-
       </section>
 
-
-      {/* =====================================================
+      {/* =========================================
           INPUT SECTION
-      ===================================================== */}
-
+      ========================================= */}
       <section className="input-section">
 
         <div className="section-header">
-
           <div className="section-number">
             01
           </div>
@@ -306,13 +345,7 @@ function StartupValidator() {
               customer details for better validation.
             </p>
           </div>
-
         </div>
-
-
-        {/* =================================================
-            FORM
-        ================================================= */}
 
         <form
           id="validator-form"
@@ -320,14 +353,12 @@ function StartupValidator() {
           onSubmit={handleSubmit}
         >
 
-          {/* =================================================
+          {/* =========================================
               STARTUP IDEA
-          ================================================= */}
-
+          ========================================= */}
           <div className="idea-input-wrapper">
 
             <div className="field-heading">
-
               <label htmlFor="startup-idea">
                 Enter your startup idea
               </label>
@@ -335,7 +366,6 @@ function StartupValidator() {
               <span className="required-label">
                 Required
               </span>
-
             </div>
 
             <textarea
@@ -349,7 +379,6 @@ function StartupValidator() {
             />
 
             <div className="textarea-footer">
-
               <span>
                 {idea.length} characters
               </span>
@@ -357,22 +386,59 @@ function StartupValidator() {
               <span>
                 Be specific for better results
               </span>
-
             </div>
-
           </div>
 
-
-          {/* =================================================
+          {/* =========================================
               DOMAIN / INDUSTRY
-          ================================================= */}
-
+          ========================================= */}
           <div className="domain-input-wrapper">
 
             <div className="field-heading">
-
               <label htmlFor="startup-domain">
                 Domain / Industry
+              </label>
+
+              <span className="optional-label">
+                Optional
+              </span>
+            </div>
+
+            <input
+              id="startup-domain"
+              type="text"
+              value={domain}
+              onChange={(e) =>
+                setDomain(e.target.value)
+              }
+              placeholder="e.g. EdTech, HealthTech, FinTech, B2B SaaS, E-Commerce, DevTools"
+              disabled={loading}
+            />
+
+            <div className="input-description">
+              <span className="description-icon">
+                🌐
+              </span>
+
+              <span>
+                Specify your startup domain or industry
+                sector to target market and competitor
+                intelligence.
+              </span>
+            </div>
+          </div>
+
+          {/* =========================================
+              TARGET CUSTOMERS
+              ALWAYS VISIBLE
+          ========================================= */}
+          <div className="customer-input-wrapper">
+
+            <div className="field-heading">
+
+              <label htmlFor="target-customers">
+                <span>👥</span>{" "}
+                Target Customers
               </label>
 
               <span className="optional-label">
@@ -382,33 +448,33 @@ function StartupValidator() {
             </div>
 
             <input
-              id="startup-domain"
+              id="target-customers"
               type="text"
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-              placeholder="e.g. EdTech, HealthTech, FinTech, B2B SaaS, E-Commerce, DevTools"
+              value={targetCustomers}
+              onChange={handleCustomerChange}
+              placeholder="e.g. College students and working professionals"
               disabled={loading}
             />
 
             <div className="input-description">
 
               <span className="description-icon">
-                🌐
+                👥
               </span>
 
               <span>
-                Specify your startup domain or industry sector to target market and competitor intelligence.
+                Specify who is most likely to use or pay
+                for your product. This helps NEXUS tailor
+                its market, customer, and competitor
+                research.
               </span>
 
             </div>
-
           </div>
 
-
-          {/* =================================================
+          {/* =========================================
               VALIDATION FOCUS
-          ================================================= */}
-
+          ========================================= */}
           <div className="validation-focus">
 
             <div className="options-header">
@@ -424,130 +490,72 @@ function StartupValidator() {
                 </h3>
 
                 <p>
-                  Select one area or choose All for complete
-                  startup validation.
+                  Select one area or choose All for
+                  complete startup validation.
                 </p>
 
               </div>
 
             </div>
 
-
-            {/* =================================================
-                OPTIONS
-            ================================================= */}
-
             <div className="validation-options">
 
-              {validationOptions.map((option) => {
+              {validationOptions.map(
+                (option) => {
 
-                const isSelected =
-                  selectedOption === option.id;
+                  const isSelected =
+                    selectedOption === option.id;
 
-                return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    disabled={loading}
-                    className={`validation-option ${
-                      isSelected
-                        ? "selected"
-                        : ""
-                    }`}
-                    onClick={() =>
-                      setSelectedOption(option.id)
-                    }
-                  >
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      disabled={loading}
+                      className={`validation-option ${
+                        isSelected
+                          ? "selected"
+                          : ""
+                      }`}
+                      onClick={() =>
+                        setSelectedOption(
+                          option.id
+                        )
+                      }
+                    >
 
-                    <div className="option-icon">
-                      {option.icon}
-                    </div>
+                      <div className="option-icon">
+                        {option.icon}
+                      </div>
 
-                    <div className="option-content">
+                      <div className="option-content">
 
-                      <h4>
-                        {option.title}
-                      </h4>
+                        <h4>
+                          {option.title}
+                        </h4>
 
-                      <p>
-                        {option.description}
-                      </p>
+                        <p>
+                          {option.description}
+                        </p>
 
-                    </div>
+                      </div>
 
-                    <div className="option-check">
-                      {isSelected ? "✓" : "→"}
-                    </div>
+                      <div className="option-check">
+                        {isSelected
+                          ? "✓"
+                          : "→"}
+                      </div>
 
-                  </button>
-                );
-              })}
+                    </button>
+                  );
+                }
+              )}
 
             </div>
-
           </div>
 
-
-          {/* =================================================
-              TARGET CUSTOMERS (POPS UP FOR RISKS & CUSTOMERS)
-          ================================================= */}
-
-          {(selectedOption === "risks" || selectedOption === "customers") && (
-
-            <div className="customer-input-wrapper pop-in">
-
-              <div className="field-heading">
-
-                <label htmlFor="target-customers">
-                  <span>{selectedOption === "risks" ? "⚠️" : "👥"}</span>{" "}
-                  {selectedOption === "risks"
-                    ? "Target Customers (for Risk Analysis)"
-                    : "Target Customers (Audience Scope)"}
-                </label>
-
-                <span className="optional-label">
-                  Optional
-                </span>
-
-              </div>
-
-              <input
-                id="target-customers"
-                type="text"
-                value={targetCustomers}
-                onChange={handleCustomerChange}
-                placeholder={
-                  selectedOption === "risks"
-                    ? "e.g. Early-stage startup CTOs, HIPAA healthcare workers, minors, B2B enterprises"
-                    : "e.g. College students, fitness beginners, DevOps engineers, small businesses"
-                }
-                disabled={loading}
-                autoFocus
-              />
-
-              <div className="input-description">
-
-                <span className="description-icon">
-                  👥
-                </span>
-
-                <span>
-                  {selectedOption === "risks"
-                    ? "Who are your target users? NEXUS will identify audience-specific legal, compliance, adoption, and churn risks."
-                    : "Who are the people most likely to use or pay for your product? NEXUS will analyze their pain points and demand."}
-                </span>
-
-              </div>
-
-            </div>
-
-          )}
-
-
-          {/* =================================================
+          {/* =========================================
               SELECTED VALIDATION
-          ================================================= */}
-
+          ========================================= */}
           <div className="selected-validation">
 
             <div className="selected-icon">
@@ -572,18 +580,14 @@ function StartupValidator() {
 
           </div>
 
-
-          {/* =================================================
+          {/* =========================================
               ERROR
-          ================================================= */}
-
+          ========================================= */}
           {error && (
-
             <div
               className="inline-error"
               role="alert"
             >
-
               <span>
                 !
               </span>
@@ -591,16 +595,12 @@ function StartupValidator() {
               <p>
                 {error}
               </p>
-
             </div>
-
           )}
 
-
-          {/* =================================================
-              VALIDATE BUTTON
-          ================================================= */}
-
+          {/* =========================================
+              SUBMIT BUTTON
+          ========================================= */}
           <div className="validate-action">
 
             <button
@@ -617,14 +617,11 @@ function StartupValidator() {
             >
 
               {loading ? (
-
                 <>
                   <span className="button-spinner"></span>
                   Researching...
                 </>
-
               ) : (
-
                 <>
                   <span>
                     ✦
@@ -636,23 +633,20 @@ function StartupValidator() {
                     →
                   </span>
                 </>
-
               )}
 
             </button>
 
             <p className="validate-caption">
-              NEXUS will research real-time web sources based
-              on your selected validation focus.
+              NEXUS will research real-time web sources
+              based on your selected validation focus.
             </p>
 
           </div>
 
-
-          {/* =================================================
-              RESEARCH TIP
-          ================================================= */}
-
+          {/* =========================================
+              INPUT HINT
+          ========================================= */}
           <div className="input-hint">
 
             <span>
@@ -660,23 +654,20 @@ function StartupValidator() {
             </span>
 
             <p>
-              Include your target users, problem, industry,
-              or business model for better research results.
+              Include your target users, problem,
+              industry, or business model for better
+              research results.
             </p>
 
           </div>
 
         </form>
-
       </section>
 
-
-      {/* =====================================================
+      {/* =========================================
           LOADING
-      ===================================================== */}
-
+      ========================================= */}
       {loading && (
-
         <section className="loading-section">
 
           <div className="loading-card">
@@ -696,8 +687,8 @@ function StartupValidator() {
               </h2>
 
               <p>
-                Searching real-time web sources for relevant
-                startup and market information.
+                Searching real-time web sources for
+                relevant startup and market information.
               </p>
 
               <div className="research-target">
@@ -711,6 +702,21 @@ function StartupValidator() {
                 </strong>
 
               </div>
+
+              {/* TARGET CUSTOMER DURING LOADING */}
+              {targetCustomers.trim() && (
+                <div className="research-target">
+
+                  <span>
+                    TARGET AUDIENCE
+                  </span>
+
+                  <strong>
+                    {targetCustomers.trim()}
+                  </strong>
+
+                </div>
+              )}
 
               <div className="loading-steps">
 
@@ -737,20 +743,15 @@ function StartupValidator() {
               </div>
 
             </div>
-
           </div>
 
         </section>
-
       )}
 
-
-      {/* =====================================================
-          ERROR CARD
-      ===================================================== */}
-
+      {/* =========================================
+          ERROR SECTION
+      ========================================= */}
       {error && !loading && (
-
         <section className="error-section">
 
           <div className="error-card">
@@ -798,386 +799,385 @@ function StartupValidator() {
           </div>
 
         </section>
-
       )}
 
-
-      {/* =====================================================
+      {/* =========================================
           RESULTS
-      ===================================================== */}
-
+      ========================================= */}
       {searchCompleted &&
         !loading &&
         !error && (
 
-        <section className="validation-dashboard">
+          <section className="validation-dashboard">
 
-          {/* HEADER */}
+            {/* HEADER */}
+            <div className="section-header">
 
-          <div className="section-header">
+              <div className="section-number">
+                02
+              </div>
 
-            <div className="section-number">
-              02
-            </div>
+              <div>
 
-            <div>
+                <h2>
+                  Validation Results
+                </h2>
 
-              <h2>
-                Validation Results
-              </h2>
+                <p>
+                  Research collected for your startup idea.
+                </p>
 
-              <p>
-                Research collected for your startup idea.
-              </p>
+              </div>
 
-            </div>
+              <div className="header-score-actions">
 
-            <div className="header-score-actions">
-
-              {submittedValidation === "risks" && (
-                <div className="top-score-badge risk-score">
-                  <span className="score-icon">⚠️</span>
-                  <div className="score-info">
-                    <span className="score-label">RISK ACCURACY</span>
-                    <strong className="score-value">96.8%</strong>
-                  </div>
-                </div>
-              )}
-
-              {submittedValidation === "customers" && (
-                <div className="top-score-badge customer-score">
-                  <span className="score-icon">👥</span>
-                  <div className="score-info">
-                    <span className="score-label">TARGET FIT</span>
-                    <strong className="score-value">95.2%</strong>
-                  </div>
-                </div>
-              )}
-
-              {submittedValidation !== "risks" && submittedValidation !== "customers" && (
                 <div className="top-score-badge general-score">
-                  <span className="score-icon">✦</span>
+
+                  <span className="score-icon">
+                    ✦
+                  </span>
+
                   <div className="score-info">
-                    <span className="score-label">ACCURACY SCORE</span>
-                    <strong className="score-value">94.5%</strong>
+
+                    <span className="score-label">
+                      RESEARCH CONFIDENCE
+                    </span>
+
+                    <strong className="score-value">
+                      HIGH
+                    </strong>
+
                   </div>
-                </div>
-              )}
 
-              <button
-                type="button"
-                className="clear-button"
-                onClick={handleClear}
-              >
-                ↻ New Idea
-              </button>
+                </div>
+
+                <button
+                  type="button"
+                  className="clear-button"
+                  onClick={handleClear}
+                >
+                  ↻ New Idea
+                </button>
+
+              </div>
 
             </div>
 
-          </div>
-
-
-          {/* ANALYZED IDEA */}
-
-          <div className="idea-display">
-
-            <span>
-              ANALYZED STARTUP IDEA
-            </span>
-
-            <h3>
-              {submittedIdea}
-            </h3>
-
-          </div>
-
-
-          {/* ANALYZED DOMAIN / INDUSTRY */}
-
-          {submittedDomain && (
-
-            <div className="idea-display domain-result">
+            {/* IDEA */}
+            <div className="idea-display">
 
               <span>
-                DOMAIN / INDUSTRY
+                ANALYZED STARTUP IDEA
               </span>
 
               <h3>
-                {submittedDomain}
+                {submittedIdea}
               </h3>
 
             </div>
 
-          )}
+            {/* DOMAIN */}
+            {submittedDomain && (
+              <div className="idea-display domain-result">
 
+                <span>
+                  DOMAIN / INDUSTRY
+                </span>
 
-          {/* TARGET CUSTOMERS (FOR RISKS & CUSTOMERS) */}
+                <h3>
+                  {submittedDomain}
+                </h3>
 
-          {(submittedValidation === "risks" || submittedValidation === "customers") && submittedCustomers && (
+              </div>
+            )}
 
-            <div className="idea-display customer-result">
+            {/* TARGET CUSTOMER */}
+            {submittedCustomers && (
+              <div className="idea-display customer-result">
 
-              <span>
-                {submittedValidation === "risks"
-                  ? "TARGET CUSTOMERS (RISK CONTEXT)"
-                  : "TARGET CUSTOMERS"}
-              </span>
+                <span>
+                  TARGET CUSTOMERS
+                </span>
 
-              <h3>
-                {submittedCustomers}
-              </h3>
+                <h3>
+                  {submittedCustomers}
+                </h3>
 
-            </div>
+              </div>
+            )}
 
-          )}
+            {/* SELECTED ANALYSIS */}
+            <div className="selected-analysis">
 
-
-          {/* SELECTED AREA */}
-
-          <div className="selected-analysis">
-
-            <div className="selected-analysis-icon">
-              {selectedValidation.icon}
-            </div>
-
-            <div>
-
-              <span>
-                VALIDATION AREA
-              </span>
-
-              <h3>
-                {selectedValidation.title}
-              </h3>
-
-              <p>
-                {selectedValidation.description}
-              </p>
-
-            </div>
-
-          </div>
-
-
-          {/* QUICK STATS */}
-
-          <div className="dashboard-grid">
-
-            <div className="dashboard-card">
-
-              <div className="card-icon">
-                🔎
+              <div className="selected-analysis-icon">
+                {selectedValidation.icon}
               </div>
 
-              <span className="card-label">
-                SOURCES
-              </span>
+              <div>
 
-              <strong className="big-number">
-                {results.length}
-              </strong>
+                <span>
+                  VALIDATION AREA
+                </span>
 
-              <p>
-                Relevant web sources found
-              </p>
+                <h3>
+                  {selectedValidation.title}
+                </h3>
 
-            </div>
+                <p>
+                  {selectedValidation.description}
+                </p>
 
-
-            <div className="dashboard-card">
-
-              <div className="card-icon">
-                ✓
               </div>
 
-              <span className="card-label">
-                STATUS
-              </span>
-
-              <strong className="status-success">
-                COMPLETE
-              </strong>
-
-              <p>
-                Research completed
-              </p>
-
             </div>
 
+            {/* DASHBOARD */}
+            <div className="dashboard-grid">
 
-            <div className={`dashboard-card ${submittedValidation === "risks" ? "risk-stat-card" : ""}`}>
+              <div className="dashboard-card">
 
-              <div className="card-icon">
-                {submittedValidation === "risks"
-                  ? "⚠️"
-                  : (submittedValidation === "customers" ? "👥" : "🎯")}
+                <div className="card-icon">
+                  🔎
+                </div>
+
+                <span className="card-label">
+                  SOURCES
+                </span>
+
+                <strong className="big-number">
+                  {results.length}
+                </strong>
+
+                <p>
+                  Relevant web sources found
+                </p>
+
               </div>
 
-              <span className="card-label">
-                {submittedValidation === "risks"
-                  ? "RISK SCORE"
-                  : (submittedValidation === "customers" ? "TARGET FIT" : "ACCURACY")}
-              </span>
+              <div className="dashboard-card">
 
-              <strong className="big-number score-number">
-                {submittedValidation === "risks"
-                  ? "96.8%"
-                  : (submittedValidation === "customers" ? "95.2%" : "94.5%")}
-              </strong>
+                <div className="card-icon">
+                  ✓
+                </div>
 
-              <p>
-                {submittedValidation === "risks"
-                  ? "Risk detection accuracy"
-                  : (submittedValidation === "customers" ? "Audience relevance match" : "Intelligence confidence score")}
-              </p>
+                <span className="card-label">
+                  STATUS
+                </span>
 
-            </div>
+                <strong className="status-success">
+                  COMPLETE
+                </strong>
 
+                <p>
+                  Research completed
+                </p>
 
-            <div className="dashboard-card">
-
-              <div className="card-icon">
-                🤖
               </div>
 
-              <span className="card-label">
-                ENGINE
-              </span>
+              <div className="dashboard-card">
 
-              <strong>
-                NEXUS AI
-              </strong>
+                <div className="card-icon">
+                  🎯
+                </div>
 
-              <p>
-                AI-powered intelligence
-              </p>
+                <span className="card-label">
+                  CONFIDENCE
+                </span>
+
+                <strong className="big-number score-number">
+                  HIGH
+                </strong>
+
+                <p>
+                  Research confidence level
+                </p>
+
+              </div>
+
+              <div className="dashboard-card">
+
+                <div className="card-icon">
+                  🤖
+                </div>
+
+                <span className="card-label">
+                  ENGINE
+                </span>
+
+                <strong>
+                  NEXUS AI
+                </strong>
+
+                <p>
+                  AI-powered intelligence
+                </p>
+
+              </div>
 
             </div>
 
-          </div>
+            {/* =========================================
+                WEB RESEARCH SOURCES
+            ========================================= */}
+            {results.length > 0 && (
 
+              <div className="results-section">
 
-          {/* WEB RESULTS */}
+                <div className="results-header">
 
-          {results.length > 0 && (
+                  <div>
 
-            <div className="results-section">
+                    <span className="mini-label">
+                      WEB INTELLIGENCE
+                    </span>
 
-              <div className="results-header">
+                    <h3>
+                      Research Sources
+                    </h3>
 
-                <div>
+                  </div>
 
-                  <span className="mini-label">
-                    WEB INTELLIGENCE
-                  </span>
+                  <div className="result-count">
 
-                  <h3>
-                    Research Sources
-                  </h3>
+                    <strong>
+                      {results.length}
+                    </strong>
+
+                    <span>
+                      {results.length === 1
+                        ? "Source"
+                        : "Sources"}
+                    </span>
+
+                  </div>
 
                 </div>
 
-                <div className="result-count">
+                <div className="results-list">
 
-                  <strong>
-                    {results.length}
-                  </strong>
+                  {results.map(
+                    (result, index) => (
 
-                  <span>
-                    {results.length === 1
-                      ? "Source"
-                      : "Sources"}
-                  </span>
+                      <SearchResultCard
+                        key={`${
+                          result?.url ||
+                          "result"
+                        }-${index}`}
+                        result={result}
+                        validationType={
+                          submittedValidation
+                        }
+                        targetCustomer={
+                          submittedCustomers
+                        }
+                      />
+
+                    )
+                  )}
 
                 </div>
 
               </div>
+            )}
 
+            {/* =========================================
+                AI ANALYSIS LOADING
+            ========================================= */}
+            {validationLoading && (
+              <p className="analysis-loading">
+                Analyzing market and competitors...
+              </p>
+            )}
 
-              <div className="results-list">
+            {/* =========================================
+                AI ANALYSIS ERROR
+            ========================================= */}
+            {validationError && (
+              <p className="inline-error">
+                {validationError}
+              </p>
+            )}
 
-                {results.map((result, index) => (
+            {/* =========================================
+                AI ANALYSIS RESULTS
+            ========================================= */}
+            {validationResult && (
+              <>
+                <DeepValidationCard
+                  technical={validationResult.technical_feasibility}
+                  scientific={validationResult.scientific_validation}
+                  regulatory={validationResult.regulatory_risk}
+                />
 
-                  <SearchResultCard
-                    key={
-                      `${result?.url || "result"}-${index}`
-                    }
-                    result={result}
-                    validationType={submittedValidation}
-                    targetCustomer={
-                      (submittedValidation === "risks" || submittedValidation === "customers")
-                        ? submittedCustomers
-                        : ""
-                    }
-                  />
+                <MarketAnalysis
+                  data={
+                    validationResult.market_analysis
+                  }
+                />
 
-                ))}
+                <CustomerSegments
+                  segments={
+                    validationResult
+                      .market_analysis
+                      ?.customer_segments
+                  }
+                />
 
-              </div>
+                <CompetitorAnalysis
+                  data={
+                    validationResult
+                      .competitor_analysis
+                  }
+                />
 
-            </div>
+                <MarketGaps
+                  gaps={
+                    validationResult
+                      .competitor_analysis
+                      ?.market_gaps
+                  }
+                />
 
-          )}
+              </>
+            )}
 
-          {/* MILESTONE 2: MARKET + COMPETITOR ANALYSIS */}
+          </section>
+        )}
 
-          {validationLoading && (
-            <p className="analysis-loading">Analyzing market and competitors...</p>
-          )}
-
-          {validationError && (
-            <p className="inline-error">{validationError}</p>
-          )}
-
-          {validationResult && (
-            <>
-              <MarketAnalysis data={validationResult.market_analysis} />
-              <CustomerSegments segments={validationResult.market_analysis?.customer_segments} />
-              <CompetitorAnalysis data={validationResult.competitor_analysis} />
-              <MarketGaps gaps={validationResult.competitor_analysis?.market_gaps} />
-            </>
-          )}
-
-        </section>
-
-      )}
-
-
-      {/* =====================================================
+      {/* =========================================
           NO RESULTS
-      ===================================================== */}
-
+      ========================================= */}
       {!loading &&
         !error &&
         searchCompleted &&
         results.length === 0 && (
 
-        <section className="empty-results">
+          <section className="empty-results">
 
-          <div className="empty-icon">
-            🔍
-          </div>
+            <div className="empty-icon">
+              🔍
+            </div>
 
-          <h2>
-            No Relevant Information Found
-          </h2>
+            <h2>
+              No Relevant Information Found
+            </h2>
 
-          <p>
-            We couldn't find enough relevant information
-            for this startup idea. Try adding more details.
-          </p>
+            <p>
+              We couldn't find enough relevant
+              information for this startup idea.
+              Try adding more details.
+            </p>
 
-          <button
-            type="button"
-            className="primary-button"
-            onClick={handleClear}
-          >
-            Try Another Idea
-          </button>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={handleClear}
+            >
+              Try Another Idea
+            </button>
 
-        </section>
-
-      )}
+          </section>
+        )}
 
     </main>
   );

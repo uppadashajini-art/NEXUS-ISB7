@@ -1,16 +1,10 @@
 import asyncio
-import json
 import logging
 import os
 import re
-import urllib.parse
-import warnings
-from typing import Any, Dict, List, Set
-
-import httpx
-
-# Suppress deprecation/rename runtime warnings from duckduckgo_search if present
-warnings.filterwarnings("ignore", category=RuntimeWarning, module="duckduckgo_search")
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -29,13 +23,21 @@ STOP_WORDS = {
     "operates", "operating", "serves", "serve", "serving", "persistent"
 }
 
-VALID_VALIDATION_TYPES = {
-    "all", "market", "competition", "customers", "business", "risks"
-}
+# ============================================================
+# Configuration
+# ============================================================
 
 MAX_TOTAL_RESULTS = 10
+SEARCH_RESULTS_PER_QUERY = 5
+SEARCH_TIMEOUT_SECONDS = 30
 
 DOMAIN_KEYWORD_TAXONOMY = [
+    ("construction contractor labor marketplace", ["construction", "contractor", "contractors", "subcontractor", "subcontractors", "builder", "builders", "tradesperson", "electrician", "plumber", "jobsite", "field work"]),
+    ("pet care services marketplace", ["pet", "pets", "dog", "cat", "sitter", "sitters", "walker", "walkers", "groomer", "groomers", "veterinary", "animal", "canine", "feline"]),
+    ("3d graphics spatial web studio", ["3d", "webgl", "three.js", "threejs", "spatial", "motion design", "shaders", "portfolio", "creative dev", "canvas", "rendering", "3d web"]),
+    ("devtools developer experience", ["devtools", "developer", "api", "sdk", "code", "ide", "cli", "github", "framework", "open-source"]),
+    ("design tools creative tech", ["design", "figma", "motion", "animation", "ui/ux", "creative", "studio", "prototype", "asset"]),
+    ("creator economy content tech", ["creator", "content", "media", "influencer", "streamer", "video", "monetization"]),
     ("last-mile logistics micro-fulfillment", ["last-mile", "supply chain", "fulfillment", "delivery", "warehouse", "logistics", "courier", "freight", "transit"]),
     ("cleantech carbon sustainability", ["sustainability", "carbon", "emissions", "cleantech", "renewable", "solar", "esg", "recycle"]),
     ("fintech banking payments", ["fintech", "banking", "payment", "payments", "lending", "credit", "wealth", "invest"]),
@@ -47,75 +49,174 @@ DOMAIN_KEYWORD_TAXONOMY = [
     ("ai automation robotics", ["ai", "automation", "robotics", "drones", "ground bots", "autonomous", "machine learning"])
 ]
 
+GENERIC_BUSINESS_MODEL_TERMS = {
+    "subscription", "subscriptions", "payment", "payments", "billing",
+    "monetization", "fintech", "saas", "platform", "platforms", "ai",
+    "automation", "b2b", "b2c", "app", "application", "service", "tool",
+    "marketplace", "software"
+}
+
 
 def _detect_domain_from_keywords(text: str) -> str:
     text_lower = text.lower()
     best_domain = ""
     best_matches = 0
     for domain_name, keywords in DOMAIN_KEYWORD_TAXONOMY:
-        matches = sum(1 for kw in keywords if kw in text_lower)
+        matches = 0
+        for kw in keywords:
+            if kw.lower() in GENERIC_BUSINESS_MODEL_TERMS:
+                continue
+            count = len(re.findall(rf"\b{re.escape(kw)}\b", text_lower))
+            matches += count * 10
         if matches > best_matches:
             best_matches = matches
             best_domain = domain_name
     return best_domain
 
 
+# ============================================================
+# Environment
+# ============================================================
+
 def _load_env_if_needed() -> None:
     """
-    Attempt to load .env from the server root if environment variables are missing.
+    Explicitly load C:/Nexus/server/.env.
     """
-    env_paths = [
-        os.path.join(os.path.dirname(__file__), "..", ".env"),
-        os.path.join(os.getcwd(), ".env"),
-        os.path.join(os.getcwd(), "server", ".env")
-    ]
-    for env_path in env_paths:
-        if os.path.exists(env_path):
-            try:
-                with open(env_path, "r", encoding="utf-8") as f:
-                    for line in f:
-                        line = line.strip()
-                        if line and not line.startswith("#") and "=" in line:
-                            k, v = line.split("=", 1)
-                            os.environ.setdefault(k.strip(), v.strip().strip("'\""))
-                break
-            except Exception:
-                pass
 
+    try:
+        from dotenv import load_dotenv
+
+        # web_search_agent.py
+        # C:/Nexus/server/agents/web_search_agent.py
+        #
+        # parents[0] = agents
+        # parents[1] = server
+        server_dir = Path(__file__).resolve().parents[1]
+
+        env_path = server_dir / ".env"
+
+        if env_path.exists():
+            load_dotenv(
+                dotenv_path=env_path,
+                override=False,
+            )
+
+            logger.info(
+                "Environment loaded from: %s",
+                env_path,
+            )
+
+            logger.info(
+                "Tavily configured: %s",
+                bool(os.getenv("TAVILY_API_KEY")),
+            )
+
+        else:
+            logger.warning(
+                "server/.env was not found at: %s",
+                env_path,
+            )
+
+    except ImportError:
+        logger.warning(
+            "python-dotenv is not installed; "
+            "using existing environment variables."
+        )
+
+
+_load_env_if_needed()
+
+
+# ============================================================
+# Text Utilities
+# ============================================================
 
 def clean_text(text: str) -> str:
-    """Strip parentheses, brackets, special characters, and excess whitespace."""
+    """
+    Clean text while preserving useful words.
+    """
+
     if not text:
         return ""
-    # remove parenthetical phrases like (or E-retailers)
-    text = re.sub(r"\([^)]*\)", "", text)
-    text = re.sub(r"\[[^\]]*\]", "", text)
-    text = re.sub(r"[^\w\s-]", " ", text)
-    return re.sub(r"\s+", " ", text).strip()
+
+    text = str(text)
+
+    # Remove markdown formatting characters.
+    text = re.sub(
+        r"[*()\[\]{}]",
+        " ",
+        text,
+    )
+
+    # Keep letters, numbers, spaces and hyphens.
+    text = re.sub(
+        r"[^a-zA-Z0-9\s\-]",
+        " ",
+        text,
+    )
+
+    text = re.sub(
+        r"\s+",
+        " ",
+        text,
+    )
+
+    return text.strip()
 
 
-def extract_key_phrases(text: str, max_terms: int = 4) -> str:
-    """Extract the most meaningful non-stop keywords from text."""
+def extract_key_phrases(
+    text: str,
+    max_terms: int = 5,
+) -> str:
+    """
+    Extract meaningful keywords from text.
+    """
+
     cleaned = clean_text(text)
-    words = cleaned.split()
-    meaningful = [w for w in words if w.lower() not in STOP_WORDS and len(w) > 2]
-    seen = set()
-    result = []
-    for w in meaningful:
-        wl = w.lower()
-        if wl not in seen:
-            seen.add(wl)
-            result.append(w)
-            if len(result) >= max_terms:
-                break
-    return " ".join(result)
+
+    words = cleaned.lower().split()
+
+    meaningful_words = []
+
+    for word in words:
+
+        word = word.strip("-")
+
+        if not word:
+            continue
+
+        if word in STOP_WORDS:
+            continue
+
+        if len(word) <= 2:
+            continue
+
+        if word not in meaningful_words:
+            meaningful_words.append(word)
+
+    return " ".join(
+        meaningful_words[:max_terms]
+    )
 
 
-def decompose_startup_idea(idea: str, domain: str = "", audience: str = "") -> Dict[str, str]:
+# ============================================================
+# Startup Idea Decomposition
+# ============================================================
+
+def decompose_startup_idea(
+    idea: str,
+    domain: str = "",
+    audience: str = "",
+) -> Dict[str, str]:
     """
-    Decompose complex or casual startup descriptions into 4 distinct, clean search vectors:
-    domain, audience, core problem, and proposed innovation mechanism.
+    Decompose startup idea into:
+
+    domain
+    audience
+    problem
+    solution
     """
+
     cleaned_idea = clean_text(idea)
     words = cleaned_idea.split()
     first_word = words[0].lower() if words else ""
@@ -127,658 +228,1820 @@ def decompose_startup_idea(idea: str, domain: str = "", audience: str = "") -> D
         if detected:
             domain_vec = detected
         else:
-            first_removed = " ".join(words[1:]) if len(words) > 1 else cleaned_idea
-            domain_vec = extract_key_phrases(first_removed[:120], max_terms=3)
+            domain_vec = extract_key_phrases(cleaned_idea, max_terms=4)
     
     # 2. Audience Vector
     audience_vec = extract_key_phrases(audience, max_terms=3) if audience else ""
     if not audience_vec:
-        aud_match = re.search(r"(?:for|designed for|targeting|aimed at|sold to|enabling)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE)
+        aud_match = re.search(r"(?:for|designed for|targeting|aimed at|sold to|enabling|empowers?|built for|helps?|allows?)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE)
         if aud_match:
             audience_vec = extract_key_phrases(aud_match.group(1), max_terms=3)
             
-    # 3. Problem & Value Vector (look for eliminate, reduce, cost, friction, problem, loss)
+    # 3. Problem & Value Vector
     problem_words = []
-    for m in re.finditer(r"(?:eliminat\w*|reduc\w*|cost\w*|expens\w*|problem\w*|friction|wast\w*|loss\w*|challeng\w*|bottleneck\w*)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE):
+    for m in re.finditer(r"(?:eliminat\w*|reduc\w*|cost\w*|expens\w*|problem\w*|friction|wast\w*|loss\w*|challeng\w*|bottleneck\w*|overcoming?)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE):
         problem_words.extend(extract_key_phrases(m.group(1), max_terms=3).split())
     problem_vec = " ".join(list(dict.fromkeys([w for w in problem_words if w.lower() != first_word]))[:4])
     if not problem_vec:
-        problem_vec = "cost margin loss friction"
+        problem_vec = extract_key_phrases(cleaned_idea, max_terms=3)
         
-    # 4. Mechanism / Innovation Vector (look for algorithms, hubs, micro, auctions, automated)
+    # 4. Mechanism / Innovation Vector
     solution_words = []
-    for m in re.finditer(r"(?:combining|utilizing|using|with|via|through|platform|network|deploying|repurposing)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE):
+    for m in re.finditer(r"(?:combining|utilizing|using|with|via|through|platform|network|deploying|repurposing|studio|engine|tool)\s+([A-Za-z0-9\s-]+?)(?:\.|\,|$)", idea, re.IGNORECASE):
         solution_words.extend(extract_key_phrases(m.group(1), max_terms=3).split())
     solution_vec = " ".join(list(dict.fromkeys([w for w in solution_words if w.lower() != first_word]))[:4])
     if not solution_vec:
         solution_vec = extract_key_phrases(" ".join(words[1:]) if len(words) > 1 else cleaned_idea, max_terms=4)
         
+    fallback_domain = extract_key_phrases(cleaned_idea, max_terms=4) or "software platform service"
+
     return {
-        "domain": domain_vec if domain_vec else "last-mile logistics micro-fulfillment",
+        "domain": domain_vec if domain_vec else fallback_domain,
         "audience": audience_vec,
         "problem": problem_vec,
-        "solution": solution_vec
+        "solution": solution_vec,
     }
 
 
-def generate_search_queries(decomposed: Dict[str, str], validation_type: str = "all") -> List[str]:
+# ============================================================
+# Search Query Generation
+# ============================================================
+
+def generate_search_queries(
+    decomposed: Dict[str, str],
+    validation_type: str = "all",
+) -> List[str]:
     """
-    Generate clean, surgical search queries without long-string noise or boolean artifacts.
+    Generate domain-aware search queries.
     """
-    d = decomposed.get("domain", "")
-    a = decomposed.get("audience", "")
-    p = decomposed.get("problem", "")
-    s = decomposed.get("solution", "")
-    
-    core = f"{d} {a}".strip() if a else d
-    
-    query_map = {
-        "market": [
-            f"{d} market size USD billion CAGR forecast",
-            f"{d} total addressable market TAM spending growth",
-            f"{s} industry valuation trends forecast",
-            f"{d} market research report statistics"
-        ],
-        "competition": [
-            f"{d} top competitors market landscape comparison",
-            f"{s} competing startups platforms alternatives",
-            f"{d} competitor pricing feature comparison",
-            f"{s} alternative solutions market leaders review"
-        ],
-        "customers": [
-            f"{core} {p} customer pain points benchmark",
-            f"{a} {d} daily workflow friction complaints",
-            f"{d} {p} financial impact wasted hours statistics",
-            f"{core} willingness to pay ROI direct solution"
-        ],
-        "business": [
-            f"{d} B2B SaaS pricing models subscription unit economics",
-            f"{s} monetization strategy revenue model customer willingness to pay",
-            f"{d} customer acquisition cost CAC LTV benchmarks",
-            f"{s} enterprise licensing contract value ARR"
-        ],
-        "risks": [
-            f"{d} startup failure reasons common pitfalls risks",
-            f"{s} regulatory compliance legal liabilities risks",
-            f"{core} customer adoption resistance churn operational challenges",
-            f"{s} security vulnerability architecture failure risks"
-        ]
-    }
-    
-    if validation_type == "all" or validation_type not in query_map:
-        return [
-            query_map["market"][0],
-            query_map["competition"][0],
-            query_map["customers"][0],
-            query_map["business"][0],
-            query_map["risks"][0]
-        ]
-    return query_map[validation_type]
+
+    domain = decomposed.get(
+        "domain",
+        "",
+    ).strip()
+
+    audience = decomposed.get(
+        "audience",
+        "",
+    ).strip()
+
+    problem = decomposed.get(
+        "problem",
+        "",
+    ).strip()
+
+    solution = decomposed.get(
+        "solution",
+        "",
+    ).strip()
+
+    # --------------------------------------------------------
+    # Build core
+    # --------------------------------------------------------
+
+    core_parts = []
+
+    if domain:
+        core_parts.append(domain)
+
+    if solution:
+        core_parts.append(solution)
+
+    core = " ".join(core_parts).strip()
+
+    # --------------------------------------------------------
+    # Remove duplicate words
+    # --------------------------------------------------------
+
+    words = core.split()
+
+    seen = set()
+
+    core_words = []
+
+    for word in words:
+
+        key = word.lower()
+
+        if key not in seen:
+
+            seen.add(key)
+
+            core_words.append(word)
+
+    core = " ".join(core_words)
+
+    # --------------------------------------------------------
+    # Queries
+    # --------------------------------------------------------
+
+    queries = []
+
+    # Market
+    if validation_type in (
+        "all",
+        "market",
+    ):
+
+        queries.append(
+            f"{core} market size growth trends "
+            f"industry forecast"
+        )
+
+    # Competition
+    if validation_type in (
+        "all",
+        "competition",
+    ):
+
+        queries.append(
+            f"{core} competitors alternatives "
+            f"market leaders products"
+        )
+
+    # Customers
+    if validation_type in (
+        "all",
+        "customers",
+    ):
+
+        audience_part = (
+            f" {audience}"
+            if audience
+            else ""
+        )
+
+        queries.append(
+            f"{core}{audience_part} "
+            f"customer needs pain points "
+            f"user problems"
+        )
+
+    # Business
+    if validation_type in (
+        "all",
+        "business",
+    ):
+
+        queries.append(
+            f"{core} business model pricing "
+            f"subscription revenue"
+        )
+
+    # Risks
+    if validation_type in (
+        "all",
+        "risks",
+    ):
+
+        queries.append(
+            f"{core} startup challenges risks "
+            f"failure reasons"
+        )
+
+    # Problem-specific
+    if problem and validation_type in (
+        "all",
+        "customers",
+        "risks",
+    ):
+
+        queries.append(
+            f"{core} {problem} "
+            f"customer research"
+        )
+
+    # Scientific Validation
+    if validation_type in (
+        "all",
+        "scientific",
+        "risks",
+    ):
+        queries.append(
+            f"{core} scientific validation peer reviewed clinical literature biomarker studies pubmed research"
+        )
+
+    # Technical Feasibility
+    if validation_type in (
+        "all",
+        "technical",
+    ):
+        queries.append(
+            f"{core} technical feasibility acoustic signal processing algorithms sensor constraints audio frequency limits"
+        )
+
+    # Regulatory Risk & Compliance
+    if validation_type in (
+        "all",
+        "regulatory",
+        "risks",
+    ):
+        queries.append(
+            f"{core} FDA SaMD software as a medical device classification clinical trial requirements wellness disclaimer"
+        )
+
+    # --------------------------------------------------------
+    # Remove duplicate queries
+    # --------------------------------------------------------
+
+    unique_queries = []
+
+    seen_queries = set()
+
+    for query in queries:
+
+        normalized = " ".join(
+            query.lower().split()
+        )
+
+        if normalized in seen_queries:
+            continue
+
+        seen_queries.add(normalized)
+
+        unique_queries.append(
+            query.strip()
+        )
+
+    return unique_queries
 
 
-def _normalize_url(url: str) -> str:
+# ============================================================
+# Tavily Search
+# ============================================================
+
+async def _search_tavily(
+    query: str,
+    max_results: int = 5,
+) -> List[Dict[str, Any]]:
     """
-    Normalize URLs by stripping tracking parameters, query artifacts, and trailing slashes.
+    Search using Tavily.
+    Tavily is the primary provider.
     """
-    if not url:
-        return ""
+
+    _load_env_if_needed()
+
+    api_key = os.getenv(
+        "TAVILY_API_KEY"
+    )
+
+    if not api_key:
+
+        logger.warning(
+            "TAVILY_API_KEY is not configured."
+        )
+
+        return []
+
+    if api_key == "your_key_here":
+
+        logger.warning(
+            "TAVILY_API_KEY contains placeholder value."
+        )
+
+        return []
+
     try:
-        parsed = urllib.parse.urlparse(url)
-        query_params = urllib.parse.parse_qsl(parsed.query)
-        filtered_params = [
-            (k, v) for k, v in query_params 
-            if not k.startswith("utm_") and k not in ("ref", "fbclid", "gclid", "source")
-        ]
-        new_query = urllib.parse.urlencode(filtered_params)
-        normalized = urllib.parse.urlunparse((
-            parsed.scheme,
-            parsed.netloc,
-            parsed.path.rstrip("/"),
-            "",
-            new_query,
-            ""
-        ))
-        return normalized.rstrip("/")
-    except Exception:
-        return url.strip().rstrip("/")
 
+        from tavily import TavilyClient
 
-def _search_tavily(query: str, api_key: str, max_results: int = 5) -> List[Dict[str, str]]:
-    """
-    Execute search via tavily-python SDK.
-    """
-    from tavily import TavilyClient
-    client = TavilyClient(api_key=api_key)
-    response = client.search(query=query, max_results=max_results, search_depth="advanced")
-    
-    raw_results = response.get("results", []) if isinstance(response, dict) else []
-    cleaned_results: List[Dict[str, str]] = []
-    
-    for item in raw_results:
-        title = item.get("title", "") or ""
-        url = item.get("url", "") or ""
-        content = item.get("content", "") or item.get("raw_content", "") or ""
-        if url and (title or content):
-            cleaned_results.append({
-                "title": title.strip(),
-                "url": url.strip(),
-                "content": re.sub(r"\s+", " ", content).strip()
-            })
-            
-    return cleaned_results
+        client = TavilyClient(
+            api_key=api_key
+        )
 
+        response = await asyncio.wait_for(
+            asyncio.to_thread(
+                client.search,
+                query=query,
+                search_depth="advanced",
+                max_results=max_results,
+            ),
+            timeout=SEARCH_TIMEOUT_SECONDS,
+        )
 
-async def _search_ddg_async(query: str, max_results: int = 5) -> List[Dict[str, str]]:
-    """
-    Asynchronously execute search via DuckDuckGo without blocking the event loop.
-    """
-    def _sync_ddg():
-        try:
-            from duckduckgo_search import DDGS
-            with DDGS() as ddgs:
-                return list(ddgs.text(query, max_results=max_results))
-        except Exception as e:
-            logger.warning(f"DuckDuckGo search error for query '{query}': {e}")
+        if not isinstance(
+            response,
+            dict,
+        ):
             return []
-            
-    loop = asyncio.get_running_loop()
-    raw = await loop.run_in_executor(None, _sync_ddg)
-    cleaned = []
-    for item in raw:
-        title = item.get("title", "") or ""
-        url = item.get("href", "") or item.get("url", "") or ""
-        body = item.get("body", "") or item.get("snippet", "") or ""
-        if url and (title or body):
-            cleaned.append({
-                "title": title.strip(),
-                "url": url.strip(),
-                "content": re.sub(r"\s+", " ", body).strip()
-            })
-    return cleaned
 
+        results = []
 
-async def _execute_single_query(query: str, tavily_api_key: str | None) -> List[Dict[str, str]]:
-    """
-    Execute a single search query preferring Tavily, falling back to DuckDuckGo.
-    """
-    if tavily_api_key:
-        try:
-            loop = asyncio.get_running_loop()
-            results = await loop.run_in_executor(None, _search_tavily, query, tavily_api_key, 5)
-            if results:
-                return results
-        except Exception as e:
-            logger.warning(f"Tavily search failed for '{query}': {e}. Falling back to DuckDuckGo.")
-            
-    try:
-        return await _search_ddg_async(query, max_results=5)
-    except Exception as e:
-        logger.error(f"DuckDuckGo fallback also failed for '{query}': {e}")
+        for item in response.get(
+            "results",
+            [],
+        ):
+
+            if not isinstance(
+                item,
+                dict,
+            ):
+                continue
+
+            title = str(
+                item.get(
+                    "title",
+                    "",
+                )
+            ).strip()
+
+            url = str(
+                item.get(
+                    "url",
+                    "",
+                )
+            ).strip()
+
+            content = str(
+                item.get(
+                    "content",
+                    "",
+                )
+            ).strip()
+
+            if not title or not url:
+                continue
+
+            results.append(
+                {
+                    "title": title,
+                    "url": url,
+                    "content": content,
+                }
+            )
+
+        logger.info(
+            "Tavily returned %d results for query: %s",
+            len(results),
+            query,
+        )
+
+        return results
+
+    except asyncio.TimeoutError:
+
+        logger.warning(
+            "Tavily search timed out for query: %s",
+            query,
+        )
+
+        return []
+
+    except Exception as exc:
+
+        logger.warning(
+            "Tavily search failed: %s",
+            exc,
+        )
+
         return []
 
 
-def _build_gemini_prompt(
-    idea: str,
-    domain: str | None,
-    target_customer: str | None,
-    validation_type: str,
-    results: List[Dict[str, str]]
-) -> str:
+# ============================================================
+# DuckDuckGo / DDGS Search
+# ============================================================
+
+async def _search_ddg_async(
+    query: str,
+    max_results: int = 5,
+) -> List[Dict[str, Any]]:
     """
-    Build structured prompt for Gemini synthesis, relevance verification, and re-ranking
-    enforcing rigorous 20-point evidence quality, anti-bias, and validation rules.
+    Search using DDGS as fallback.
     """
-    domain_text = domain.strip() if domain and domain.strip() else "Not specified"
-    audience_text = target_customer.strip() if target_customer and target_customer.strip() else "Not specified"
-    compact_results = []
-    for r in results:
-        compact_results.append({
-            "title": r.get("title", ""),
-            "url": r.get("url", ""),
-            "content": (r.get("content", "") or "")[:350]
-        })
-    
-    focus_guidelines = {
-        "market": "STRICT MARKET DEMAND VALIDATION:\n"
-                  "- Do NOT validate generic tech optimism, broad industry hype, or vague claims of growth.\n"
-                  "- ONLY validate and prioritize evidence demonstrating exact market valuation ($ USD), CAGR growth projections, TAM, and verified budget allocations.",
 
-        "competition": "STRICT COMPETITIVE LANDSCAPE VALIDATION:\n"
-                       "- Do NOT validate generic tech directory listings or unrelated tech giants.\n"
-                       "- ONLY validate and prioritize evidence demonstrating direct competitors, product feature gaps, pricing comparisons, limitations, and defensible moats.",
+    try:
 
-        "customers": "STRICT TARGET CUSTOMER PROBLEM VALIDATION:\n"
-                     "- Do NOT validate general preferences (e.g. generic desire for automation or efficiency) unless explicitly connected to the core problem.\n"
-                     "- ONLY validate evidence showing the customer experiences the EXACT problem frequently with MEASURABLE COST / IMPACT.",
+        try:
+            from ddgs import DDGS
+        except ImportError:
+            from duckduckgo_search import DDGS
 
-        "business": "STRICT BUSINESS & MONETIZATION VALIDATION:\n"
-                    "- Do NOT validate speculative revenue claims or unproven free-tier models.\n"
-                    "- ONLY validate proven pricing models (usage, seat, value-share), customer Willingness to Pay (WTP), and unit economics (LTV/CAC).",
+        def search_sync():
 
-        "risks": "STRICT RISK & PITFALL VALIDATION:\n"
-                 "- Do NOT validate generic philosophical risks.\n"
-                 "- ONLY validate specific regulatory/legal liabilities (GDPR, HIPAA, SOC 2), technical feasibility/security bottlenecks, and proven failure pitfalls.",
+            with DDGS() as ddgs:
 
-        "all": "STRICT 360-DEGREE STARTUP VALIDATION:\n"
-               "- Select and rank the highest-precision evidence across Market Size ($ and CAGR), Direct Competitors, Exact Customer Pain, Pricing Models, and Critical Regulatory/Failure Risks."
-    }
-    
-    specific_instruction = focus_guidelines.get(validation_type, focus_guidelines["all"])
-    
-    return f"""You are an elite AI Startup Research & Evidence Quality Analyst.
-Your objective is to strictly evaluate EVIDENCE QUALITY, eliminate false positives, avoid market-size bias, identify the specific target audience for each source, and provide the most accurate assessment possible.
+                return list(
+                    ddgs.text(
+                        query,
+                        max_results=max_results,
+                    )
+                )
 
-PROPOSITION DETAILS:
-- Startup Idea: {idea}
-- Domain / Industry: {domain_text}
-- Target Audience / Customer: {audience_text}
-- Validation Focus Area: {validation_type.upper()}
+        raw_results = await asyncio.wait_for(
+            asyncio.to_thread(
+                search_sync
+            ),
+            timeout=SEARCH_TIMEOUT_SECONDS,
+        )
 
-FOCUS GUIDELINE:
-{specific_instruction}
+        results = []
 
-CORE EVIDENCE EVALUATION RULES:
-1. Extract the primary claim from each candidate source.
-2. Classify evidence type: Market Size | Problem Validation | Customer Pain | Willingness To Pay | Competition | Business Potential | Risk | Industry Context.
-3. Target Audience Identification: For each source, identify the specific user, customer, or buyer segment this finding directly impacts or targets (e.g., 'Residential Homeowners', 'Municipal Public Works (B2G)', 'Enterprise Sustainability Teams', 'Smart Home Consumers'). Keep it concise (2-5 words).
-4. Determine evidence relevance & strength:
-   - Direct Evidence (1.0) = explicitly validates the startup idea / exact problem
-   - Strong Indirect Evidence (0.75) = validates a closely related problem
-   - Weak Indirect Evidence (0.50) = supports surrounding context only
-   - Contextual Evidence (0.25) = general industry background
-   - Noise (0.0) = not useful / promotional spam
-5. Determine source quality: Academic/Gov/Industry Research Firm > Public Company Report > Industry Publication > Company Website > Blog/Social.
-6. ANTI-BIAS GUARDRAILS:
-   - NEVER treat industry growth as proof of customer demand.
-   - NEVER treat market size as proof of problem existence.
-   - NEVER treat customer interest as proof of willingness to pay.
-   - NEVER treat a related industry problem as validation of the startup's exact problem.
-7. A source must be scored based on how DIRECTLY it validates the startup's core problem, not just matching the industry.
-8. If evidence only validates the industry and not the startup idea itself, explicitly state:
-   "This source validates the market context but does not directly validate the startup's core problem."
-9. Include contradictory or risk-challenging evidence when found—do not hide real obstacles.
-10. Weighting priorities: Problem Validation (35%) > Customer Pain (25%) > Willingness To Pay (15%) > Market Size (10%) > Competition (10%) > Risks (5%).
-11. Final selection priority: Direct Evidence > Strong Indirect Evidence > Contextual Evidence.
+        for item in raw_results:
 
-CANDIDATE WEB RESEARCH RESULTS:
-{json.dumps(compact_results, indent=2)}
+            if not isinstance(
+                item,
+                dict,
+            ):
+                continue
 
-YOUR OBJECTIVES:
-1. Filter out pure promotional spam or off-topic noise.
-2. Re-order the results so that highest-strength Direct Evidence matching '{validation_type}' appears first.
-3. For each source, determine the precise 'target_audience' (2-5 words).
-4. For each source, synthesize a crisp 1-2 sentence evidence-backed finding following: [Evidence Classification] Specific Claim → Core Problem Takeaway.
-5. Strictly PRESERVE the exact 'title' and 'url' from the candidate list. DO NOT invent or alter URLs.
-6. Return ONLY a valid JSON array of objects with keys: "title", "url", "target_audience", "content".
+            title = str(
+                item.get(
+                    "title",
+                    "",
+                )
+            ).strip()
 
-Output JSON format:
-[
-  {{
-    "title": "Exact Title",
-    "url": "Exact URL",
-    "target_audience": "Concise Audience Segment (2-5 words)",
-    "content": "Actionable, evidence-backed takeaway directly tying the finding to the startup's core problem and validation focus."
-  }}
-]"""
+            url = str(
+                item.get(
+                    "href",
+                    "",
+                )
+            ).strip()
+
+            content = str(
+                item.get(
+                    "body",
+                    "",
+                )
+            ).strip()
+
+            if not title or not url:
+                continue
+
+            results.append(
+                {
+                    "title": title,
+                    "url": url,
+                    "content": content,
+                }
+            )
+
+        logger.info(
+            "DDGS returned %d results for query: %s",
+            len(results),
+            query,
+        )
+
+        return results
+
+    except asyncio.TimeoutError:
+
+        logger.warning(
+            "DDGS search timed out for query: %s",
+            query,
+        )
+
+        return []
+
+    except Exception as exc:
+
+        logger.warning(
+            "DDGS search failed: %s",
+            exc,
+        )
+
+        return []
 
 
-def _score_source_quality_and_relevance(
-    item: Dict[str, str],
-    decomposed: Dict[str, str],
-    validation_type: str
-) -> float:
+# ============================================================
+# Execute Search
+# ============================================================
+
+async def _execute_single_query(
+    query: str,
+    max_results: int = 5,
+) -> List[Dict[str, Any]]:
     """
-    Score source candidates deterministically based on domain authority,
-    metric density, and vector relevance.
-    """
-    score = 0.0
-    url = (item.get("url") or "").lower()
-    title = (item.get("title") or "").lower()
-    content = (item.get("content") or "").lower()
-    full_text = f"{title} {content}"
+    Execute one search query.
 
-    # 1. Authoritative Domain Tier (+30 pts)
-    high_authority_domains = [
-        "mckinsey", "gartner", "statista", "forbes", "hbr.org", "techcrunch",
-        "bloomberg", "reuters", "coresight", "retaildive", "supplychaindive",
-        "wsj", "imarcgroup", "polarismarketresearch", "dataintelo", "grandviewresearch",
-        "marketsandmarkets", "pwc", "deloitte", "bain", "accenture", "globenewswire",
-        "prnewswire", "businesswire", "sciencedirect", "springer", "nature.com"
+    Tavily first.
+    DDGS fallback.
+    """
+
+    tavily_results = await _search_tavily(
+        query,
+        max_results=max_results,
+    )
+
+    if tavily_results:
+
+        return tavily_results
+
+    logger.info(
+        "Tavily returned no results; "
+        "trying DDGS fallback."
+    )
+
+    return await _search_ddg_async(
+        query,
+        max_results=max_results,
+    )
+
+
+# ============================================================
+# URL Utilities
+# ============================================================
+
+def _get_domain_name(url: str) -> str:
+    """
+    Extract the main domain name from a URL.
+    """
+
+    if not url:
+        return ""
+
+    try:
+
+        parsed = urlparse(url)
+
+        hostname = (
+            parsed.netloc
+            or parsed.path
+        )
+
+        hostname = hostname.lower()
+
+        hostname = re.sub(
+            r"^www\.",
+            "",
+            hostname,
+        )
+
+        if not hostname:
+            return ""
+
+        parts = hostname.split(".")
+
+        if len(parts) >= 2:
+
+            return parts[-2]
+
+        return parts[0]
+
+    except Exception:
+
+        return ""
+
+
+# ============================================================
+# Sentence Utilities
+# ============================================================
+
+def _extract_sentences(
+    text: str,
+) -> List[str]:
+    """
+    Split text into sentences.
+    """
+
+    if not text:
+        return []
+
+    sentences = re.split(
+        r"(?<=[.!?])\s+",
+        text,
+    )
+
+    return [
+        sentence.strip()
+        for sentence in sentences
+        if sentence.strip()
     ]
-    for d in high_authority_domains:
-        if d in url:
-            score += 30.0
+
+
+def _find_matching_sentences(
+    text: str,
+    keywords: List[str],
+    max_sentences: int = 3,
+) -> List[str]:
+    """
+    Find sentences containing relevant keywords.
+    """
+
+    sentences = _extract_sentences(text)
+
+    matches = []
+
+    for sentence in sentences:
+
+        lower_sentence = sentence.lower()
+
+        if any(
+            keyword.lower() in lower_sentence
+            for keyword in keywords
+        ):
+
+            matches.append(sentence)
+
+        if len(matches) >= max_sentences:
             break
 
-    # 2. Key Vector Relevance (+20 pts)
-    for k in ["domain", "problem", "solution", "audience"]:
-        vec_words = decomposed.get(k, "").lower().split()
-        matches = sum(1 for w in vec_words if w and w in full_text)
-        score += matches * 4.0
+    return matches
 
-    # 3. Quantitative / Hard Metric Density (+15 pts)
-    metric_patterns = [r"\d+%", r"\$\s*\d+", r"\bCAGR\b", r"\bbillion\b", r"\bmillion\b", r"\b202[4-9]\b"]
-    for pat in metric_patterns:
-        if re.search(pat, full_text, re.IGNORECASE):
-            score += 3.5
 
-    # 4. Validation Focus Alignment (+15 pts)
-    focus_keywords = {
-        "market": ["market size", "cagr", "valuation", "forecast", "tam", "growth"],
-        "competition": ["competitor", "alternative", "vs", "comparison", "feature", "pricing"],
-        "customers": ["pain", "friction", "cost", "complaint", "hours", "bottleneck", "loss", "return"],
-        "business": ["pricing", "subscription", "monetization", "margin", "revenue", "cac", "ltv"],
-        "risks": ["risk", "compliance", "penalty", "failure", "liability", "pitfall", "gdpr", "hipaa", "fraud"],
-        "all": ["market", "competitor", "cost", "pricing", "risk"]
+# ============================================================
+# Relevance Scoring
+# ============================================================
+
+def _score_source_quality_and_relevance(
+    result: Dict[str, Any],
+    decomposed: Dict[str, str],
+) -> float:
+    """
+    Score search result based on:
+
+    - domain relevance
+    - solution relevance
+    - audience relevance
+    - market signals
+    - source authority
+    - competitor signals
+    - spam signals
+    """
+
+    title = str(
+        result.get(
+            "title",
+            "",
+        )
+    )
+
+    content = str(
+        result.get(
+            "content",
+            "",
+        )
+    )
+
+    url = str(
+        result.get(
+            "url",
+            "",
+        )
+    )
+
+    full_text = (
+        f"{title} {content} {url}"
+    ).lower()
+
+    score = 0.0
+
+    # --------------------------------------------------------
+    # Authority domains
+    # --------------------------------------------------------
+
+    authority_domains = {
+        "statista",
+        "grandviewresearch",
+        "mordorintelligence",
+        "fortunebusinessinsights",
+        "researchandmarkets",
+        "ibisworld",
+        "gminsights",
+        "nih",
+        "ncbi",
+        "forbes",
+        "techcrunch",
+        "businessinsider",
+        "mckinsey",
+        "deloitte",
+        "pwc",
+        "gartner",
+        "hbr",
+        "harvard",
     }
-    for kw in focus_keywords.get(validation_type, focus_keywords["all"]):
-        if kw in full_text:
-            score += 3.0
 
-    # 5. Low-Quality Spam Penalty (-30 pts)
-    spam_indicators = ["login", "sign in", "privacy policy", "cookie policy", "terms of service", "404 not found"]
-    for sp in spam_indicators:
-        if sp in title:
-            score -= 30.0
+    domain_name = _get_domain_name(url)
+
+    if domain_name in authority_domains:
+
+        score += 15
+
+    # --------------------------------------------------------
+    # Domain
+    # --------------------------------------------------------
+
+    domain = decomposed.get(
+        "domain",
+        "",
+    ).lower()
+
+    domain_terms = [
+        term
+        for term in domain.split()
+        if len(term) > 2
+    ]
+
+    for term in domain_terms:
+
+        if term in full_text:
+
+            score += 5
+
+    # --------------------------------------------------------
+    # Solution
+    # --------------------------------------------------------
+
+    solution = decomposed.get(
+        "solution",
+        "",
+    ).lower()
+
+    solution_terms = [
+        term
+        for term in solution.split()
+        if len(term) > 2
+    ]
+
+    for term in solution_terms:
+
+        if term in full_text:
+
+            score += 4
+
+    # --------------------------------------------------------
+    # Audience
+    # --------------------------------------------------------
+
+    audience = decomposed.get(
+        "audience",
+        "",
+    ).lower()
+
+    audience_terms = [
+        term
+        for term in audience.split()
+        if len(term) > 2
+    ]
+
+    audience_matches = 0
+
+    for term in audience_terms:
+
+        if term in full_text:
+
+            audience_matches += 1
+
+    if audience_matches:
+
+        score += min(
+            audience_matches * 4,
+            12,
+        )
+
+    # --------------------------------------------------------
+    # Industry relevance
+    # --------------------------------------------------------
+
+    industry_keywords = [
+
+        "fitness",
+        "workout",
+        "exercise",
+        "gym",
+        "training",
+
+        "health",
+        "healthcare",
+        "wellness",
+
+        "education",
+        "student",
+        "learning",
+
+        "finance",
+        "fintech",
+        "banking",
+        "investment",
+
+        "retail",
+        "ecommerce",
+
+        "agriculture",
+        "agritech",
+
+        "travel",
+        "tourism",
+
+        "logistics",
+
+        "insurance",
+
+        "software",
+        "saas",
+
+        "artificial intelligence",
+        "machine learning",
+        "ai",
+    ]
+
+    industry_matches = sum(
+        1
+        for keyword in industry_keywords
+        if keyword in full_text
+    )
+
+    if industry_matches == 0:
+
+        score -= 15
+
+    elif industry_matches == 1:
+
+        score += 4
+
+    elif industry_matches == 2:
+
+        score += 7
+
+    else:
+
+        score += 10
+
+    # --------------------------------------------------------
+    # Market quality signals
+    # --------------------------------------------------------
+
+    metric_patterns = [
+
+        r"\b\d+(?:\.\d+)?\s*%\b",
+
+        r"\bcagr\b",
+
+        r"\bmarket size\b",
+
+        r"\brevenue\b",
+
+        r"\bbillion\b",
+
+        r"\bmillion\b",
+
+        r"\bpricing\b",
+
+        r"\bsubscription\b",
+
+        r"\bforecast\b",
+
+        r"\bgrowth rate\b",
+
+        r"\bmarket share\b",
+
+        r"\bvaluation\b",
+    ]
+
+    for pattern in metric_patterns:
+
+        if re.search(
+            pattern,
+            full_text,
+            flags=re.IGNORECASE,
+        ):
+
+            score += 3
+
+    # --------------------------------------------------------
+    # Competitor signals
+    # --------------------------------------------------------
+
+    competitor_keywords = [
+
+        "competitor",
+        "competitors",
+
+        "alternative",
+        "alternatives",
+
+        "market leader",
+
+        "similar",
+
+        "comparison",
+
+        "compare",
+
+        "competitor analysis",
+
+        "top companies",
+
+        "leading companies",
+
+        "leading platforms",
+
+        "market players",
+    ]
+
+    for keyword in competitor_keywords:
+
+        if keyword in full_text:
+
+            score += 2
+
+    # --------------------------------------------------------
+    # Customer signals
+    # --------------------------------------------------------
+
+    customer_keywords = [
+
+        "customer needs",
+        "user needs",
+        "pain points",
+        "user problems",
+        "consumer behavior",
+        "customer behavior",
+        "target users",
+        "target audience",
+        "user preferences",
+        "consumer preferences",
+    ]
+
+    for keyword in customer_keywords:
+
+        if keyword in full_text:
+
+            score += 3
+
+    # --------------------------------------------------------
+    # Business signals
+    # --------------------------------------------------------
+
+    business_keywords = [
+
+        "business model",
+        "revenue model",
+        "subscription model",
+        "pricing model",
+        "subscription",
+        "freemium",
+        "monthly plan",
+        "annual plan",
+        "monetization",
+    ]
+
+    for keyword in business_keywords:
+
+        if keyword in full_text:
+
+            score += 3
+
+    # --------------------------------------------------------
+    # Risk signals
+    # --------------------------------------------------------
+
+    risk_keywords = [
+
+        "risk",
+        "risks",
+        "challenge",
+        "challenges",
+        "barrier",
+        "barriers",
+        "privacy concern",
+        "security concern",
+        "regulatory",
+        "failure",
+        "limitations",
+    ]
+
+    for keyword in risk_keywords:
+
+        if keyword in full_text:
+
+            score += 2
+
+    # --------------------------------------------------------
+    # Gift filtering
+    # --------------------------------------------------------
+
+    gift_keywords = [
+
+        "gift",
+        "gifts",
+        "personalized gifts",
+        "personalised gifts",
+        "custom gifts",
+        "customized gifts",
+        "customised gifts",
+        "birthday gifts",
+        "wedding gifts",
+        "corporate gifts",
+        "gift ideas",
+        "gift shop",
+        "gift store",
+    ]
+
+    gift_matches = sum(
+        1
+        for keyword in gift_keywords
+        if keyword in full_text
+    )
+
+    if gift_matches:
+
+        score -= 25
+
+    # --------------------------------------------------------
+    # Weak page signals
+    # --------------------------------------------------------
+
+    weak_keywords = [
+
+        "coupon",
+        "discount code",
+        "free download",
+        "template",
+        "pinterest",
+        "shopping",
+        "shop now",
+        "giveaway",
+        "affiliate",
+    ]
+
+    for keyword in weak_keywords:
+
+        if keyword in full_text:
+
+            score -= 8
+
+    # --------------------------------------------------------
+    # Wikipedia
+    # --------------------------------------------------------
+
+    if "wikipedia.org" in url.lower():
+
+        score -= 30
 
     return score
 
 
+# ============================================================
+# Heuristic Reranking
+# ============================================================
+
 def _heuristic_rerank(
-    results: List[Dict[str, str]],
+    results: List[Dict[str, Any]],
     decomposed: Dict[str, str],
-    validation_type: str
-) -> List[Dict[str, str]]:
-    """Rerank candidates deterministically based on evidence strength and domain authority."""
-    scored = []
-    for r in results:
-        s = _score_source_quality_and_relevance(r, decomposed, validation_type)
-        scored.append((s, r))
-    scored.sort(key=lambda x: x[0], reverse=True)
-    return [r for _, r in scored]
+) -> List[Dict[str, Any]]:
+    """
+    Rank results using deterministic local scoring.
+    """
+
+    scored_results = []
+
+    for result in results:
+
+        score = _score_source_quality_and_relevance(
+            result,
+            decomposed,
+        )
+
+        result_copy = dict(result)
+
+        result_copy[
+            "_relevance_score"
+        ] = score
+
+        scored_results.append(
+            result_copy
+        )
+
+    scored_results.sort(
+        key=lambda item: item.get(
+            "_relevance_score",
+            0,
+        ),
+        reverse=True,
+    )
+
+    return scored_results
 
 
+# ============================================================
+# Gemini Prompt
+# ============================================================
 
-def _infer_fallback_audience(
-    title: str,
-    content: str,
-    decomposed: Dict[str, str],
-    user_audience: str | None = None
+def _build_gemini_prompt(
+    idea: str,
+    results: List[Dict[str, Any]],
 ) -> str:
     """
-    Intelligently infer a 2-5 word concise target audience segment from source text or vectors.
+    Keep this helper for compatibility.
+
+    Gemini is intentionally not used in the main search flow.
     """
-    if user_audience and len(user_audience.strip()) > 2:
-        return user_audience.strip().title()
 
-    full_text = f"{title} {content}".lower()
+    formatted_results = []
 
-    if any(w in full_text for w in ["municipal", "city", "public works", "government", "b2g", "mayors", "civic"]):
-        return "Municipalities & Smart Cities (B2G)"
-    if any(w in full_text for w in ["homeowner", "household", "kitchen", "residential", "consumer", "apartment"]):
-        return "Residential Households & Consumers"
-    if any(w in full_text for w in ["enterprise", "corporate", "b2b", "procurement", "workplace", "supply chain"]):
-        return "Enterprise & B2B Buyers"
-    if any(w in full_text for w in ["student", "university", "college", "professor", "teacher", "academic"]):
-        return "Students & Academic Institutions"
-    if any(w in full_text for w in ["developer", "engineer", "software", "api", "technical team", "devops"]):
-        return "Developers & Tech Teams"
-    if any(w in full_text for w in ["doctor", "patient", "clinic", "hospital", "healthcare", "medical"]):
-        return "Healthcare Providers & Patients"
-    if any(w in full_text for w in ["retail", "ecommerce", "merchant", "store owner", "small business", "smb"]):
-        return "Retailers & Small Businesses"
-    if any(w in full_text for w in ["property", "facility", "landlord", "building manager", "real estate"]):
-        return "Property & Facility Managers"
+    for index, result in enumerate(results):
 
-    aud = decomposed.get("audience", "").strip()
-    if aud:
-        return aud.title()
+        formatted_results.append(
+            f"""
+RESULT {index + 1}
 
-    dom = decomposed.get("domain", "").strip()
-    if dom:
-        return f"{dom.title()} Buyers"
+Title: {result.get("title", "")}
 
-    return "Target Market Users"
+URL: {result.get("url", "")}
+
+Content: {result.get("content", "")[:1500]}
+"""
+        )
+
+    return f"""
+You are a startup research search-quality evaluator.
+
+Startup idea:
+
+{idea}
+
+Evaluate the following search results.
+
+Prefer genuinely relevant:
+
+- Direct competitors
+- Similar products
+- Alternative solutions
+- Industry market reports
+- Customer research
+- Pricing information
+- Business model information
+- Technology trends
+- Startup risks
+
+Do NOT select:
+
+- Gift websites
+- Gift shops
+- Birthday gifts
+- Wedding gifts
+- Corporate gifts
+- Wikipedia
+- Irrelevant shopping pages
+- Completely unrelated pages
+
+Return only the indexes of relevant results.
+
+{"".join(formatted_results)}
+"""
 
 
-def _validate_gemini_results(
-    gemini_output_text: str,
-    original_results: List[Dict[str, str]],
-    decomposed: Dict[str, str] | None = None,
-    user_audience: str | None = None
-) -> List[Dict[str, str]] | None:
-    """
-    Defensively validate Gemini's JSON output ensuring only genuine input URLs are used.
-    """
-    try:
-        text = gemini_output_text.strip()
-        if text.startswith("```"):
-            text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.MULTILINE)
-            text = re.sub(r"\s*```$", "", text, flags=re.MULTILINE)
-        
-        parsed = json.loads(text.strip())
-        if not isinstance(parsed, list):
-            return None
-        
-        original_urls = {_normalize_url(r.get("url", "")) for r in original_results if r.get("url")}
-        valid_items: List[Dict[str, str]] = []
-        
-        for item in parsed:
-            if not isinstance(item, dict):
-                continue
-            url = str(item.get("url", "")).strip()
-            norm_url = _normalize_url(url)
-            if norm_url in original_urls and url:
-                t = str(item.get("title", "")).strip()
-                c = str(item.get("content", "")).strip()
-                aud = str(item.get("target_audience", "")).strip()
-                if not aud:
-                    aud = _infer_fallback_audience(t, c, decomposed or {}, user_audience)
-
-                valid_items.append({
-                    "title": t,
-                    "url": url,
-                    "target_audience": aud,
-                    "content": c
-                })
-        
-        if valid_items:
-            return valid_items
-        return None
-    except Exception as e:
-        logger.warning(f"Failed to parse or validate Gemini output: {e}")
-        return None
-
+# ============================================================
+# Gemini Reranking
+# ============================================================
 
 async def _rerank_with_gemini(
     idea: str,
-    domain: str | None,
-    target_customer: str | None,
-    validation_type: str,
-    results: List[Dict[str, str]],
-    api_key: str,
-    decomposed: Dict[str, str] | None = None
-) -> List[Dict[str, str]]:
+    results: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
     """
-    Asynchronously invoke Gemini API to verify accuracy, synthesize takeaways, extract target audiences,
-    and re-rank results with multi-model fallbacks.
+    Gemini reranking is intentionally disabled.
+
+    Reason:
+    The search agent should not depend on Gemini authentication.
+    Tavily + local relevance ranking are sufficient.
+
+    The helper remains available so existing tests/imports
+    do not break.
     """
-    if not results or not api_key:
-        return results
-        
-    prompt = _build_gemini_prompt(idea, domain, target_customer, validation_type, results)
-    
-    models = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
+    logger.info(
+        "Gemini reranking skipped; using deterministic relevance ranking."
+    )
+    return results
+
+
+# ============================================================
+# Audience Inference
+# ============================================================
+
+async def _decompose_with_gemini_async(idea: str) -> Optional[Dict[str, str]]:
+    """
+    Decompose startup idea using Gemini with explicit primary business function instructions.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key or not api_key.strip():
+        return None
+
+    import httpx, json
+    prompt = f"""Identify the PRIMARY business function first — what does this company actually DO and WHO does it connect or serve — before considering secondary features like payment processing, AI, subscriptions, or monetization mechanics. A company that connects contractors with subcontractors is a CONSTRUCTION/LABOR MARKETPLACE, even if it charges via subscriptions or processes payments. A company that matches pet owners with sitters is a PET SERVICES MARKETPLACE, even if it uses AI matching. Do not classify based on HOW the company monetizes or WHAT TECHNOLOGY it uses — classify based on WHAT PROBLEM it solves and for WHOM. List the 2-3 core nouns describing what is being connected/served (e.g. 'contractors', 'subcontractors', 'construction projects') and derive industry from those, not from adjacent business-model language.
+
+Analyze this startup idea:
+"{idea}"
+
+Return ONLY a valid JSON object with these exact keys:
+{{
+  "domain": "2-4 core nouns describing the primary business domain (e.g. 'construction contractor labor marketplace', 'pet care services marketplace')",
+  "audience": "Target audience (e.g. 'General Contractors & Subcontractors', 'Pet Owners & Sitters')",
+  "problem": "Core problem solved (e.g. 'managing bidding worker scheduling labor shortages')",
+  "solution": "Core mechanism or solution (e.g. 'bidding and scheduling platform')"
+}}
+"""
+    models = ["gemini-3.6-flash", "gemini-3-flash-preview", "gemini-flash-lite-latest", "gemini-2.5-flash"]
     for model in models:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key.strip()}"
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "temperature": 0.2,
-                "responseMimeType": "application/json"
-            }
+            "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"}
         }
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            timeout_config = httpx.Timeout(15.0, connect=3.0)
+            async with httpx.AsyncClient(timeout=timeout_config) as client:
                 resp = await client.post(url, json=payload)
                 if resp.status_code == 200:
-                    data = resp.json()
-                    candidates = data.get("candidates", [])
-                    if candidates:
-                        content_parts = candidates[0].get("content", {}).get("parts", [])
-                        if content_parts:
-                            raw_text = content_parts[0].get("text", "")
-                            validated = _validate_gemini_results(
-                                raw_text,
-                                results,
-                                decomposed=decomposed,
-                                user_audience=target_customer
-                            )
-                            if validated:
-                                return validated
-        except Exception as e:
-            logger.warning(f"Gemini model '{model}' call error: {e}")
+                    cand = resp.json().get("candidates", [])
+                    if cand:
+                        parts = cand[0].get("content", {}).get("parts", [])
+                        if parts:
+                            raw_text = parts[0].get("text", "").strip()
+                            if raw_text.startswith("```"):
+                                raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text, flags=re.MULTILINE)
+                                raw_text = re.sub(r"\s*```$", "", raw_text, flags=re.MULTILINE)
+                            res = json.loads(raw_text.strip())
+                            if isinstance(res, dict) and res.get("domain"):
+                                return {
+                                    "domain": str(res.get("domain", "")).strip(),
+                                    "audience": str(res.get("audience", "")).strip(),
+                                    "problem": str(res.get("problem", "")).strip(),
+                                    "solution": str(res.get("solution", "")).strip(),
+                                }
+        except Exception as exc:
+            logger.warning(f"Gemini decomposition call to {model} failed: {exc}")
             continue
-            
-    return results
+    return None
 
+
+# ============================================================
+# Audience Inference
+# ============================================================
+
+def _infer_fallback_audience(
+    result: Dict[str, Any],
+    domain: str,
+    idea: str = "",
+    decomposed: Optional[Dict[str, str]] = None,
+) -> str:
+    """
+    Infer specific, idea-relevant target audience for search results.
+    Reuses seed audience extraction from idea + snippet matching to prevent 'General Users'.
+    """
+    title = str(result.get("title", "")).strip()
+    content = str(result.get("content", "")).strip()
+    full_text = f"{title} {content}".lower()
+
+    # 1. Extract seed audiences from idea
+    seed_audiences = []
+    if idea:
+        persona_patterns = [
+            r"(?:for|enabling|helping|targeting|sold to|connecting|matches?)\s+([A-Za-z0-9\s-]+?)(?:,|\.|\band\b|through|with|by|$)",
+            r"\b(general contractors|subcontractors|contractors|builders|pet owners|pet sitters|dog walkers|mobile groomers|fleet managers|plant operators|facility managers|homeowners|small businesses|merchants|retailers|students|teachers|patients|doctors|clinics)\b"
+        ]
+        action_verbs = {"leaving", "boarding", "overpaying", "finding", "searching", "buying", "using", "paying", "managing"}
+        for pat in persona_patterns:
+            for m in re.finditer(pat, idea, re.IGNORECASE):
+                val = m.group(0 if m.lastindex is None else 1).strip()
+                clean_val = re.sub(r"^(?:for|enabling|helping|targeting|sold to|connecting|matches?)\s+", "", val, flags=re.IGNORECASE).strip()
+                first_word = clean_val.split()[0].lower() if clean_val.split() else ""
+                if first_word in action_verbs:
+                    continue
+                if len(clean_val) > 3 and len(clean_val.split()) <= 5 and clean_val.lower() not in [s.lower() for s in seed_audiences]:
+                    seed_audiences.append(clean_val.title())
+
+    if decomposed and decomposed.get("audience"):
+        aud_dec = decomposed.get("audience").title()
+        if aud_dec and aud_dec.lower() not in [s.lower() for s in seed_audiences]:
+            seed_audiences.append(aud_dec)
+
+    # 2. Match seed audience terms against snippet
+    for seed in seed_audiences:
+        seed_words = [w for w in seed.lower().split() if len(w) > 3 and w not in STOP_WORDS and w not in GENERIC_BUSINESS_MODEL_TERMS]
+        if any(w in full_text for w in seed_words):
+            return seed
+
+    # 3. Industry-specific domain mappings
+    domain_audience_rules = [
+        (["contractor", "subcontractor", "construction", "builder", "jobsite"], "General Contractors & Subcontractors"),
+        (["pet", "dog", "cat", "sitter", "walker", "groomer"], "Pet Owners & Pet Care Providers"),
+        (["fleet", "driver", "courier", "logistics", "freight"], "Logistics Operators & Fleet Managers"),
+        (["patient", "doctor", "clinic", "hospital", "health"], "Healthcare Consumers & Medical Providers"),
+        (["student", "teacher", "school", "course", "tutor"], "Students & Educational Professionals"),
+        (["farmer", "crop", "agri", "vineyard"], "Agricultural Producers & Farm Managers"),
+        (["data center", "cooling", "server", "thermal"], "Data Center Operations & Infrastructure Managers"),
+    ]
+
+    for keywords, target in domain_audience_rules:
+        if any(kw in full_text for kw in keywords):
+            return target
+
+    if seed_audiences:
+        return seed_audiences[0]
+
+    if domain:
+        clean_dom = domain.replace("marketplace", "").replace("services", "").replace("platform", "").strip().title()
+        if clean_dom:
+            return f"{clean_dom} Professionals & Users"
+
+    return "Target Industry Buyers & Service Providers"
+
+
+# ============================================================
+# Gemini Result Validation
+# ============================================================
+
+def _validate_gemini_results(
+    original_results: List[Dict[str, Any]],
+    reranked_results: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """
+    Ensure reranked results are from the original search.
+    """
+
+    original_urls = {
+        result.get("url")
+        for result in original_results
+        if result.get("url")
+    }
+
+    validated = []
+
+    for result in reranked_results:
+
+        url = result.get("url")
+
+        if url in original_urls:
+
+            validated.append(result)
+
+    return validated
+
+
+# ============================================================
+# Result Filtering
+# ============================================================
+
+def _is_obviously_irrelevant(
+    result: Dict[str, Any],
+) -> bool:
+    """
+    Reject obviously irrelevant pages.
+    """
+
+    title = str(
+        result.get(
+            "title",
+            "",
+        )
+    ).lower()
+
+    content = str(
+        result.get(
+            "content",
+            "",
+        )
+    ).lower()
+
+    url = str(
+        result.get(
+            "url",
+            "",
+        )
+    ).lower()
+
+    full_text = (
+        f"{title} {content} {url}"
+    )
+
+    # Wikipedia
+    if "wikipedia.org" in url:
+        return True
+
+    # Gift-related pages
+    gift_keywords = [
+        "gift shop",
+        "gift store",
+        "gift ideas",
+        "birthday gifts",
+        "wedding gifts",
+        "corporate gifts",
+        "custom gifts",
+        "personalized gifts",
+        "personalised gifts",
+    ]
+
+    if any(
+        keyword in full_text
+        for keyword in gift_keywords
+    ):
+
+        return True
+
+    # Shopping pages
+    shopping_keywords = [
+        "coupon",
+        "discount code",
+        "shop now",
+        "free download",
+        "giveaway",
+    ]
+
+    if any(
+        keyword in full_text
+        for keyword in shopping_keywords
+    ):
+
+        return True
+
+    return False
+
+
+# ============================================================
+# Main Web Search Agent
+# ============================================================
 
 async def run_web_search_agent(
     idea: str,
-    domain: str | None = None,
-    target_customer: str | None = None,
-    validation_type: str = "all"
-) -> Dict[str, List[Dict[str, str]]]:
+    domain: str = "",
+    audience: str = "",
+    validation_type: str = "all",
+) -> Dict[str, Any]:
     """
-    Asynchronous web search & intelligence validation agent.
-    
-    Args:
-        idea: Startup idea description string.
-        domain: Optional startup domain/industry.
-        target_customer: Optional customer segment.
-        validation_type: Focus area ('all', 'market', 'competition', 'customers', 'business', 'risks').
-        
-    Returns:
-        Dict with shape {"results": [{"title": "", "url": "", "target_audience": "", "content": ""}]}
+    Main Web Search Agent.
+
+    Flow:
+
+        Startup Idea
+              ↓
+        Decomposition
+              ↓
+        Query Generation
+              ↓
+        Tavily
+              ↓
+        DDGS fallback
+              ↓
+        Deduplication
+              ↓
+        Relevance Ranking
+              ↓
+        Filtering
+              ↓
+        Target Audience
+              ↓
+        Final Results
+
+    Gemini is intentionally not part of the active flow.
     """
+
     try:
+
         _load_env_if_needed()
-        
-        if not idea or not isinstance(idea, str) or not idea.strip():
-            return {"results": []}
-        
-        if validation_type not in VALID_VALIDATION_TYPES:
-            validation_type = "all"
-        
-        # 1. Intelligent Decomposition
-        decomposed = decompose_startup_idea(
-            idea=idea,
-            domain=domain or "",
-            audience=target_customer or ""
-        )
-        
-        # 2. Smart Query Generation
-        queries = generate_search_queries(decomposed, validation_type)
-        if not queries:
-            return {"results": []}
-        
-        tavily_api_key = os.getenv("TAVILY_API_KEY")
-        if tavily_api_key:
-            tavily_api_key = tavily_api_key.strip()
-            if not tavily_api_key:
-                tavily_api_key = None
-        
-        # 3. Concurrent Search Execution
-        search_tasks = [_execute_single_query(q, tavily_api_key) for q in queries]
-        query_results = await asyncio.gather(*search_tasks, return_exceptions=True)
-        
-        seen_urls: Set[str] = set()
-        aggregated_results: List[Dict[str, str]] = []
-        
-        for batch in query_results:
-            if isinstance(batch, Exception) or not batch:
-                continue
-            for item in batch:
-                raw_url = item.get("url", "")
-                norm_url = _normalize_url(raw_url)
-                title = item.get("title", "")
-                content = item.get("content", "")
-                full_lower = f"{title} {content}".lower()
-                
-                # Filter out obvious false-positive food pulses if domain is logistics
-                if any(k in decomposed.get("domain", "").lower() for k in ["logistics", "supply chain", "fulfillment", "delivery", "transit"]):
-                    if any(food in full_lower for food in ["chickpea", "lentil", "pulse ingredient", "pea flour", "yellow pea", "faba bean"]):
-                        continue
-                        
-                if norm_url and norm_url not in seen_urls:
-                    seen_urls.add(norm_url)
-                    aggregated_results.append({
-                        "title": title,
-                        "url": raw_url,
-                        "content": content
-                    })
-                    if len(aggregated_results) >= MAX_TOTAL_RESULTS * 2:
-                        break
-            if len(aggregated_results) >= MAX_TOTAL_RESULTS * 2:
-                break
-        
-        # 4. Deterministic Pre-Ranking
-        aggregated_results = _heuristic_rerank(aggregated_results, decomposed, validation_type)
-        
-        # 5. Gemini Synthesis & Audience Inference (with fallbacks)
-        gemini_api_key = os.getenv("GEMINI_API_KEY")
-        if gemini_api_key and gemini_api_key.strip() and aggregated_results:
-            aggregated_results = await _rerank_with_gemini(
-                idea=idea,
-                domain=domain,
-                target_customer=target_customer,
-                validation_type=validation_type,
-                results=aggregated_results,
-                api_key=gemini_api_key.strip(),
-                decomposed=decomposed
+        cleaned_idea = clean_text(idea)
+
+        if not cleaned_idea:
+            raise ValueError(
+                "Startup idea cannot be empty"
             )
-        
-        # 6. Ensure target_audience is populated on all items
-        final_results = []
-        for r in aggregated_results[:MAX_TOTAL_RESULTS]:
-            aud = r.get("target_audience")
-            if not aud or not str(aud).strip():
-                aud = _infer_fallback_audience(
-                    r.get("title", ""),
-                    r.get("content", ""),
-                    decomposed,
-                    target_customer
+
+        if len(cleaned_idea) < 10:
+
+            raise ValueError(
+                "Startup idea is too short to analyze meaningfully"
+            )
+
+        # ----------------------------------------------------
+        # Validate search type
+        # ----------------------------------------------------
+
+        allowed_types = {
+            "all",
+            "market",
+            "competition",
+            "customers",
+            "business",
+            "risks",
+            "scientific",
+            "technical",
+            "regulatory",
+        }
+
+        validation_type = (
+            validation_type or "all"
+        ).lower().strip()
+
+        if validation_type not in allowed_types:
+
+            validation_type = "all"
+
+        # ----------------------------------------------------
+        # Decompose idea
+        # ----------------------------------------------------
+
+        gemini_dec = await _decompose_with_gemini_async(cleaned_idea)
+        if gemini_dec:
+            decomposed = gemini_dec
+            logger.info("Startup idea decomposition via Gemini: %s", decomposed)
+        else:
+            decomposed = decompose_startup_idea(
+                cleaned_idea,
+                domain=domain,
+                audience=audience,
+            )
+            logger.info("Startup idea decomposition via Heuristic: %s", decomposed)
+
+        # ----------------------------------------------------
+        # Generate queries
+        # ----------------------------------------------------
+
+        queries = generate_search_queries(
+            decomposed,
+            validation_type,
+        )
+
+        logger.info(
+            "Generated search queries: %s",
+            queries,
+        )
+
+        if not queries:
+
+            return {
+                "results": []
+            }
+
+        # ----------------------------------------------------
+        # Execute searches concurrently
+        # ----------------------------------------------------
+
+        tasks = [
+
+            _execute_single_query(
+                query,
+                max_results=SEARCH_RESULTS_PER_QUERY,
+            )
+
+            for query in queries
+        ]
+
+        search_batches = await asyncio.gather(
+            *tasks,
+            return_exceptions=True,
+        )
+
+        # ----------------------------------------------------
+        # Collect results
+        # ----------------------------------------------------
+
+        all_results = []
+
+        for batch in search_batches:
+
+            if isinstance(
+                batch,
+                Exception,
+            ):
+
+                logger.warning(
+                    "Search batch failed: %s",
+                    batch,
                 )
-            final_results.append({
-                "title": r.get("title", ""),
-                "url": r.get("url", ""),
-                "target_audience": aud,
-                "content": r.get("content", "")
-            })
-                
-        return {"results": final_results}
 
-    except Exception as e:
-        logger.error(f"Unexpected error in run_web_search_agent: {e}")
-        return {"results": []}
+                continue
 
+            if not isinstance(
+                batch,
+                list,
+            ):
+
+                continue
+
+            all_results.extend(batch)
+
+        logger.info(
+            "Collected %d raw search results",
+            len(all_results),
+        )
+
+        if not all_results:
+
+            logger.warning(
+                "No search results returned "
+                "from Tavily or DDGS."
+            )
+
+            return {
+                "results": []
+            }
+
+        # ----------------------------------------------------
+        # Deduplicate URLs
+        # ----------------------------------------------------
+
+        unique_results = []
+
+        seen_urls = set()
+
+        for result in all_results:
+
+            url = str(
+                result.get(
+                    "url",
+                    "",
+                )
+            ).strip()
+
+            if not url:
+                continue
+
+            normalized_url = (
+                url.lower().rstrip("/")
+            )
+
+            if normalized_url in seen_urls:
+                continue
+
+            seen_urls.add(
+                normalized_url
+            )
+
+            unique_results.append(
+                result
+            )
+
+        logger.info(
+            "Unique search results: %d",
+            len(unique_results),
+        )
+
+        # ----------------------------------------------------
+        # Remove obvious irrelevant pages BEFORE ranking
+        # ----------------------------------------------------
+
+        prefiltered_results = []
+
+        for result in unique_results:
+
+            if _is_obviously_irrelevant(
+                result
+            ):
+
+                continue
+
+            prefiltered_results.append(
+                result
+            )
+
+        logger.info(
+            "Results after obvious filtering: %d",
+            len(prefiltered_results),
+        )
+
+        # ----------------------------------------------------
+        # Rank results
+        # ----------------------------------------------------
+
+        ranked_results = _heuristic_rerank(
+            prefiltered_results,
+            decomposed,
+        )
+
+        # ----------------------------------------------------
+        # Final relevance filtering
+        # ----------------------------------------------------
+
+        filtered_results = []
+
+        for result in ranked_results:
+
+            score = result.get(
+                "_relevance_score",
+                0,
+            )
+
+            if score < -10:
+                continue
+
+            filtered_results.append(
+                result
+            )
+
+        # ----------------------------------------------------
+        # Keep top 10
+        # ----------------------------------------------------
+
+        filtered_results = filtered_results[
+            :MAX_TOTAL_RESULTS
+        ]
+
+        logger.info(
+            "Results after relevance filtering: %d",
+            len(filtered_results),
+        )
+
+        # ----------------------------------------------------
+        # Add target audience
+        # ----------------------------------------------------
+
+        final_results = []
+
+        explicit_audience = clean_text(
+            audience
+        )
+
+        for result in filtered_results:
+
+            result_copy = dict(result)
+
+            result_copy.pop(
+                "_relevance_score",
+                None,
+            )
+
+            # IMPORTANT:
+            # If user supplied target customer,
+            # always preserve it.
+            if explicit_audience:
+
+                result_copy[
+                    "target_audience"
+                ] = explicit_audience
+
+            else:
+
+                existing_audience = (
+                    result_copy.get(
+                        "target_audience"
+                    )
+                )
+
+                if existing_audience and existing_audience not in ("General Users", "Potential Customers"):
+                    result_copy["target_audience"] = existing_audience
+                else:
+                    result_copy["target_audience"] = _infer_fallback_audience(
+                        result_copy,
+                        domain=decomposed.get("domain", ""),
+                        idea=cleaned_idea,
+                        decomposed=decomposed,
+                    )
+
+            final_results.append(
+                result_copy
+            )
+
+        # ----------------------------------------------------
+        # Return
+        # ----------------------------------------------------
+
+        logger.info(
+            "Returning %d final search results",
+            len(final_results),
+        )
+
+        return {
+            "results": final_results
+        }
+
+    except ValueError as exc:
+
+        logger.warning(
+            "Invalid search request: %s",
+            exc,
+        )
+
+        return {
+            "results": []
+        }
+
+    except Exception as exc:
+
+        logger.exception(
+            "Web Search Agent failed: %s",
+            exc,
+        )
+
+        return {
+            "results": []
+        }
+
+
+# ============================================================
+# Local Test
+# ============================================================
 
 if __name__ == "__main__":
-    sample_idea = "AI platform that turns recorded college lectures into interactive quizzes and summary flashcards"
-    sample_customer = "college students and university professors"
-    sample_validation_type = "risks"
-    
-    print(f"Testing Web Search Agent with:")
-    print(f"- Idea: '{sample_idea}'")
-    print(f"- Target Customer: '{sample_customer}'")
-    print(f"- Validation Type: '{sample_validation_type}'\n")
-    
-    output = asyncio.run(run_web_search_agent(
-        idea=sample_idea,
-        target_customer=sample_customer,
-        validation_type=sample_validation_type
-    ))
-    
-    print("Result output:")
-    print(json.dumps(output, indent=2))
-    print(f"\nTotal results returned: {len(output.get('results', []))}")
+
+    async def main():
+
+        idea = (
+            "AI platform that provides personalized "
+            "fitness plans for users"
+        )
+
+        result = await run_web_search_agent(
+            idea=idea,
+            domain="fitness",
+            audience=(
+                "college students and working professionals"
+            ),
+            validation_type="all",
+        )
+
+        from pprint import pprint
+
+        pprint(result)
+
+    asyncio.run(main())

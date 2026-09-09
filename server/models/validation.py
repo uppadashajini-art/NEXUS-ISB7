@@ -8,8 +8,8 @@ These models define:
 
 """
 
-from typing import List, Optional
-from pydantic import BaseModel, Field, field_validator
+from typing import Any, Dict, List, Optional
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 # ---------------------------------------------------------------------------
@@ -20,6 +20,8 @@ class ValidationRequest(BaseModel):
     """Incoming request body for POST /api/validate"""
 
     idea: str = Field(..., description="The startup idea submitted by the user")
+    domain: Optional[str] = Field(None, description="Optional user-specified domain category")
+    target_customer: Optional[str] = Field(None, description="Optional target customer segment")
 
     @field_validator("idea")
     @classmethod
@@ -83,6 +85,43 @@ class CompetitorAnalysis(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Deep Validation Models (Technical, Scientific, Regulatory)
+# ---------------------------------------------------------------------------
+
+class TechnicalFeasibility(BaseModel):
+    score: float = Field(default=7.0, description="Feasibility score from 1.0 to 10.0")
+    feasibility_rating: str = Field(default="Medium", description="High, Medium, Low, or Moonshot")
+    key_barriers: List[str] = Field(default_factory=list)
+    signal_constraints: List[str] = Field(default_factory=list)
+    recommended_tech_stack: List[str] = Field(default_factory=list)
+
+
+class ScientificValidation(BaseModel):
+    score: float = Field(default=6.5, description="Scientific confidence score from 1.0 to 10.0")
+    evidence_level: str = Field(default="Emerging Hypothesis", description="Clinical Fact, Emerging Hypothesis, or Unsubstantiated")
+    key_findings: List[str] = Field(default_factory=list)
+    clinical_findings: List[str] = Field(default_factory=list)
+    risk_flags: List[str] = Field(default_factory=list)
+    required_trials: List[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def sync_findings(self) -> "ScientificValidation":
+        if not self.key_findings and self.clinical_findings:
+            self.key_findings = list(self.clinical_findings)
+        elif not self.clinical_findings and self.key_findings:
+            self.clinical_findings = list(self.key_findings)
+        return self
+
+
+class RegulatoryRisk(BaseModel):
+    risk_level: str = Field(default="Medium", description="Low, Medium, High, or Critical")
+    fda_classification: str = Field(default="Standard Industry Governance", description="General Wellness, SaMD Class I/II/III, or Industry Governance")
+    regulatory_classification: Optional[str] = Field(default=None)
+    compliance_requirements: List[str] = Field(default_factory=list)
+    recommended_pathway: str = Field(default="", description="Go-to-market regulatory disclaimers & approval strategy")
+
+
+# ---------------------------------------------------------------------------
 # Combined Response Model (what FastAPI returns to React)
 # ---------------------------------------------------------------------------
 
@@ -90,6 +129,12 @@ class ValidationResponse(BaseModel):
     idea: str
     market_analysis: MarketAnalysis
     competitor_analysis: CompetitorAnalysis
+    technical_feasibility: Optional[TechnicalFeasibility] = None
+    scientific_validation: Optional[ScientificValidation] = None
+    regulatory_risk: Optional[RegulatoryRisk] = None
+    # The exact search results the analysis agents used — returned to the
+    # frontend so it can display Research Sources without a second API call.
+    search_results: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
