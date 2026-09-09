@@ -1513,19 +1513,19 @@ def _infer_fallback_audience(
         if any(w in full_text for w in seed_words):
             return seed
 
-    # 3. Industry-specific domain mappings
+    # 3. Industry-specific domain mappings with exact word boundaries
     domain_audience_rules = [
-        (["contractor", "subcontractor", "construction", "builder", "jobsite"], "General Contractors & Subcontractors"),
-        (["pet", "dog", "cat", "sitter", "walker", "groomer"], "Pet Owners & Pet Care Providers"),
-        (["fleet", "driver", "courier", "logistics", "freight"], "Logistics Operators & Fleet Managers"),
-        (["patient", "doctor", "clinic", "hospital", "health"], "Healthcare Consumers & Medical Providers"),
-        (["student", "teacher", "school", "course", "tutor"], "Students & Educational Professionals"),
-        (["farmer", "crop", "agri", "vineyard"], "Agricultural Producers & Farm Managers"),
-        (["data center", "cooling", "server", "thermal"], "Data Center Operations & Infrastructure Managers"),
+        ([r"\bcontractor\b", r"\bsubcontractor\b", r"\bconstruction\b", r"\bbuilder\b", r"\bjobsite\b"], "General Contractors & Subcontractors"),
+        ([r"\bpet\b", r"\bpets\b", r"\bdog\b", r"\bcat\b", r"\bsitter\b", r"\bwalker\b", r"\bgroomer\b"], "Pet Owners & Pet Care Providers"),
+        ([r"\bfleet\b", r"\bdriver\b", r"\bcourier\b", r"\blogistics\b", r"\bfreight\b"], "Logistics Operators & Fleet Managers"),
+        ([r"\bpatient\b", r"\bdoctor\b", r"\bclinic\b", r"\bhospital\b", r"\btelehealth\b"], "Healthcare Consumers & Medical Providers"),
+        ([r"\bstudent\b", r"\bteacher\b", r"\bschool\b", r"\bcourse\b", r"\btutor\b"], "Students & Educational Professionals"),
+        ([r"\bfarmer\b", r"\bcrop\b", r"\bagri\b", r"\bvineyard\b", r"\borchard\b", r"\bpesticide\b", r"\bspore\b"], "Commercial Vineyard Managers & Farm Operators"),
+        ([r"\bdata center\b", r"\bcooling\b", r"\bserver\b", r"\bthermal\b"], "Data Center Operations & Infrastructure Managers"),
     ]
 
-    for keywords, target in domain_audience_rules:
-        if any(kw in full_text for kw in keywords):
+    for patterns, target in domain_audience_rules:
+        if any(re.search(pat, full_text, re.IGNORECASE) for pat in patterns):
             return target
 
     if seed_audiences:
