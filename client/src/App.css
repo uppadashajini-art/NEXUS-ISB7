@@ -3388,6 +3388,639 @@ button:disabled {
 .comparison-table tr:hover td {
   background: rgba(255, 255, 255, 0.015);
 }
+/* =====================================================
+   COMPETITOR ANALYSIS - ENHANCED STYLES
+===================================================== */
+
+.competitor-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.competitor-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(232, 199, 123, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.summary-icon {
+  font-size: 24px;
+}
+
+.summary-label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  opacity: 0.65;
+}
+
+.summary-value {
+  display: block;
+  font-size: 24px;
+  margin-top: 4px;
+}
+
+.competitor-type-label,
+.group-kicker,
+.insight-kicker {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  opacity: 0.6;
+  margin-bottom: 5px;
+}
+
+.competitor-pricing-box {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 15px 17px;
+  border-radius: 12px;
+  border: 1px solid rgba(232, 199, 123, 0.25);
+  background: rgba(232, 199, 123, 0.06);
+}
+
+.pricing-icon {
+  font-size: 22px;
+}
+
+.pricing-label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  opacity: 0.65;
+}
+
+.pricing-value {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+.competitor-info-section {
+  margin-top: 18px;
+}
+
+.competitor-info-row {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 15px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.competitor-info-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.competitor-info-value {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.competitor-info-icon {
+  font-size: 15px;
+}
+
+.competitor-info-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.competitor-muted {
+  font-size: 12px;
+  opacity: 0.55;
+}
+
+.competitor-comparison-section {
+  margin-top: 35px;
+}
+
+.comparison-heading h3 {
+  margin: 8px 0 5px;
+}
+
+.comparison-heading p {
+  margin: 0 0 18px;
+  font-size: 13px;
+  opacity: 0.65;
+}
+
+.comparison-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(232, 199, 123, 0.16);
+}
+
+.competitor-comparison-table {
+  width: 100%;
+  min-width: 850px;
+  border-collapse: collapse;
+}
+
+.competitor-comparison-table th,
+.competitor-comparison-table td {
+  padding: 14px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.competitor-comparison-table th {
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.competitor-comparison-table td {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.comparison-price {
+  display: inline-block;
+  font-weight: 600;
+}
+
+.competitor-insight-box {
+  margin-top: 30px;
+  padding: 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 118, 87, 0.2);
+  background: rgba(255, 118, 87, 0.05);
+}
+
+.competitor-insight-header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.insight-icon {
+  font-size: 22px;
+}
+
+.competitor-insight-header h3 {
+  margin: 5px 0 0;
+  font-size: 17px;
+}
+
+.competitor-insight-list {
+  margin-top: 18px;
+}
+
+.competitor-insight-item {
+  display: flex;
+  gap: 14px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.insight-number {
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.5;
+}
+
+.competitor-insight-item p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.competitor-disclaimer {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.competitor-disclaimer p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  opacity: 0.55;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .competitor-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .competitor-info-row {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .competitor-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .competitor-domain-link {
+    margin-top: 8px;
+  }
+}
+/* =====================================================
+   COMPETITOR ANALYSIS - ENHANCED STYLES
+===================================================== */
+
+.competitor-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.competitor-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(232, 199, 123, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.025);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.competitor-summary-item:hover {
+  transform: translateY(-2px);
+  border-color: rgba(232, 199, 123, 0.35);
+}
+
+.summary-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.summary-label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  opacity: 0.65;
+}
+
+.summary-value {
+  display: block;
+  font-size: 24px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.competitor-type-label,
+.group-kicker,
+.insight-kicker {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  opacity: 0.6;
+  margin-bottom: 5px;
+}
+
+/* =====================================================
+   PRICING
+===================================================== */
+
+.competitor-pricing-box {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 15px 17px;
+  border-radius: 12px;
+  border: 1px solid rgba(232, 199, 123, 0.25);
+  background: rgba(232, 199, 123, 0.06);
+}
+
+.pricing-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.pricing-label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  opacity: 0.65;
+}
+
+.pricing-value {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* =====================================================
+   COMPETITOR INFORMATION
+===================================================== */
+
+.competitor-info-section {
+  margin-top: 18px;
+}
+
+.competitor-info-row {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 15px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.competitor-info-row:last-child {
+  border-bottom: none;
+}
+
+.competitor-info-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.competitor-info-value {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.competitor-info-icon {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.competitor-info-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.competitor-info-list li {
+  margin-bottom: 5px;
+  line-height: 1.5;
+}
+
+.competitor-muted {
+  font-size: 12px;
+  opacity: 0.55;
+}
+
+/* =====================================================
+   COMPARISON SECTION
+===================================================== */
+
+.competitor-comparison-section {
+  margin-top: 35px;
+}
+
+.comparison-heading h3 {
+  margin: 8px 0 5px;
+}
+
+.comparison-heading p {
+  margin: 0 0 18px;
+  font-size: 13px;
+  opacity: 0.65;
+}
+
+.comparison-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(232, 199, 123, 0.16);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.competitor-comparison-table {
+  width: 100%;
+  min-width: 850px;
+  border-collapse: collapse;
+}
+
+.competitor-comparison-table th,
+.competitor-comparison-table td {
+  padding: 14px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.competitor-comparison-table th {
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.competitor-comparison-table td {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.competitor-comparison-table tbody tr {
+  transition: background 0.2s ease;
+}
+
+.competitor-comparison-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.competitor-comparison-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.competitor-comparison-table td:first-child {
+  font-weight: 600;
+  color: var(--gold-light);
+}
+
+.comparison-price {
+  display: inline-block;
+  font-weight: 600;
+  color: var(--gold-light);
+}
+
+/* =====================================================
+   COMPETITIVE INSIGHTS
+===================================================== */
+
+.competitor-insight-box {
+  margin-top: 30px;
+  padding: 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 118, 87, 0.2);
+  background: rgba(255, 118, 87, 0.05);
+}
+
+.competitor-insight-header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.insight-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.competitor-insight-header h3 {
+  margin: 5px 0 0;
+  font-size: 17px;
+}
+
+.competitor-insight-list {
+  margin-top: 18px;
+}
+
+.competitor-insight-item {
+  display: flex;
+  gap: 14px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.competitor-insight-item:first-child {
+  border-top: none;
+}
+
+.insight-number {
+  min-width: 24px;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.5;
+}
+
+.competitor-insight-item p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* =====================================================
+   DISCLAIMER
+===================================================== */
+
+.competitor-disclaimer {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.competitor-disclaimer p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  opacity: 0.55;
+}
+
+/* =====================================================
+   EMPTY STATE
+===================================================== */
+
+.competitor-empty-state {
+  padding: 30px 20px;
+  text-align: center;
+  border: 1px dashed rgba(232, 199, 123, 0.2);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.competitor-empty-state h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.competitor-empty-state p {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 900px) {
+  .competitor-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .competitor-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .competitor-info-row {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .competitor-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .competitor-domain-link {
+    margin-top: 8px;
+  }
+
+  .competitor-pricing-box {
+    padding: 13px 14px;
+  }
+
+  .competitor-insight-box {
+    padding: 16px;
+  }
+
+  .competitor-comparison-section {
+    margin-top: 25px;
+  }
+}
+
+@media (max-width: 480px) {
+  .competitor-summary-item {
+    padding: 14px;
+  }
+
+  .summary-value {
+    font-size: 20px;
+  }
+
+  .competitor-pricing-box {
+    gap: 10px;
+  }
+
+  .pricing-value {
+    font-size: 13px;
+  }
+
+  .competitor-insight-item {
+    gap: 10px;
+  }
+}
 
 /* =========================================================
    ACCESSIBILITY
