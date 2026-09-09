@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 
 import SearchResultCard from "../components/SearchResultCard";
@@ -122,9 +121,9 @@ function StartupValidator() {
     const trimmedDomain = domain.trim();
     const trimmedCustomers = targetCustomers.trim();
 
-    // -----------------------------------------
-    // IDEA VALIDATION
-    // -----------------------------------------
+    // =========================================
+    // INPUT VALIDATION
+    // =========================================
 
     if (!trimmedIdea) {
       setError("Please enter your startup idea.");
@@ -138,9 +137,9 @@ function StartupValidator() {
       return;
     }
 
-    // -----------------------------------------
+    // =========================================
     // START LOADING
-    // -----------------------------------------
+    // =========================================
 
     setLoading(true);
     setValidationLoading(true);
@@ -152,39 +151,30 @@ function StartupValidator() {
     setSearchCompleted(false);
     setValidationResult(null);
 
-    // -----------------------------------------
+    // =========================================
     // SAVE SUBMITTED VALUES
-    // -----------------------------------------
+    // =========================================
 
     setSubmittedIdea(trimmedIdea);
     setSubmittedDomain(trimmedDomain);
     setSubmittedCustomers(trimmedCustomers);
     setSubmittedValidation(selectedOption);
 
-    // -----------------------------------------
-    // DEBUG LOGS
-    // -----------------------------------------
+    // =========================================
+    // DEBUG
+    // =========================================
 
     console.log("=================================");
     console.log("NEXUS STARTUP VALIDATION");
     console.log("=================================");
-
     console.log("Startup Idea:", trimmedIdea);
     console.log("Domain / Industry:", trimmedDomain);
     console.log("Target Customers:", trimmedCustomers);
     console.log("Validation Type:", selectedOption);
 
-    console.log(
-      "API Endpoint:",
-      "https://nexus-server-staging.onrender.com/api/validate"
-    );
-
     try {
       // =========================================
       // CALL BACKEND
-      // =========================================
-      // IMPORTANT:
-      // selectedOption is passed as validationType
       // =========================================
 
       const analysisData = await validateIdea(
@@ -200,26 +190,23 @@ function StartupValidator() {
       );
 
       // =========================================
-      // RESEARCH SOURCES
+      // WEB SEARCH RESULTS
       // =========================================
 
-      const searchResults =
-        Array.isArray(
-          analysisData?.search_results
-        )
-          ? analysisData.search_results
-          : [];
+      const searchResults = Array.isArray(
+        analysisData?.search_results
+      )
+        ? analysisData.search_results
+        : [];
 
       setResults(searchResults);
 
       // =========================================
-      // VALIDATION RESULT
+      // COMPLETE VALIDATION RESULT
       // =========================================
 
       setValidationResult(analysisData);
-
       setSearchCompleted(true);
-
     } catch (err) {
       console.error(
         "Validation error:",
@@ -230,25 +217,17 @@ function StartupValidator() {
         err?.message ||
         "Unable to validate the startup idea. Please try again.";
 
-      const isAnalysisError =
+      if (
         errorMessage
           .toLowerCase()
-          .includes("analysis");
-
-      if (isAnalysisError) {
-        setValidationError(
-          errorMessage
-        );
-
+          .includes("analysis")
+      ) {
+        setValidationError(errorMessage);
         setValidationResult(null);
       } else {
-        setError(
-          errorMessage
-        );
-
+        setError(errorMessage);
         setSearchCompleted(false);
       }
-
     } finally {
       setLoading(false);
       setValidationLoading(false);
@@ -323,7 +302,7 @@ function StartupValidator() {
   };
 
   // =========================================
-  // TARGET CUSTOMER CHANGE
+  // CUSTOMER CHANGE
   // =========================================
 
   const handleCustomerChange = (e) => {
@@ -396,7 +375,6 @@ function StartupValidator() {
           </div>
 
           <div>
-
             <h2>
               Describe Your Startup
             </h2>
@@ -405,7 +383,6 @@ function StartupValidator() {
               Enter your startup idea and provide optional
               customer details for better validation.
             </p>
-
           </div>
 
         </div>
@@ -617,11 +594,9 @@ function StartupValidator() {
                       </div>
 
                       <div className="option-check">
-
                         {isSelected
                           ? "✓"
                           : "→"}
-
                       </div>
 
                     </button>
@@ -662,30 +637,26 @@ function StartupValidator() {
           </div>
 
           {/* =========================================
-              ERROR
+              INLINE ERROR
           ========================================= */}
 
           {error && (
-
             <div
               className="inline-error"
               role="alert"
             >
 
-              <span>
-                !
-              </span>
+              <span>!</span>
 
               <p>
                 {error}
               </p>
 
             </div>
-
           )}
 
           {/* =========================================
-              SUBMIT BUTTON
+              SUBMIT
           ========================================= */}
 
           <div className="validate-action">
@@ -704,26 +675,18 @@ function StartupValidator() {
             >
 
               {loading ? (
-
                 <>
                   <span className="button-spinner"></span>
                   Researching...
                 </>
-
               ) : (
-
                 <>
-                  <span>
-                    ✦
-                  </span>
-
+                  <span>✦</span>
                   Validate Idea
-
                   <span className="button-arrow">
                     →
                   </span>
                 </>
-
               )}
 
             </button>
@@ -741,9 +704,7 @@ function StartupValidator() {
 
           <div className="input-hint">
 
-            <span>
-              💡
-            </span>
+            <span>💡</span>
 
             <p>
               Include your target users, problem,
@@ -903,7 +864,7 @@ function StartupValidator() {
       )}
 
       {/* =========================================
-          RESULTS
+          VALIDATION RESULTS
       ========================================= */}
 
       {searchCompleted &&
@@ -912,7 +873,9 @@ function StartupValidator() {
 
           <section className="validation-dashboard">
 
-            {/* HEADER */}
+            {/* =========================================
+                HEADER
+            ========================================= */}
 
             <div className="section-header">
 
@@ -927,7 +890,8 @@ function StartupValidator() {
                 </h2>
 
                 <p>
-                  Research collected for your startup idea.
+                  AI-powered research and analysis
+                  for your startup idea.
                 </p>
 
               </div>
@@ -966,7 +930,9 @@ function StartupValidator() {
 
             </div>
 
-            {/* IDEA */}
+            {/* =========================================
+                IDEA
+            ========================================= */}
 
             <div className="idea-display">
 
@@ -980,7 +946,9 @@ function StartupValidator() {
 
             </div>
 
-            {/* DOMAIN */}
+            {/* =========================================
+                DOMAIN
+            ========================================= */}
 
             {submittedDomain && (
 
@@ -998,7 +966,9 @@ function StartupValidator() {
 
             )}
 
-            {/* TARGET CUSTOMERS */}
+            {/* =========================================
+                TARGET CUSTOMERS
+            ========================================= */}
 
             {submittedCustomers && (
 
@@ -1016,7 +986,9 @@ function StartupValidator() {
 
             )}
 
-            {/* SELECTED ANALYSIS */}
+            {/* =========================================
+                SELECTED ANALYSIS
+            ========================================= */}
 
             <div className="selected-analysis">
 
@@ -1042,7 +1014,9 @@ function StartupValidator() {
 
             </div>
 
-            {/* DASHBOARD */}
+            {/* =========================================
+                DASHBOARD SUMMARY
+            ========================================= */}
 
             <div className="dashboard-grid">
 
@@ -1200,9 +1174,16 @@ function StartupValidator() {
 
             {validationLoading && (
 
-              <p className="analysis-loading">
-                Analyzing market and competitors...
-              </p>
+              <div className="analysis-loading">
+
+                <span className="button-spinner"></span>
+
+                <p>
+                  Analyzing market, customers,
+                  competitors and opportunities...
+                </p>
+
+              </div>
 
             )}
 
@@ -1212,9 +1193,18 @@ function StartupValidator() {
 
             {validationError && (
 
-              <p className="inline-error">
-                {validationError}
-              </p>
+              <div
+                className="inline-error"
+                role="alert"
+              >
+
+                <span>!</span>
+
+                <p>
+                  {validationError}
+                </p>
+
+              </div>
 
             )}
 
@@ -1226,49 +1216,101 @@ function StartupValidator() {
 
               <>
 
-                <DeepValidationCard
-                  technical={
-                    validationResult
-                      .technical_feasibility
-                  }
-                  scientific={
-                    validationResult
-                      .scientific_validation
-                  }
-                  regulatory={
-                    validationResult
-                      .regulatory_risk
-                  }
-                />
+                {/* ================================
+                    DEEP VALIDATION
+                ================================= */}
 
-                <MarketAnalysis
-                  data={
-                    validationResult.market_analysis
-                  }
-                />
+                {(validationResult.technical_feasibility ||
+                  validationResult.scientific_validation ||
+                  validationResult.regulatory_risk) && (
 
-                <CustomerSegments
-                  segments={
-                    validationResult
-                      .market_analysis
-                      ?.customer_segments
-                  }
-                />
+                  <DeepValidationCard
+                    technical={
+                      validationResult
+                        .technical_feasibility
+                    }
+                    scientific={
+                      validationResult
+                        .scientific_validation
+                    }
+                    regulatory={
+                      validationResult
+                        .regulatory_risk
+                    }
+                  />
 
-                <CompetitorAnalysis
-                  data={
-                    validationResult
-                      .competitor_analysis
-                  }
-                />
+                )}
 
-                <MarketGaps
-                  gaps={
-                    validationResult
-                      .competitor_analysis
-                      ?.market_gaps
-                  }
-                />
+                {/* ================================
+                    MARKET ANALYSIS
+                ================================= */}
+
+                {validationResult.market_analysis && (
+
+                  <MarketAnalysis
+                    data={
+                      validationResult
+                        .market_analysis
+                    }
+                  />
+
+                )}
+
+                {/* ================================
+                    CUSTOMER SEGMENTS
+                ================================= */}
+
+                {validationResult.market_analysis
+                  ?.customer_segments && (
+
+                  <CustomerSegments
+                    segments={
+                      validationResult
+                        .market_analysis
+                        .customer_segments
+                    }
+                  />
+
+                )}
+
+                {/* ================================
+                    COMPETITOR ANALYSIS
+                ================================= */}
+
+                {validationResult.competitor_analysis && (
+
+                  <CompetitorAnalysis
+                    data={
+                      validationResult
+                        .competitor_analysis
+                    }
+                  />
+
+                )}
+
+                {/* ================================
+                    MARKET GAPS
+                ================================= */}
+
+                {Array.isArray(
+                  validationResult
+                    .competitor_analysis
+                    ?.market_gaps
+                ) &&
+                  validationResult
+                    .competitor_analysis
+                    .market_gaps
+                    .length > 0 && (
+
+                    <MarketGaps
+                      gaps={
+                        validationResult
+                          .competitor_analysis
+                          .market_gaps
+                      }
+                    />
+
+                  )}
 
               </>
 
@@ -1318,4 +1360,5 @@ function StartupValidator() {
     </main>
   );
 }
+
 export default StartupValidator;
