@@ -520,10 +520,13 @@ def _generate_heuristic_deep_validation(
     ])
 
     # Detect if agriculture / precision farming / drone spraying / crops
-    is_agritech = any(kw in idea_lower or kw in industry.lower() for kw in [
-        "agri", "agriculture", "crop", "crops", "farm", "farming", "vineyard",
-        "orchard", "drone", "spore", "fungal", "fungicide", "soil", "harvest", "horticulture"
-    ])
+    is_agritech = any(
+        re.search(rf"\b{re.escape(kw)}\b", idea_lower) or re.search(rf"\b{re.escape(kw)}\b", industry.lower())
+        for kw in [
+            "agri", "agriculture", "crop", "crops", "farm", "farming", "vineyard",
+            "orchard", "drone", "spore", "fungal", "fungicide", "soil", "harvest", "horticulture"
+        ]
+    )
 
     # Detect if healthtech / medical / diagnostic
     is_medical = is_acoustic_gut or any(kw in idea_lower or kw in industry.lower() for kw in [
