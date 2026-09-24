@@ -26,6 +26,8 @@ from server.models.validation import (
     CustomerSegment,
     MarketAnalysis,
     ValidationResponse,
+    SWOTAnalysis,
+    RiskItem,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,6 +41,16 @@ except ImportError:
         idea: str, **kwargs
     ) -> Dict[str, Any]:
         return {"results": []}
+
+try:
+    from server.agents.swot_risk_agent import run_swot_risk_agent
+except ImportError:
+    logger.warning("swot_risk_agent not found via direct import")
+
+    async def run_swot_risk_agent(
+        idea: str, **kwargs
+    ) -> Dict[str, Any]:
+        return {"swot_analysis": None, "risk_analysis": []}
 
 
 async def _dispatch_market_analysis(
@@ -116,9 +128,11 @@ async def _dispatch_competitor_analysis(
         )
 
         if isinstance(result, dict) and "competitor_analysis" in result:
-            return result["competitor_analysis"]
+            comp_res = result["competitor_analysis"]
+            if comp_res.get("direct_competitors"):
+                return comp_res
 
-        if isinstance(result, dict) and "direct_competitors" in result:
+        if isinstance(result, dict) and "direct_competitors" in result and result.get("direct_competitors"):
             return result
 
     except (ImportError, AttributeError):
@@ -617,6 +631,22 @@ async def run_orchestrator(
         else None
     )
 
+    # Execute SWOT & Risk Analysis Agent (Member 1 — Milestone 3/4)
+    swot_data = None
+    risk_data = []
+    try:
+        swot_risk_res = await run_swot_risk_agent(
+            idea=cleaned_idea,
+            market_analysis=market_data,
+            competitor_analysis=competitor_data,
+            search_results=search_results,
+        )
+        if isinstance(swot_risk_res, dict):
+            swot_data = swot_risk_res.get("swot_analysis")
+            risk_data = swot_risk_res.get("risk_analysis", [])
+    except Exception as exc:
+        logger.error(f"SWOT/Risk Agent failed in orchestrator: {exc}")
+
     validated_response = ValidationResponse(
         idea=cleaned_idea,
         market_analysis=market_data,
@@ -624,6 +654,8 @@ async def run_orchestrator(
         technical_feasibility=tech_data,
         scientific_validation=sci_data,
         regulatory_risk=reg_data,
+        swot_analysis=swot_data,
+        risk_analysis=risk_data,
         search_results=search_results,
     )
 
