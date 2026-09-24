@@ -971,8 +971,12 @@ def _looks_like_direct_competitor(
         text_terms
     )
 
-    if len(overlap) >= 3:
+    if (len(overlap) >= 1 and len(idea_terms) <= 2) or len(overlap) >= 2:
         return True
+
+    if any(k in text for k in ["competitor", "alternative", "rival", "fitness app", "workout app", "coaching app", "ai app", "training app"]) and len(overlap) >= 1:
+        if not any(phrase in text for phrase in INDIRECT_SERVICE_PHRASES) and not any(t in text for t in ["personal trainer", "traditional coaching"]):
+            return True
 
     food_terms = {
         "meal",
@@ -2139,8 +2143,8 @@ def _synthesize_domain_aware_market_gaps(
         return [
             "Potential personalization gap: users may benefit from "
             "more adaptive recommendations based on individual goals.",
-            "Potential affordability gap: lower-cost personalized "
-            "training could serve users who cannot afford one-to-one "
+            "Potential affordability gap: there may be an opportunity for affordable, "
+            "lower-cost personalized training to serve users who cannot afford one-to-one "
             "coaching.",
             "Potential engagement gap: stronger progress feedback "
             "could improve long-term adherence.",
