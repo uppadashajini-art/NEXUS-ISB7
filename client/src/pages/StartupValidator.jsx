@@ -6,6 +6,9 @@ import CustomerSegments from "../components/CustomerSegments";
 import CompetitorAnalysis from "../components/CompetitorAnalysis";
 import MarketGaps from "../components/MarketGaps";
 import DeepValidationCard from "../components/DeepValidationCard";
+import SwotAnalysis from "../components/SwotAnalysis";
+import RiskAnalysis from "../components/RiskAnalysis";
+import MvpRecommendations from "../components/MvpRecommendations";
 import GtmStrategy from "../components/GtmStrategy";
 import StartupAdvisor from "../components/StartupAdvisor";
 
@@ -1313,6 +1316,36 @@ function StartupValidator() {
                     />
 
                   )}
+
+                {/* ================================
+                    SWOT ANALYSIS
+                ================================= */}
+
+                {validationResult.swot_analysis && (
+                  <SwotAnalysis
+                    data={validationResult.swot_analysis}
+                  />
+                )}
+
+                {/* ================================
+                    RISK ANALYSIS
+                ================================= */}
+
+                {validationResult.risk_analysis && Array.isArray(validationResult.risk_analysis) && validationResult.risk_analysis.length > 0 && (
+                  <RiskAnalysis
+                    risks={validationResult.risk_analysis}
+                  />
+                )}
+
+                {/* ================================
+                    MVP FEATURE RECOMMENDATIONS
+                ================================= */}
+
+                {validationResult.mvp_recommendations && (
+                  <MvpRecommendations
+                    mvpData={validationResult.mvp_recommendations}
+                  />
+                )}
 
                 {/* ================================
                     GO-TO-MARKET STRATEGY
