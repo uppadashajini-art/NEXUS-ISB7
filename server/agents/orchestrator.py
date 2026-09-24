@@ -1252,7 +1252,7 @@ async def run_orchestrator(
 
     # -------------------------------------------------------
     # 7. MVP Recommendation Agent
-    # Member 2 — YOUR WORK
+    # Member 2
     # -------------------------------------------------------
 
     mvp_data = None
@@ -1294,7 +1294,27 @@ async def run_orchestrator(
         )
 
     # -------------------------------------------------------
-    # 8. Build final validated response
+    # 8. Go-To-Market Strategy Agent
+    # -------------------------------------------------------
+
+    gtm_data = None
+    try:
+        from server.agents.gtm_agent import run_gtm_agent
+        gtm_res = await run_gtm_agent(
+            idea=cleaned_idea,
+            market_analysis=market_data,
+            competitor_analysis=competitor_data,
+            swot_analysis=swot_data,
+            risk_analysis=risk_data,
+            mvp_recommendations=mvp_data,
+            search_results=search_results
+        )
+        gtm_data = gtm_res.get("gtm_strategy")
+    except Exception as exc:
+        logger.warning(f"GTM Agent execution skipped: {exc}")
+
+    # -------------------------------------------------------
+    # 9. Build final validated response
     # -------------------------------------------------------
 
     validated_response = ValidationResponse(
@@ -1316,6 +1336,8 @@ async def run_orchestrator(
         risk_analysis=risk_data,
 
         mvp_recommendations=mvp_data,
+
+        gtm_strategy=gtm_data,
 
         search_results=search_results,
     )

@@ -263,29 +263,25 @@ Return pure JSON matching this exact structure:
 }}
 Do not include any markdown wrappers or text outside the JSON.
 """
-    for model_name in GEMINI_MODELS:
-        url = f"{GEMINI_API_URL}/{model_name}:generateContent?key={api_key}"
-        headers = {"Content-Type": "application/json"}
-        payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0.2, "maxOutputTokens": 2048}
-        }
-        try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                res = await client.post(url, headers=headers, json=payload)
-                if res.status_code == 200:
-                    raw = res.json()
-                    candidates = raw.get("candidates", [])
-                    if candidates:
-                        text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-                        clean_json = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip(), flags=re.MULTILINE)
-                        parsed = json.loads(clean_json)
-                        if "swot_analysis" in parsed and "risk_analysis" in parsed:
-                            logger.info(f"Gemini SWOT/Risk generation succeeded via {model_name}")
-                            return parsed
-        except Exception as e:
-            logger.warning(f"Gemini {model_name} failed for SWOT/Risk: {e}")
-            continue
+    try:
+        from server.utils.gemini_client import call_gemini_generate_content, clean_llm_json_text
+        result = await call_gemini_generate_content(
+            prompt=prompt,
+            api_key=api_key,
+            temperature=0.2,
+            response_mime_type="application/json",
+            timeout_per_model=12.0,
+            tag="SWOT-RISK"
+        )
+        if result:
+            raw_text, successful_model = result
+            clean_json = clean_llm_json_text(raw_text)
+            parsed = json.loads(clean_json)
+            if "swot_analysis" in parsed and "risk_analysis" in parsed:
+                logger.info(f"Gemini SWOT/Risk generation succeeded via {successful_model}")
+                return parsed
+    except Exception as exc:
+        logger.warning(f"Universal Gemini SWOT/Risk generation error: {exc}")
 
     return None
 

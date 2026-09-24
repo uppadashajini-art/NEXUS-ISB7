@@ -1004,27 +1004,29 @@ def _generate_heuristic_market_analysis(
         else:
             primary_title = f"Primary: {seed_audiences[0]}" if seed_audiences else f"Primary Buyers in the {industry} Market"
             secondary_title = f"Secondary: {seed_audiences[1]}" if len(seed_audiences) > 1 else f"Operations & Management Teams in {industry}"
+        idea_clean = idea.strip()
+        core_snippet = idea_clean if len(idea_clean) < 60 else f"{idea_clean[:57]}..."
         customer_segments = [
             {
                 "segment": primary_title,
                 "needs": [
-                    f"Solutions directly addressing the core problem described in the startup idea",
-                    f"Reliable, measurable outcomes with a clear return on investment"
+                    f"Specialized automated workflows tailored for {primary_title}",
+                    f"Verifiable operational efficiency and direct margin recovery"
                 ],
                 "pain_points": [
-                    f"Current alternatives fail to solve the specific problem stated in the idea",
-                    f"High manual effort or cost associated with existing workarounds"
+                    f"Existing market tools lack domain-specific support for {industry} workflows",
+                    f"Heavy manual overhead and friction managing {core_snippet}"
                 ]
             },
             {
                 "segment": secondary_title,
                 "needs": [
                     "Centralized visibility, reporting, and verifiable performance metrics",
-                    "Cost-effective scalability without steep onboarding overhead"
+                    "Seamless API & ERP integration without steep onboarding overhead"
                 ],
                 "pain_points": [
-                    "Fragmented tools and data silos preventing unified decision-making",
-                    "Difficulty proving quantifiable efficiency gains to internal stakeholders"
+                    "Fragmented legacy tools and disconnected systems creating operational bottlenecks",
+                    "Difficulty proving quantifiable ROI and efficiency gains to leadership"
                 ]
             }
         ]
@@ -1033,10 +1035,10 @@ def _generate_heuristic_market_analysis(
         growth_drivers = domain_info["growth_drivers"]
         market_challenges = domain_info["market_challenges"]
     else:
-        logger.warning("SYNTHESIS-PATH: HEURISTIC-FALLBACK | reason=no_domain_template — growth_drivers/market_challenges are generic last-resort strings.")
+        logger.warning("SYNTHESIS-PATH: HEURISTIC-FALLBACK | reason=no_domain_template — growth_drivers/market_challenges derived from industry.")
         growth_drivers = [
-            f"Growing demand for solutions that directly address the core problem in the {industry} space",
-            f"Increasing willingness-to-pay among {industry} stakeholders for measurable, proven outcomes",
+            f"Accelerating adoption of modern automated intelligence platforms across {industry}",
+            f"Increasing willingness-to-pay among {industry} leaders for verifiable cost and time savings",
         ]
         market_challenges = [
             f"Customer acquisition friction and the need to build trust in an emerging {industry} solution",
@@ -1404,71 +1406,28 @@ async def _run_gemini_market_analysis(
         is_thin_evidence=is_thin_evidence
     )
 
-    models = [
-        "gemini-3.6-flash",         # confirmed working, has quota
-        "gemini-3-flash-preview",   # confirmed working, has quota
-        "gemini-flash-lite-latest", # confirmed working, has quota
-        "gemini-2.5-flash",         # last resort — quota resets daily
-    ]
-
-    for model in models:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key.strip()}"
-        payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "temperature": 0.2,
-                "responseMimeType": "application/json"
-            }
-        }
-        for attempt in range(3):
-            try:
-                timeout_config = httpx.Timeout(30.0, connect=5.0)
-                async with httpx.AsyncClient(timeout=timeout_config) as client:
-                    resp = await client.post(url, json=payload)
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        candidates = data.get("candidates", [])
-                        if candidates:
-                            parts = candidates[0].get("content", {}).get("parts", [])
-                            if parts:
-                                raw_text = parts[0].get("text", "")
-                                validated = _validate_and_sanitize_gemini_output(
-                                    raw_text,
-                                    fallback_data,
-                                    is_thin_evidence
-                                )
-                                if validated:
-                                    logger.info(f"SYNTHESIS-PATH: GEMINI-LLM | model={model}")
-                                    return validated
-                        break
-                    elif resp.status_code in (400, 401, 403):
-                        logger.warning(f"Gemini API returned HTTP {resp.status_code} (Authentication/Project error). Aborting API retries.")
-                        return None
-                    elif resp.status_code in (429, 500, 502, 503, 504):
-                        delay = (0.5 * (2 ** attempt)) + random.uniform(0.1, 0.3)
-                        logger.warning(f"Gemini model {model} HTTP {resp.status_code}, retrying in {delay:.2f}s (attempt {attempt+1}/3)...")
-                        await asyncio.sleep(delay)
-                        continue
-                    elif resp.status_code == 404:
-                        logger.warning(f"Gemini model {model} returned 404, falling back to next model.")
-                        break
-                    else:
-                        logger.warning(f"Gemini model {model} returned HTTP {resp.status_code}")
-                        break
-            except (httpx.ConnectError, httpx.ConnectTimeout, httpx.NetworkError) as net_err:
-                logger.warning(f"Gemini model {model} connection failed ({net_err}). Trying next model.")
-                break  # try next model in the fallback list
-            except httpx.TimeoutException as timeout_err:
-                if attempt < 2:
-                    logger.warning(f"Gemini model {model} timeout (attempt {attempt+1}/3), retrying...")
-                    await asyncio.sleep(1.0)
-                    continue
-                logger.warning(f"Gemini model {model} timed out after 3 attempts. Trying next model.")
-                break  # try next model
-            except Exception as exc:
-                logger.warning(f"Gemini call to {model} failed: {exc}")
-                await asyncio.sleep(0.3)
-                continue
+    try:
+        from server.utils.gemini_client import call_gemini_generate_content
+        result = await call_gemini_generate_content(
+            prompt=prompt,
+            api_key=api_key,
+            temperature=0.2,
+            response_mime_type="application/json",
+            timeout_per_model=12.0,
+            tag="MARKET-ANALYSIS"
+        )
+        if result:
+            raw_text, successful_model = result
+            validated = _validate_and_sanitize_gemini_output(
+                raw_text,
+                fallback_data,
+                is_thin_evidence
+            )
+            if validated:
+                logger.info(f"SYNTHESIS-PATH: GEMINI-LLM | model={successful_model}")
+                return validated
+    except Exception as exc:
+        logger.warning(f"Universal Gemini market analysis error: {exc}")
 
     return None
 

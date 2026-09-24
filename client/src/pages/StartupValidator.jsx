@@ -6,6 +6,8 @@ import CustomerSegments from "../components/CustomerSegments";
 import CompetitorAnalysis from "../components/CompetitorAnalysis";
 import MarketGaps from "../components/MarketGaps";
 import DeepValidationCard from "../components/DeepValidationCard";
+import GtmStrategy from "../components/GtmStrategy";
+import StartupAdvisor from "../components/StartupAdvisor";
 
 import { validateIdea } from "../services/validationService";
 
@@ -1311,6 +1313,26 @@ function StartupValidator() {
                     />
 
                   )}
+
+                {/* ================================
+                    GO-TO-MARKET STRATEGY
+                ================================= */}
+
+                {validationResult.gtm_strategy && (
+                  <GtmStrategy
+                    gtmStrategy={validationResult.gtm_strategy}
+                  />
+                )}
+
+                {/* ================================
+                    CONVERSATIONAL STARTUP ADVISOR
+                ================================= */}
+
+                {validationResult && (
+                  <StartupAdvisor
+                    validationContext={validationResult}
+                  />
+                )}
 
               </>
 

@@ -2307,210 +2307,32 @@ Required schema:
 }}
 """
 
-    models = [
-        "gemini-3.6-flash",
-        "gemini-3-flash-preview",
-        "gemini-flash-lite-latest",
-        "gemini-2.5-flash",
-    ]
-
-    for model in models:
-
-        url = (
-            "https://generativelanguage.googleapis.com/"
-            f"v1beta/models/{model}:generateContent"
-            f"?key={api_key.strip()}"
+    try:
+        from server.utils.gemini_client import call_gemini_generate_content, clean_llm_json_text
+        result = await call_gemini_generate_content(
+            prompt=prompt,
+            api_key=api_key,
+            temperature=0.1,
+            response_mime_type="application/json",
+            timeout_per_model=12.0,
+            tag="COMPETITOR-ANALYSIS"
         )
-
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {
-                            "text": prompt
-                        }
-                    ]
-                }
-            ],
-            "generationConfig": {
-                "temperature": 0.1,
-                "responseMimeType": "application/json",
-            },
-        }
-
-        for attempt in range(3):
-
+        if result:
+            raw_text, successful_model = result
+            raw_text = clean_llm_json_text(raw_text)
             try:
+                parsed = json.loads(raw_text.strip())
+            except json.JSONDecodeError as exc:
+                logger.warning(f"Invalid Gemini JSON from {successful_model}: {exc}")
+                return None
 
-                timeout = httpx.Timeout(
-                    30.0,
-                    connect=5.0,
-                )
-
-                async with httpx.AsyncClient(
-                    timeout=timeout
-                ) as client:
-
-                    response = await client.post(
-                        url,
-                        json=payload,
-                    )
-
-                if response.status_code == 200:
-
-                    data = response.json()
-
-                    candidates = data.get(
-                        "candidates",
-                        [],
-                    )
-
-                    if not candidates:
-                        break
-
-                    parts = (
-                        candidates[0]
-                        .get("content", {})
-                        .get("parts", [])
-                    )
-
-                    if not parts:
-                        break
-
-                    raw_text = _safe_text(
-                        parts[0].get("text")
-                    )
-
-                    if not raw_text:
-                        break
-
-                    raw_text = re.sub(
-                        r"^```(?:json)?\s*",
-                        "",
-                        raw_text,
-                        flags=re.IGNORECASE,
-                    )
-
-                    raw_text = re.sub(
-                        r"\s*```$",
-                        "",
-                        raw_text,
-                    )
-
-                    try:
-                        parsed = json.loads(
-                            raw_text.strip()
-                        )
-                    except json.JSONDecodeError as exc:
-
-                        logger.warning(
-                            "Invalid Gemini JSON from %s: %s",
-                            model,
-                            exc,
-                        )
-
-                        break
-
-                    if not isinstance(
-                        parsed,
-                        dict,
-                    ):
-                        break
-
-                    comp_data = parsed.get(
-                        "competitor_analysis",
-                        parsed,
-                    )
-
-                    if not isinstance(
-                        comp_data,
-                        dict,
-                    ):
-                        break
-
-                    return {
-                        "competitor_analysis": comp_data
-                    }
-
-                if response.status_code in (
-                    400,
-                    401,
-                    403,
-                ):
-                    logger.warning(
-                        "Gemini HTTP %s. "
-                        "Stopping Gemini analysis.",
-                        response.status_code,
-                    )
-                    return None
-
-                if response.status_code == 404:
-                    logger.warning(
-                        "Gemini model %s unavailable.",
-                        model,
-                    )
-                    break
-
-                if response.status_code in (
-                    429,
-                    500,
-                    502,
-                    503,
-                    504,
-                ):
-
-                    delay = (
-                        0.5 * (2 ** attempt)
-                    ) + random.uniform(
-                        0.1,
-                        0.3,
-                    )
-
-                    await asyncio.sleep(
-                        delay
-                    )
-
-                    continue
-
-                logger.warning(
-                    "Gemini model %s returned HTTP %s.",
-                    model,
-                    response.status_code,
-                )
-
-                break
-
-            except (
-                httpx.ConnectError,
-                httpx.ConnectTimeout,
-                httpx.NetworkError,
-            ) as exc:
-
-                logger.warning(
-                    "Gemini connection error: %s",
-                    exc,
-                )
-
-                break
-
-            except httpx.TimeoutException:
-
-                if attempt < 2:
-                    await asyncio.sleep(
-                        1.0
-                    )
-                    continue
-
-                break
-
-            except Exception as exc:
-
-                logger.warning(
-                    "Gemini call failed: %s",
-                    exc,
-                )
-
-                break
+            if isinstance(parsed, dict):
+                comp_data = parsed.get("competitor_analysis", parsed)
+                if isinstance(comp_data, dict):
+                    logger.info(f"Gemini competitor analysis succeeded via {successful_model}")
+                    return {"competitor_analysis": comp_data}
+    except Exception as exc:
+        logger.warning(f"Universal Gemini competitor analysis error: {exc}")
 
     return None
 

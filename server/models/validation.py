@@ -416,7 +416,6 @@ class ValidationResponse(BaseModel):
     scientific_validation: Optional[ScientificValidation] = None
 
     regulatory_risk: Optional[RegulatoryRisk] = None
-
     swot_analysis: Optional[SWOTAnalysis] = None
 
     risk_analysis: Optional[List[RiskItem]] = Field(
@@ -428,6 +427,12 @@ class ValidationResponse(BaseModel):
     # -------------------------------------------------------
 
     mvp_recommendations: Optional[MVPRecommendations] = None
+
+    # -------------------------------------------------------
+    # Go-To-Market Strategy
+    # -------------------------------------------------------
+
+    gtm_strategy: Optional[Dict[str, Any]] = None
 
     # -------------------------------------------------------
     # Search results used by analysis agents

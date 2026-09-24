@@ -44,7 +44,7 @@ export default function DeepValidationCard({
       <div className="deep-validation-header">
         <div className="header-badge">
           <span className="dot-pulse"></span>
-          DEEP VALIDATION MATRIX (ACCURACY 9+/10)
+          DEEP VALIDATION MATRIX
         </div>
         <h2>Technical, Scientific & Regulatory Feasibility</h2>
         <p>
