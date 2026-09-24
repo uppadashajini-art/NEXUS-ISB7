@@ -1,11 +1,11 @@
 """
-
 These models define:
 - The incoming request shape (the startup idea).
-- The structured output shape expected from the Market Analysis Agent (Member 2)
-  and the Competitor Analysis Agent (Member 3).
+- The structured output shape expected from the Market Analysis Agent.
+- The structured output shape expected from the Competitor Analysis Agent.
+- SWOT and Risk analysis output.
+- MVP Feature Recommendation output.
 - The final combined response returned by FastAPI to the React frontend.
-
 """
 
 from typing import Any, Dict, List, Optional
@@ -19,149 +19,432 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 class ValidationRequest(BaseModel):
     """Incoming request body for POST /api/validate"""
 
-    idea: str = Field(..., description="The startup idea submitted by the user")
-    domain: Optional[str] = Field(None, description="Optional user-specified domain category")
-    target_customer: Optional[str] = Field(None, description="Optional target customer segment")
+    idea: str = Field(
+        ...,
+        description="The startup idea submitted by the user"
+    )
+
+    domain: Optional[str] = Field(
+        None,
+        description="Optional user-specified domain category"
+    )
+
+    target_customer: Optional[str] = Field(
+        None,
+        description="Optional target customer segment"
+    )
 
     @field_validator("idea")
     @classmethod
     def idea_must_not_be_empty_or_too_short(cls, value: str) -> str:
         cleaned = value.strip()
+
         if not cleaned:
             raise ValueError("Startup idea cannot be empty")
+
         if len(cleaned) < 10:
-            raise ValueError("Startup idea is too short to analyze meaningfully")
+            raise ValueError(
+                "Startup idea is too short to analyze meaningfully"
+            )
+
         return cleaned
 
 
 # ---------------------------------------------------------------------------
-# Market Analysis Models (Member 2's agent output)
+# Market Analysis Models
 # ---------------------------------------------------------------------------
 
 class CustomerSegment(BaseModel):
     segment: str
-    needs: List[str] = Field(default_factory=list)
-    pain_points: List[str] = Field(default_factory=list)
+
+    needs: List[str] = Field(
+        default_factory=list
+    )
+
+    pain_points: List[str] = Field(
+        default_factory=list
+    )
 
 
 class MarketAnalysis(BaseModel):
     industry: str
+
     market_opportunity: str
-    market_trends: List[str] = Field(default_factory=list)
-    customer_segments: List[CustomerSegment] = Field(default_factory=list)
-    growth_drivers: List[str] = Field(default_factory=list)
-    market_challenges: List[str] = Field(default_factory=list)
+
+    market_trends: List[str] = Field(
+        default_factory=list
+    )
+
+    customer_segments: List[CustomerSegment] = Field(
+        default_factory=list
+    )
+
+    growth_drivers: List[str] = Field(
+        default_factory=list
+    )
+
+    market_challenges: List[str] = Field(
+        default_factory=list
+    )
 
 
 # ---------------------------------------------------------------------------
-# Competitor Analysis Models (Member 3's agent output)
+# Competitor Analysis Models
 # ---------------------------------------------------------------------------
 
 class Competitor(BaseModel):
     name: str
+
     url: Optional[str] = None
+
     product_service: Optional[str] = None
+
     target_customers: Optional[str] = None
-    key_features: List[str] = Field(default_factory=list)
+
+    key_features: List[str] = Field(
+        default_factory=list
+    )
+
     pricing: Optional[str] = None
-    strengths: List[str] = Field(default_factory=list)
-    weaknesses: List[str] = Field(default_factory=list)
+
+    strengths: List[str] = Field(
+        default_factory=list
+    )
+
+    weaknesses: List[str] = Field(
+        default_factory=list
+    )
 
 
 class ComparisonRow(BaseModel):
     """A single row in the competitor comparison table."""
+
     competitor: str
+
     target_customers: Optional[str] = None
+
     key_features: Optional[str] = None
+
     strengths: Optional[str] = None
+
     weaknesses: Optional[str] = None
 
 
 class CompetitorAnalysis(BaseModel):
-    direct_competitors: List[Competitor] = Field(default_factory=list)
-    indirect_competitors: List[Competitor] = Field(default_factory=list)
-    comparison: List[ComparisonRow] = Field(default_factory=list)
-    market_gaps: List[str] = Field(default_factory=list)
+    direct_competitors: List[Competitor] = Field(
+        default_factory=list
+    )
+
+    indirect_competitors: List[Competitor] = Field(
+        default_factory=list
+    )
+
+    comparison: List[ComparisonRow] = Field(
+        default_factory=list
+    )
+
+    market_gaps: List[str] = Field(
+        default_factory=list
+    )
 
 
 # ---------------------------------------------------------------------------
-# Deep Validation Models (Technical, Scientific, Regulatory)
+# Deep Validation Models
+# Technical, Scientific, Regulatory
 # ---------------------------------------------------------------------------
 
 class TechnicalFeasibility(BaseModel):
-    score: float = Field(default=7.0, description="Feasibility score from 1.0 to 10.0")
-    feasibility_rating: str = Field(default="Medium", description="High, Medium, Low, or Moonshot")
-    key_barriers: List[str] = Field(default_factory=list)
-    signal_constraints: List[str] = Field(default_factory=list)
-    recommended_tech_stack: List[str] = Field(default_factory=list)
+    score: float = Field(
+        default=7.0,
+        description="Feasibility score from 1.0 to 10.0"
+    )
+
+    feasibility_rating: str = Field(
+        default="Medium",
+        description="High, Medium, Low, or Moonshot"
+    )
+
+    key_barriers: List[str] = Field(
+        default_factory=list
+    )
+
+    signal_constraints: List[str] = Field(
+        default_factory=list
+    )
+
+    recommended_tech_stack: List[str] = Field(
+        default_factory=list
+    )
 
 
 class ScientificValidation(BaseModel):
-    score: float = Field(default=6.5, description="Scientific confidence score from 1.0 to 10.0")
-    evidence_level: str = Field(default="Emerging Hypothesis", description="Clinical Fact, Emerging Hypothesis, or Unsubstantiated")
-    key_findings: List[str] = Field(default_factory=list)
-    clinical_findings: List[str] = Field(default_factory=list)
-    risk_flags: List[str] = Field(default_factory=list)
-    required_trials: List[str] = Field(default_factory=list)
+    score: float = Field(
+        default=6.5,
+        description="Scientific confidence score from 1.0 to 10.0"
+    )
+
+    evidence_level: str = Field(
+        default="Emerging Hypothesis",
+        description=(
+            "Clinical Fact, Emerging Hypothesis, "
+            "or Unsubstantiated"
+        )
+    )
+
+    key_findings: List[str] = Field(
+        default_factory=list
+    )
+
+    clinical_findings: List[str] = Field(
+        default_factory=list
+    )
+
+    risk_flags: List[str] = Field(
+        default_factory=list
+    )
+
+    required_trials: List[str] = Field(
+        default_factory=list
+    )
 
     @model_validator(mode="after")
     def sync_findings(self) -> "ScientificValidation":
+
         if not self.key_findings and self.clinical_findings:
             self.key_findings = list(self.clinical_findings)
+
         elif not self.clinical_findings and self.key_findings:
             self.clinical_findings = list(self.key_findings)
+
         return self
 
 
 class RegulatoryRisk(BaseModel):
-    risk_level: str = Field(default="Medium", description="Low, Medium, High, or Critical")
-    fda_classification: str = Field(default="Standard Industry Governance", description="General Wellness, SaMD Class I/II/III, or Industry Governance")
-    regulatory_classification: Optional[str] = Field(default=None)
-    compliance_requirements: List[str] = Field(default_factory=list)
-    recommended_pathway: str = Field(default="", description="Go-to-market regulatory disclaimers & approval strategy")
+    risk_level: str = Field(
+        default="Medium",
+        description="Low, Medium, High, or Critical"
+    )
+
+    fda_classification: str = Field(
+        default="Standard Industry Governance",
+        description=(
+            "General Wellness, SaMD Class I/II/III, "
+            "or Industry Governance"
+        )
+    )
+
+    regulatory_classification: Optional[str] = Field(
+        default=None
+    )
+
+    compliance_requirements: List[str] = Field(
+        default_factory=list
+    )
+
+    recommended_pathway: str = Field(
+        default="",
+        description=(
+            "Go-to-market regulatory disclaimers "
+            "& approval strategy"
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
-# SWOT & Risk Analysis Models (Member 1 — Milestone 3/4)
+# SWOT & Risk Analysis Models
+# Member 1 — Milestone 3/4
 # ---------------------------------------------------------------------------
 
 class SWOTAnalysis(BaseModel):
-    strengths: List[str] = Field(default_factory=list, description="Unique features, technological edge, customer value, and competitive advantages")
-    weaknesses: List[str] = Field(default_factory=list, description="Technical bottlenecks, resource constraints, brand absence, and product limits")
-    opportunities: List[str] = Field(default_factory=list, description="Market expansion, emerging customer demands, new tech, and untapped niches")
-    threats: List[str] = Field(default_factory=list, description="Incumbent reactions, price wars, regulatory hurdles, and adoption barriers")
+
+    strengths: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Unique features, technological edge, "
+            "customer value, and competitive advantages"
+        )
+    )
+
+    weaknesses: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Technical bottlenecks, resource constraints, "
+            "brand absence, and product limits"
+        )
+    )
+
+    opportunities: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Market expansion, emerging customer demands, "
+            "new tech, and untapped niches"
+        )
+    )
+
+    threats: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Incumbent reactions, price wars, regulatory hurdles, "
+            "and adoption barriers"
+        )
+    )
 
 
 class RiskItem(BaseModel):
-    risk: str = Field(..., description="Description of the identified risk")
-    category: str = Field(..., description="Technical, Market, Financial, Competition, Operational, or Adoption")
-    severity: str = Field(default="Medium", description="High, Medium, or Low")
-    impact: str = Field(..., description="Concrete business consequence if this risk materializes")
-    mitigation: str = Field(..., description="Actionable strategic countermeasure to minimize or eliminate this risk")
+
+    risk: str = Field(
+        ...,
+        description="Description of the identified risk"
+    )
+
+    category: str = Field(
+        ...,
+        description=(
+            "Technical, Market, Financial, Competition, "
+            "Operational, or Adoption"
+        )
+    )
+
+    severity: str = Field(
+        default="Medium",
+        description="High, Medium, or Low"
+    )
+
+    impact: str = Field(
+        ...,
+        description=(
+            "Concrete business consequence "
+            "if this risk materializes"
+        )
+    )
+
+    mitigation: str = Field(
+        ...,
+        description=(
+            "Actionable strategic countermeasure "
+            "to minimize or eliminate this risk"
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
-# Combined Response Model (what FastAPI returns to React)
+# MVP Feature Recommendation Models
+# Member 2 — Milestone 3/4
+# ---------------------------------------------------------------------------
+
+class MVPFeature(BaseModel):
+    """
+    Represents one feature recommended for the startup MVP.
+    """
+
+    feature: str = Field(
+        ...,
+        description="Name of the recommended feature"
+    )
+
+    priority: str = Field(
+        ...,
+        description=(
+            "Must Have, Should Have, "
+            "Could Have, or Future Features"
+        )
+    )
+
+    reason: str = Field(
+        ...,
+        description="Why this feature is recommended"
+    )
+
+    customer_value: str = Field(
+        ...,
+        description=(
+            "Expected customer value: "
+            "High, Medium, or Low"
+        )
+    )
+
+    complexity: str = Field(
+        ...,
+        description=(
+            "Implementation complexity: "
+            "High, Medium, or Low"
+        )
+    )
+
+
+class MVPRecommendations(BaseModel):
+    """
+    Groups recommended MVP features according to priority.
+    """
+
+    must_have: List[MVPFeature] = Field(
+        default_factory=list,
+        description="Features required for the initial MVP"
+    )
+
+    should_have: List[MVPFeature] = Field(
+        default_factory=list,
+        description="Important features after core MVP functionality"
+    )
+
+    could_have: List[MVPFeature] = Field(
+        default_factory=list,
+        description="Useful but non-essential MVP features"
+    )
+
+    future_features: List[MVPFeature] = Field(
+        default_factory=list,
+        description="Features planned for future versions"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Combined Response Model
+# What FastAPI returns to React
 # ---------------------------------------------------------------------------
 
 class ValidationResponse(BaseModel):
+
     idea: str
+
     market_analysis: MarketAnalysis
+
     competitor_analysis: CompetitorAnalysis
+
     technical_feasibility: Optional[TechnicalFeasibility] = None
+
     scientific_validation: Optional[ScientificValidation] = None
+
     regulatory_risk: Optional[RegulatoryRisk] = None
+
     swot_analysis: Optional[SWOTAnalysis] = None
-    risk_analysis: Optional[List[RiskItem]] = Field(default_factory=list)
-    # The exact search results the analysis agents used — returned to the
-    # frontend so it can display Research Sources without a second API call.
-    search_results: List[Dict[str, Any]] = Field(default_factory=list)
+
+    risk_analysis: Optional[List[RiskItem]] = Field(
+        default_factory=list
+    )
+
+    # -------------------------------------------------------
+    # MVP Recommendation Agent — Member 2
+    # -------------------------------------------------------
+
+    mvp_recommendations: Optional[MVPRecommendations] = None
+
+    # -------------------------------------------------------
+    # Search results used by analysis agents
+    # -------------------------------------------------------
+
+    search_results: List[Dict[str, Any]] = Field(
+        default_factory=list
+    )
 
 
 # ---------------------------------------------------------------------------
-# Error Response Model (used when an agent or orchestrator step fails)
+# Error Response Model
+# Used when an agent or orchestrator step fails
 # ---------------------------------------------------------------------------
 
 class ErrorResponse(BaseModel):
+
     error: str
+
     detail: Optional[str] = None
