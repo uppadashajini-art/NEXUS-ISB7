@@ -352,6 +352,7 @@ async def call_gemini_generate_content(
 
         timeout_config = httpx.Timeout(timeout_per_model, connect=2.5)
         consecutive_network_errors = 0
+        consecutive_429s = 0
 
         for idx, model in enumerate(candidate_models):
             url = f"{GEMINI_API_BASE_URL}/{model}:generateContent?key={key}"
@@ -377,7 +378,11 @@ async def call_gemini_generate_content(
                         continue
 
                     elif status == 429:
-                        logger.info(f"[{tag}] Model '{model}' quota/rate-limited (429). Fast-failing to next model...")
+                        consecutive_429s += 1
+                        logger.info(f"[{tag}] Model '{model}' quota/rate-limited (429).")
+                        if consecutive_429s >= 3 and get_groq_api_key():
+                            logger.info(f"[{tag}] Gemini free-tier quota exhausted. Fast-failing immediately to Groq...")
+                            break
                         continue
 
                     elif status == 404:
