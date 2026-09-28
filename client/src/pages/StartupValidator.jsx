@@ -6,8 +6,12 @@ import CustomerSegments from "../components/CustomerSegments";
 import CompetitorAnalysis from "../components/CompetitorAnalysis";
 import MarketGaps from "../components/MarketGaps";
 import DeepValidationCard from "../components/DeepValidationCard";
+import RiskAnalysis from "../components/RiskAnalysis";
+import MvpRecommendations from "../components/MvpRecommendations";
 import GtmStrategy from "../components/GtmStrategy";
+import ValidationReport from "../components/ValidationReport";
 import StartupAdvisor from "../components/StartupAdvisor";
+
 
 import { validateIdea } from "../services/validationService";
 
@@ -1315,12 +1319,43 @@ function StartupValidator() {
                   )}
 
                 {/* ================================
+                    RISK ANALYSIS
+                ================================= */}
+
+                {Array.isArray(validationResult.risk_analysis) &&
+                  validationResult.risk_analysis.length > 0 && (
+                    <RiskAnalysis
+                      risks={validationResult.risk_analysis}
+                    />
+                )}
+
+                {/* ================================
+                    MVP RECOMMENDATIONS
+                ================================= */}
+
+                {validationResult.mvp_recommendations && (
+                  <MvpRecommendations
+                    data={validationResult.mvp_recommendations}
+                  />
+                )}
+
+                {/* ================================
                     GO-TO-MARKET STRATEGY
                 ================================= */}
 
                 {validationResult.gtm_strategy && (
                   <GtmStrategy
                     gtmStrategy={validationResult.gtm_strategy}
+                  />
+                )}
+
+                {/* ================================
+                    VALIDATION REPORT
+                ================================= */}
+
+                {validationResult.validation_report && (
+                  <ValidationReport
+                    report={validationResult.validation_report}
                   />
                 )}
 

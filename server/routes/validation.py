@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import ValidationError
 
 from server.models.validation import ValidationRequest, ValidationResponse, ErrorResponse
+from server.agents.report_generation_agent import generate_validation_report
 
 router = APIRouter()
 
@@ -59,6 +60,23 @@ async def validate_idea(request: ValidationRequest):
     except Exception as e:
         # Catch-all for agent or orchestrator failures
         raise HTTPException(status_code=500, detail=f"Orchestrator failed: {e}")
+
+    try:
+        report_result = await generate_validation_report(
+            idea=request.idea,
+            market_analysis=result.get("market_analysis"),
+            competitor_analysis=result.get("competitor_analysis"),
+            swot_analysis=result.get("swot_analysis"),
+            risk_analysis=result.get("risk_analysis"),
+            mvp_recommendations=result.get("mvp_recommendations"),
+            gtm_strategy=result.get("gtm_strategy"),
+        )
+        result["validation_report"] = report_result.get("validation_report")
+    except Exception:
+        # Report generation failing should never break the rest of the
+        # response -- the frontend will just not show that section.
+        result["validation_report"] = None
+
 
     try:
         return ValidationResponse(**result)
