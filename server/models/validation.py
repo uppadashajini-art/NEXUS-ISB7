@@ -399,6 +399,51 @@ class MVPRecommendations(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# MVP Recommendation Models (Member 2 — Milestone 3/4)
+# ---------------------------------------------------------------------------
+
+class MvpFeature(BaseModel):
+    feature: str
+    reason: Optional[str] = None
+    customer_value: Optional[str] = None
+    complexity: Optional[str] = None
+
+
+class MvpRecommendations(BaseModel):
+    must_have: List[MvpFeature] = Field(default_factory=list)
+    should_have: List[MvpFeature] = Field(default_factory=list)
+    could_have: List[MvpFeature] = Field(default_factory=list)
+    future_features: List[MvpFeature] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Go-To-Market Strategy Models (Member 3 — Milestone 3/4)
+# ---------------------------------------------------------------------------
+
+class GtmStrategy(BaseModel):
+    target_market: List[str] = Field(default_factory=list)
+    positioning: Optional[str] = None
+    marketing_channels: List[str] = Field(default_factory=list)
+    customer_acquisition: List[str] = Field(default_factory=list)
+    pricing_strategy: Optional[str] = None
+    launch_strategy: List[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Validation Report Model (Member 4 — Milestone 4)
+# ---------------------------------------------------------------------------
+
+class ValidationReport(BaseModel):
+    executive_summary: str
+    market_summary: str
+    competitor_summary: str
+    swot_summary: str
+    risk_summary: str
+    mvp_summary: str
+    gtm_summary: str
+    recommendations: str
+    conclusion: str
+# ---------------------------------------------------------------------------
 # Combined Response Model
 # What FastAPI returns to React
 # ---------------------------------------------------------------------------
@@ -416,11 +461,19 @@ class ValidationResponse(BaseModel):
     scientific_validation: Optional[ScientificValidation] = None
 
     regulatory_risk: Optional[RegulatoryRisk] = None
+
     swot_analysis: Optional[SWOTAnalysis] = None
 
-    risk_analysis: Optional[List[RiskItem]] = Field(
-        default_factory=list
-    )
+    risk_analysis: Optional[List[RiskItem]] = Field( default_factory=list)
+
+    search_results: List[Dict[str, Any]] = Field(default_factory=list)
+    
+    mvp_recommendations: Optional[MvpRecommendations] = None
+    
+    gtm_strategy: Optional[GtmStrategy] = None
+    
+    validation_report: Optional[ValidationReport] = None
+    
 
     # -------------------------------------------------------
     # MVP Recommendation Agent — Member 2
