@@ -43,6 +43,25 @@ export default function StartupAdvisor({ validationContext }) {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  // Reset/update initial greeting when a new startup idea validation report arrives
+  useEffect(() => {
+    if (validationContext?.idea) {
+      setMessages([
+        {
+          id: `init-${Date.now()}`,
+          sender: "advisor",
+          text: `Hello! I'm your AI Startup Advisor. I have examined the complete validation reports generated for **"${validationContext.idea}"**. How can I help you execute your vision?`,
+          followups: [
+            "What should my MVP contain?",
+            "Who are my main competitors?",
+            "What are the biggest risks?",
+            "How should I price and launch this?"
+          ]
+        }
+      ]);
+    }
+  }, [validationContext?.idea]);
+
   const handleSend = async (questionText) => {
     const textToSend = (questionText || inputValue).trim();
     if (!textToSend || loading) return;
@@ -59,9 +78,11 @@ export default function StartupAdvisor({ validationContext }) {
     setLoading(true);
 
     try {
-      const apiBase = (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"))
-        ? "http://127.0.0.1:8000"
-        : "";
+      const apiBase =
+        import.meta.env.VITE_API_BASE_URL ||
+        ((typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"))
+          ? "http://127.0.0.1:8000"
+          : "https://nexus-server-staging.onrender.com");
 
       const response = await fetch(`${apiBase}/api/advisor`, {
         method: "POST",

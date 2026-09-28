@@ -313,16 +313,19 @@ async def run_swot_risk_agent(
         search_results=search_results,
     )
 
-    # Attempt Gemini API synthesis if available
-    api_key = os.getenv("GEMINI_API_KEY")
-    if api_key and api_key.strip():
+    # Attempt Gemini/Groq LLM synthesis if available
+    from server.utils.gemini_client import get_gemini_api_key, get_groq_api_key
+    gemini_key = get_gemini_api_key()
+    groq_key = get_groq_api_key()
+
+    if gemini_key or groq_key:
         industry = _detect_industry_context(clean_idea, market_analysis)
         llm_data = await _call_gemini_swot_risk(
             idea=clean_idea,
             industry=industry,
             market_analysis=market_analysis,
             competitor_analysis=competitor_analysis,
-            api_key=api_key.strip()
+            api_key=gemini_key
         )
         if llm_data:
             try:

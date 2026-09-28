@@ -2506,20 +2506,20 @@ async def run_competitor_analysis_agent(
         }
 
     # ========================================================
-    # GEMINI
+    # GEMINI / GROQ LLM SYNTHESIS
     # ========================================================
 
-    api_key = os.getenv(
-        "GEMINI_API_KEY"
-    )
+    from server.utils.gemini_client import get_gemini_api_key, get_groq_api_key
+    gemini_key = get_gemini_api_key()
+    groq_key = get_groq_api_key()
 
-    if api_key and api_key.strip():
+    if gemini_key or groq_key:
 
         gemini_result = (
             await _run_gemini_competitor_analysis(
                 idea=idea,
                 search_results=valid_results,
-                api_key=api_key.strip(),
+                api_key=gemini_key,
                 max_competitors=max_competitors,
             )
         )

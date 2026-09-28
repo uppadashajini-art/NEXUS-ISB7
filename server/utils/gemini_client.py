@@ -27,46 +27,31 @@ GEMINI_API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 GROQ_API_BASE_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 # Master prioritized list of all text generation models on Google AI Studio
-# Ordered strictly from BEST (premier reasoning, modern capabilities) to LAST (lite, older, specialized).
+# Ordered strictly with verified production models first (gemini-2.5-flash, gemini-3-flash-preview, gemini-flash-latest)
 MASTER_MODELS_WATERFALL: List[str] = [
-    # --- Tier 1: Premier Gemini 3 Flagships (Top reasoning, quality & comprehension) ---
+    # --- Tier 1: Verified High-Speed Production Gemini Models ---
+    "gemini-2.5-flash",
+    "gemini-3-flash-preview",
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-flash",
     "gemini-3.5-flash",
     "gemini-3.8-flash",
     "gemini-3.7-flash",
     "gemini-3.6-flash",
-    "gemini-3-flash-preview",
     "gemini-3.1-pro-preview",
     "gemini-3.5-flash-lite",
     "gemini-3.1-flash-lite-preview",
     "gemini-3.1-flash-lite",
-
-    # --- Tier 2: Current Production Aliases & Core Workhorses ---
-    "gemini-2.5-flash",
-    "gemini-flash-latest",
-    "gemini-pro-latest",
-    "gemini-flash-lite-latest",
     "gemini-2.5-pro",
-    "gemini-2.5-flash-lite",
-    "gemini-2.5-computer-use-preview-10-2025",
-
-    # --- Tier 3: High-Capability Specialized Engines ---
-    "gemini-robotics-er-2-preview",
-    "gemma-4-26b-a4b-it",
-    "gemini-omni-flash-preview",
-    "gemini-omni-1.1-flash",
-    "gemma-4-31b-it",
-
-    # --- Tier 4: Gemini 2.0 Series ---
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
-
-    # --- Tier 5: Gemini 1.5 Series ---
-    "gemini-1.5-flash",
+    "gemini-pro-latest",
     "gemini-1.5-pro",
     "gemini-1.5-flash-8b",
 ]
 
-# Master prioritized list of fast, free Groq models (120B reasoning, Qwen 27B, 20B, 7B, Llama 3)
+# Master prioritized list of fast Groq models (120B reasoning, Qwen 27B, 20B, 7B)
 GROQ_MODELS_WATERFALL: List[str] = [
     "openai/gpt-oss-120b",
     "qwen/qwen3.8-27b",
@@ -294,16 +279,33 @@ async def call_groq_generate_content(
                         if content.strip():
                             logger.info(f"[{tag}] GROQ LLM SUCCESS | Model: '{model}' (candidate {idx+1}/{len(GROQ_MODELS_WATERFALL)})")
                             return content, f"groq/{model}"
+                elif status in (400, 422):
+                    logger.info(f"[{tag}] Groq Model '{model}' returned {status}. Retrying in standard text mode...")
+                    alt_payload = {
+                        "model": model,
+                        "messages": messages,
+                        "temperature": temperature
+                    }
+                    async with httpx.AsyncClient(timeout=timeout_config) as client2:
+                        alt_resp = await client2.post(GROQ_API_BASE_URL, headers=headers, json=alt_payload)
+                        if alt_resp.status_code == 200:
+                            alt_choices = alt_resp.json().get("choices", [])
+                            if alt_choices:
+                                alt_content = alt_choices[0].get("message", {}).get("content", "")
+                                if alt_content.strip():
+                                    logger.info(f"[{tag}] GROQ LLM SUCCESS | Model: '{model}' (standard text mode)")
+                                    return alt_content, f"groq/{model}"
+                    continue
 
                 elif status == 429:
                     logger.info(f"[{tag}] Groq Model '{model}' rate-limited (429). Trying next Groq model...")
                     continue
                 else:
-                    logger.warning(f"[{tag}] Groq Model '{model}' returned status {status}. Trying next...")
+                    logger.warning(f"[{tag}] Groq Model '{model}' returned status {status}: {resp.text[:120]}. Trying next...")
                     continue
 
         except Exception as exc:
-            logger.warning(f"[{tag}] Groq Model '{model}' exception: {exc}. Trying next...")
+            logger.warning(f"[{tag}] Groq Model '{model}' exception: {type(exc).__name__}: {exc}. Trying next...")
             continue
 
     return None

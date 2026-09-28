@@ -1330,7 +1330,12 @@ function StartupValidator() {
 
                 {validationResult && (
                   <StartupAdvisor
-                    validationContext={validationResult}
+                    validationContext={{
+                      ...validationResult,
+                      idea: validationResult.idea || submittedIdea || idea,
+                      domain: submittedDomain || domain || validationResult?.market_analysis?.industry,
+                      target_customer: submittedCustomers || targetCustomers || validationResult?.target_customer,
+                    }}
                   />
                 )}
 

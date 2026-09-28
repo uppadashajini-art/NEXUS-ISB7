@@ -2262,20 +2262,12 @@ async def run_gtm_agent(
         "primary_segment": resolved_segments[0]["segment"] if (resolved_segments and isinstance(resolved_segments[0], dict) and "segment" in resolved_segments[0]) else "Target Customers"
     }
 
-    # Check for Gemini API Key
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        # Check in .env if not loaded in process
-        env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
-        if os.path.exists(env_path):
-            try:
-                from dotenv import load_dotenv
-                load_dotenv(env_path, override=False)
-                api_key = os.getenv("GEMINI_API_KEY")
-            except Exception:
-                pass
+    # Check for Gemini / Groq API Keys
+    from server.utils.gemini_client import get_gemini_api_key, get_groq_api_key
+    gemini_key = get_gemini_api_key()
+    groq_key = get_groq_api_key()
 
-    if api_key and api_key.strip():
+    if gemini_key or groq_key:
         elapsed_so_far = time.monotonic() - start_time
         remaining_budget = max(5.0, BUDGET_TOTAL_SECONDS - elapsed_so_far)
         llm_budget = min(BUDGET_GENERATION_SECONDS, remaining_budget - 8.0)
@@ -2283,7 +2275,7 @@ async def run_gtm_agent(
         try:
             llm_draft = await _call_gemini_synthesis(
                 signals=signals,
-                api_key=api_key.strip(),
+                api_key=gemini_key,
                 time_limit=llm_budget
             )
 

@@ -983,7 +983,7 @@ def _generate_heuristic_market_analysis(
     else:
         # No domain template and no Gemini — derive rough segments from idea keywords.
         # NEVER output uniform generic placeholders; use idea text to make labels specific.
-        logger.warning("SYNTHESIS-PATH: HEURISTIC-FALLBACK | reason=no_domain_template — segments derived from idea keywords only.")
+        logger.debug("Generating in-memory heuristic customer segment fallback baseline.")
         idea_lower_seg = (idea or "").lower()
         # Derive primary segment from idea keywords
         if any(k in idea_lower_seg for k in ["manufacturer", "manufacturing", "plant", "factory", "industrial"]):
@@ -1035,7 +1035,7 @@ def _generate_heuristic_market_analysis(
         growth_drivers = domain_info["growth_drivers"]
         market_challenges = domain_info["market_challenges"]
     else:
-        logger.warning("SYNTHESIS-PATH: HEURISTIC-FALLBACK | reason=no_domain_template — growth_drivers/market_challenges derived from industry.")
+        logger.debug("Generating in-memory heuristic growth drivers and market challenges fallback baseline.")
         growth_drivers = [
             f"Accelerating adoption of modern automated intelligence platforms across {industry}",
             f"Increasing willingness-to-pay among {industry} leaders for verifiable cost and time savings",
@@ -1107,11 +1107,8 @@ def _validate_and_sanitize_gemini_output(
     Defensively parses and validates Gemini's JSON output against the MarketAnalysis schema.
     """
     try:
-        text = raw_text.strip()
-        if text.startswith("```"):
-            text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.MULTILINE)
-            text = re.sub(r"\s*```$", "", text, flags=re.MULTILINE)
-
+        from server.utils.gemini_client import clean_llm_json_text
+        text = clean_llm_json_text(raw_text)
         data = json.loads(text.strip())
         if not isinstance(data, dict):
             return None
@@ -1424,10 +1421,10 @@ async def _run_gemini_market_analysis(
                 is_thin_evidence
             )
             if validated:
-                logger.info(f"SYNTHESIS-PATH: GEMINI-LLM | model={successful_model}")
+                logger.info(f"SYNTHESIS-PATH: LLM-SUCCESS | model={successful_model}")
                 return validated
     except Exception as exc:
-        logger.warning(f"Universal Gemini market analysis error: {exc}")
+        logger.warning(f"Universal LLM market analysis error: {exc}")
 
     return None
 
@@ -1450,6 +1447,7 @@ async def run_market_analysis_agent(
     """
     try:
         _load_env_if_needed()
+        from server.utils.gemini_client import get_gemini_api_key, get_groq_api_key
 
         clean_idea = (idea or "").strip()
         if not clean_idea:
@@ -1463,10 +1461,12 @@ async def run_market_analysis_agent(
         seed_audiences = _extract_seed_audiences(clean_idea, results_list)
         fallback_data = _generate_heuristic_market_analysis(clean_idea, domain, results_list)
 
-        # Attempt Gemini LLM synthesis if API key is present
-        api_key = os.getenv("GEMINI_API_KEY")
-        if api_key and api_key.strip():
-            logger.info(f"SYNTHESIS-PATH: GEMINI-LLM | attempting models in fallback order...")
+        # Primary LLM synthesis (Gemini) with automatic Groq failover
+        gemini_key = get_gemini_api_key()
+        groq_key = get_groq_api_key()
+
+        if gemini_key or groq_key:
+            logger.info("SYNTHESIS-PATH: Attempting LLM generation (Gemini primary -> Groq secondary)...")
             gemini_result = await _run_gemini_market_analysis(
                 idea=clean_idea,
                 industry=industry,
@@ -1474,7 +1474,7 @@ async def run_market_analysis_agent(
                 seed_audiences=seed_audiences,
                 is_thin_evidence=is_thin_evidence,
                 fallback_data=fallback_data,
-                api_key=api_key.strip()
+                api_key=gemini_key
             )
             if gemini_result:
                 tech = gemini_result.get("technical_feasibility") or fallback_data.get("technical_feasibility")
@@ -1495,9 +1495,9 @@ async def run_market_analysis_agent(
                     "regulatory_risk": reg,
                     **gemini_result,
                 }
-            logger.warning("SYNTHESIS-PATH: HEURISTIC-FALLBACK | reason=all_gemini_models_exhausted")
+            logger.warning("SYNTHESIS-PATH: HEURISTIC-FALLBACK | reason=all_llm_models_exhausted")
         else:
-            logger.info("SYNTHESIS-PATH: HEURISTIC-FALLBACK | reason=no_api_key")
+            logger.info("SYNTHESIS-PATH: HEURISTIC-FALLBACK | reason=no_api_keys_configured")
 
         # All Gemini models exhausted or missing API key — return resilient heuristic fallback
         market_fallback = {

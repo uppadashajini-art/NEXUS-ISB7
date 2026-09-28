@@ -1414,8 +1414,10 @@ async def _decompose_with_gemini_async(idea: str) -> Optional[Dict[str, str]]:
     """
     Decompose startup idea using Gemini with explicit primary business function instructions.
     """
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key or not api_key.strip():
+    from server.utils.gemini_client import get_gemini_api_key, get_groq_api_key
+    gemini_key = get_gemini_api_key()
+    groq_key = get_groq_api_key()
+    if not gemini_key and not groq_key:
         return None
 
     import httpx, json
@@ -1436,7 +1438,7 @@ Return ONLY a valid JSON object with these exact keys:
         from server.utils.gemini_client import call_gemini_generate_content, clean_llm_json_text
         result = await call_gemini_generate_content(
             prompt=prompt,
-            api_key=api_key,
+            api_key=gemini_key,
             temperature=0.1,
             response_mime_type="application/json",
             timeout_per_model=10.0,
