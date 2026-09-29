@@ -65,14 +65,62 @@ def _summarize_mvp(mvp_recommendations: Optional[Dict[str, Any]]) -> str:
     return f"Recommended MVP must-have features: {names}."
 
 
+def _extract_positioning_text(positioning: Any) -> str:
+    """
+    `positioning` may be:
+      - a plain string, or
+      - a dict with keys like problem_solved / target_user / differentiation
+        (as returned by the real GTM agent).
+    Always returns clean, readable prose -- never a raw dict repr.
+    """
+    if isinstance(positioning, str) and positioning.strip():
+        return positioning.strip()
+
+    if isinstance(positioning, dict):
+        problem_solved = str(positioning.get("problem_solved", "")).strip()
+        differentiation = str(positioning.get("differentiation", "")).strip()
+        text = ""
+        if problem_solved:
+            text = problem_solved
+        if differentiation:
+            text = f"{text} {differentiation}".strip()
+        return text
+
+    return ""
+
+
+def _extract_channel_names(channels: Any) -> str:
+    """
+    `channels` may be:
+      - a list of plain strings, or
+      - a list of dicts with a 'channel' key (as returned by the real GTM agent).
+    Always returns a clean comma-separated list of channel names.
+    """
+    if not channels:
+        return "no channels specified"
+
+    names: List[str] = []
+    for c in channels:
+        if isinstance(c, str) and c.strip():
+            names.append(c.strip())
+        elif isinstance(c, dict):
+            name = str(c.get("channel", "")).strip()
+            if name:
+                names.append(name)
+
+    return _join_or_default(names, "no channels specified")
+
+
 def _summarize_gtm(gtm_strategy: Optional[Dict[str, Any]]) -> str:
     if not gtm_strategy:
         return "Go-to-market strategy was not available for this validation run."
-    positioning = gtm_strategy.get("positioning", "")
-    channels = _join_or_default(gtm_strategy.get("marketing_channels"), "no channels specified")
-    summary = f"Suggested marketing channels: {channels}."
-    if positioning:
-        summary = f"{positioning} {summary}"
+
+    positioning_text = _extract_positioning_text(gtm_strategy.get("positioning"))
+    channels_text = _extract_channel_names(gtm_strategy.get("marketing_channels"))
+
+    summary = f"Suggested marketing channels: {channels_text}."
+    if positioning_text:
+        summary = f"{positioning_text} {summary}"
     return summary
 
 
