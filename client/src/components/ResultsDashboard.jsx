@@ -1,3 +1,9 @@
+/* =========================================================
+   NEXUS AI — RESULTS DASHBOARD
+   Clean / Compact / Professional
+   Dark + Light Theme
+   ========================================================= */
+
 import React, {
   useState,
   useEffect,
@@ -31,14 +37,19 @@ import MvpRecommendations from "./MvpRecommendations";
 import GtmStrategy from "./GtmStrategy";
 import ValidationReport from "./ValidationReport";
 
-/* ============================================================
+
+/* =========================================================
    SAFE TEXT HELPERS
-============================================================ */
+   ========================================================= */
 
 function renderText(val, fallback = "") {
-  if (val === null || val === undefined) return fallback;
+  if (val === null || val === undefined) {
+    return fallback;
+  }
 
-  if (typeof val === "string") return val;
+  if (typeof val === "string") {
+    return val;
+  }
 
   if (
     typeof val === "number" ||
@@ -90,19 +101,24 @@ function renderText(val, fallback = "") {
   return String(val);
 }
 
+
 const safe = (value, fallback = "—") => {
   const text = renderText(value, "");
-  return text.trim() !== "" ? text : fallback;
+
+  return text.trim() !== ""
+    ? text
+    : fallback;
 };
 
-/* ============================================================
-   SUB SCORE BAR
-============================================================ */
+
+/* =========================================================
+   SCORE BAR
+   ========================================================= */
 
 function SubScoreBar({
   label,
   score,
-  accent,
+  accent = "#f5b942",
   rationale,
 }) {
   const pct = Math.min(
@@ -112,6 +128,7 @@ function SubScoreBar({
 
   return (
     <div className="feasibility-bar-item">
+
       <div className="feasibility-bar-header">
         <span className="feasibility-bar-title">
           {renderText(label)}
@@ -128,24 +145,12 @@ function SubScoreBar({
         </span>
       </div>
 
-      <div
-        className="feasibility-track"
-        style={{
-          background: "rgba(255,255,255,0.06)",
-          height: "6px",
-          borderRadius: "3px",
-          overflow: "hidden",
-          marginTop: "6px",
-        }}
-      >
+      <div className="feasibility-track">
         <div
           className="feasibility-fill"
           style={{
             width: `${pct}%`,
             background: accent,
-            height: "100%",
-            borderRadius: "3px",
-            transition: "width 0.8s ease",
           }}
         />
       </div>
@@ -153,22 +158,163 @@ function SubScoreBar({
       {rationale && (
         <p
           style={{
-            margin: "6px 0 0",
+            margin: "7px 0 0",
             fontSize: "12px",
-            color: "var(--text-secondary)",
+            color: "var(--r-text-secondary)",
             lineHeight: "17px",
           }}
         >
           {renderText(rationale)}
         </p>
       )}
+
     </div>
   );
 }
 
-/* ============================================================
-   RESULTS SECTIONS
-============================================================ */
+
+/* =========================================================
+   QUICK STAT
+   ========================================================= */
+
+function QuickStat({
+  icon,
+  label,
+  value,
+  description,
+  accent = "#f5b942",
+}) {
+  return (
+    <div className="results-quick-stat">
+
+      <div
+        className="results-quick-stat-label"
+        style={{
+          "--stat-accent": accent,
+        }}
+      >
+        <span>{icon}</span>
+        <span>{label}</span>
+      </div>
+
+      <div className="results-quick-stat-value">
+        {value}
+      </div>
+
+      {description && (
+        <div className="results-quick-stat-description">
+          {description}
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+
+/* =========================================================
+   KPI CARD
+   ========================================================= */
+
+function KpiCard({
+  label,
+  value,
+  accent = "#f5b942",
+  description,
+}) {
+  return (
+    <div
+      className="kpi-card"
+      style={{
+        "--kpi-accent": accent,
+      }}
+    >
+
+      <div className="kpi-header">
+        <span className="kpi-label">
+          {label}
+        </span>
+      </div>
+
+      <p
+        className="kpi-val"
+        style={{
+          color: accent,
+        }}
+      >
+        {value}
+      </p>
+
+      {description && (
+        <div className="results-metric-description">
+          {description}
+        </div>
+      )}
+
+      <div className="kpi-sparkline">
+        <span
+          style={{
+            display: "block",
+            width: "68%",
+            height: "100%",
+            borderRadius: "inherit",
+            background: accent,
+          }}
+        />
+      </div>
+
+    </div>
+  );
+}
+
+
+/* =========================================================
+   SECTION HEADING
+   ========================================================= */
+
+function SectionHeading({
+  eyebrow,
+  title,
+  count,
+  description,
+}) {
+  return (
+    <div className="results-section-header">
+
+      <div className="results-section-title-wrap">
+
+        {eyebrow && (
+          <div className="results-section-eyebrow">
+            {eyebrow}
+          </div>
+        )}
+
+        <h2 className="results-section-title">
+          {title}
+        </h2>
+
+        {description && (
+          <p className="results-section-subtitle">
+            {description}
+          </p>
+        )}
+
+      </div>
+
+      {count && (
+        <span className="results-section-count">
+          {count}
+        </span>
+      )}
+
+    </div>
+  );
+}
+
+
+/* =========================================================
+   NAVIGATION SECTIONS
+   ========================================================= */
 
 const SECTIONS = [
   {
@@ -176,69 +322,61 @@ const SECTIONS = [
     label: "Overview",
     icon: Award,
     accent: "#FFC72C",
-    rgb: "255,199,44",
   },
   {
     id: "web-intelligence",
     label: "Web Sources",
     icon: Globe,
     accent: "#FFC72C",
-    rgb: "255,199,44",
   },
   {
     id: "deep-validation",
     label: "Deep Matrix",
     icon: ShieldCheck,
     accent: "#2DD4BF",
-    rgb: "45,212,191",
   },
   {
     id: "market",
     label: "Market & Target",
     icon: BarChart3,
     accent: "#FF8A1F",
-    rgb: "255,138,31",
   },
   {
     id: "competitors",
     label: "Competitors",
     icon: Crosshair,
     accent: "#F43F5E",
-    rgb: "244,63,94",
   },
   {
     id: "risk",
     label: "Risk Audit",
     icon: AlertTriangle,
     accent: "#F59E0B",
-    rgb: "245,158,11",
   },
   {
     id: "mvp",
     label: "MVP Roadmap",
     icon: Layers,
     accent: "#A78BFA",
-    rgb: "167,139,250",
   },
   {
     id: "gtm",
     label: "Go-To-Market",
     icon: Compass,
     accent: "#38BDF8",
-    rgb: "56,189,248",
   },
   {
     id: "report",
     label: "Validation Report",
     icon: FileText,
     accent: "#34D399",
-    rgb: "52,211,153",
   },
 ];
 
-/* ============================================================
+
+/* =========================================================
    MAIN COMPONENT
-============================================================ */
+   ========================================================= */
 
 export default function ResultsDashboard({
   validationResult,
@@ -250,11 +388,13 @@ export default function ResultsDashboard({
   onOpenHistory,
   onNewAnalysis,
 }) {
+
+  /* =======================================================
+     BASIC RESULT DATA
+     ======================================================= */
+
   const r = validationResult || {};
 
-  /* ============================================================
-     BASIC RESULT INFORMATION
-  ============================================================ */
 
   const ideaText = safe(
     r.idea ||
@@ -263,11 +403,13 @@ export default function ResultsDashboard({
     "The proposed startup idea leverages automated intelligence and modern workflow integration to solve critical operational bottlenecks."
   );
 
+
   const productName = safe(
     r.product_name ||
       r.productName,
     "AI Startup Venture"
   );
+
 
   const targetScore = Math.min(
     100,
@@ -276,123 +418,122 @@ export default function ResultsDashboard({
       Math.round(
         Number(
           r.overall_score ||
-            r.score ||
-            81
+          r.score ||
+          81
         )
       )
     )
   );
 
-  /* ============================================================
+
+  /* =======================================================
      ANIMATED SCORE
-  ============================================================ */
+     ======================================================= */
 
   const [animatedScore, setAnimatedScore] =
     useState(0);
 
+
   useEffect(() => {
-    let start = 0;
+    let frame;
 
-    const end = targetScore;
-
-    if (end === 0) {
-      setAnimatedScore(0);
-      return;
-    }
+    const startTime = performance.now();
 
     const duration = 900;
-    const stepTime = 16;
-    const steps = duration / stepTime;
-    const increment = end / steps;
 
-    const timer = setInterval(() => {
-      start += increment;
+    const animate = (currentTime) => {
+      const elapsed =
+        currentTime - startTime;
 
-      if (start >= end) {
-        setAnimatedScore(end);
-        clearInterval(timer);
-      } else {
-        setAnimatedScore(
-          Math.round(start)
-        );
+      const progress = Math.min(
+        elapsed / duration,
+        1
+      );
+
+      const eased =
+        1 -
+        Math.pow(1 - progress, 3);
+
+      setAnimatedScore(
+        Math.round(targetScore * eased)
+      );
+
+      if (progress < 1) {
+        frame =
+          requestAnimationFrame(animate);
       }
-    }, stepTime);
+    };
 
-    return () =>
-      clearInterval(timer);
+    frame =
+      requestAnimationFrame(animate);
+
+    return () => {
+      if (frame) {
+        cancelAnimationFrame(frame);
+      }
+    };
   }, [targetScore]);
 
-  /* ============================================================
+
+  /* =======================================================
      SUB SCORES
-  ============================================================ */
+     ======================================================= */
 
   const subScores = useMemo(() => {
-    if (
-      r.sub_scores &&
-      typeof r.sub_scores === "object"
-    ) {
-      return {
-        market: Math.round(
-          Number(r.sub_scores.market) ||
-            targetScore * 0.95
-        ),
 
-        technical: Math.round(
-          Number(r.sub_scores.technical) ||
-            targetScore * 0.9
-        ),
-
-        regulatory: Math.round(
-          Number(r.sub_scores.regulatory) ||
-            targetScore * 0.85
-        ),
-
-        execution: Math.round(
-          Number(r.sub_scores.execution) ||
-            targetScore * 0.88
-        ),
-
-        competition: Math.round(
-          Number(r.sub_scores.competition) ||
-            targetScore * 0.82
-        ),
-      };
-    }
+    const source =
+      r.sub_scores ||
+      r.subScores ||
+      {};
 
     return {
-      market: Math.min(
-        100,
-        Math.round(targetScore * 0.96)
-      ),
+      market:
+        Number(
+          source.market ??
+            Math.round(
+              targetScore * 0.95
+            )
+        ),
 
-      technical: Math.min(
-        100,
-        Math.round(targetScore * 0.92)
-      ),
+      technical:
+        Number(
+          source.technical ??
+            Math.round(
+              targetScore * 0.90
+            )
+        ),
 
-      regulatory: Math.min(
-        100,
-        Math.round(targetScore * 0.88)
-      ),
+      regulatory:
+        Number(
+          source.regulatory ??
+            Math.round(
+              targetScore * 0.85
+            )
+        ),
 
-      execution: Math.min(
-        100,
-        Math.round(targetScore * 0.9)
-      ),
+      execution:
+        Number(
+          source.execution ??
+            Math.round(
+              targetScore * 0.88
+            )
+        ),
 
-      competition: Math.min(
-        100,
-        Math.round(targetScore * 0.84)
-      ),
+      competition:
+        Number(
+          source.competition ??
+            Math.round(
+              targetScore * 0.82
+            )
+        ),
     };
-  }, [
-    r.sub_scores,
-    targetScore,
-  ]);
 
-  /* ============================================================
+  }, [r, targetScore]);
+
+
+  /* =======================================================
      VERDICT
-  ============================================================ */
+     ======================================================= */
 
   const verdict = safe(
     r.verdict,
@@ -403,50 +544,53 @@ export default function ResultsDashboard({
       : "PIVOT RECOMMENDED"
   );
 
-  /* ============================================================
-     STRATEGIC SIGNALS
-  ============================================================ */
+
+  const verdictClass =
+    verdict.toUpperCase().includes("STRONG") ||
+    verdict.toUpperCase().includes("HIGH")
+      ? "green"
+      : verdict.toUpperCase().includes("CAUTION") ||
+        verdict.toUpperCase().includes("MODERATE")
+      ? "warning"
+      : "danger";
+
+
+  /* =======================================================
+     KEY SIGNALS
+     ======================================================= */
 
   const keySignals = useMemo(() => {
+
+    const signals =
+      r.key_signals ||
+      r.keySignals;
+
     if (
-      Array.isArray(r.key_signals) &&
-      r.key_signals.length > 0
+      Array.isArray(signals) &&
+      signals.length > 0
     ) {
-      return r.key_signals.map(
-        (sig, idx) => {
-          if (
-            typeof sig === "object" &&
-            sig !== null
-          ) {
-            return {
-              signal: renderText(
-                sig.signal ||
-                  sig.title ||
-                  `Signal ${idx + 1}`
-              ),
-
-              status: renderText(
-                sig.status,
-                "Positive"
-              ),
-
-              implication: renderText(
-                sig.implication ||
-                  sig.description ||
-                  sig.text,
-                "High strategic relevance."
-              ),
-            };
-          }
-
-          return {
-            signal: renderText(sig),
-            status: "Positive",
-            implication:
-              "Direct market and intelligence indicator from multi-agent validation.",
-          };
-        }
-      );
+      return signals
+        .map((item) => ({
+          signal: safe(
+            item?.signal ||
+              item?.title ||
+              item?.name ||
+              item
+          ),
+          status: safe(
+            item?.status,
+            "Signal"
+          ),
+          implication: safe(
+            item?.implication ||
+              item?.description ||
+              item?.reason
+          ),
+        }))
+        .filter(
+          (item) =>
+            item.signal !== "—"
+        );
     }
 
     return [
@@ -455,33 +599,36 @@ export default function ResultsDashboard({
           "Pharma Outsourcing & Lab Expansion",
         status: "Positive",
         implication:
-          "Global laboratory automation market expanding with strong compliance requirements.",
+          "Growing laboratory complexity creates demand for automated safety and compliance workflows.",
       },
       {
         signal:
           "Automated Safety Enforcement Gap",
-        status: "Positive",
+        status: "Opportunity",
         implication:
-          "Incumbent monitoring tools lack real-time computer vision PPE and hazard detection.",
+          "Existing workflows still rely heavily on manual monitoring and periodic audits.",
       },
       {
         signal:
           "Data Privacy & Edge Constraints",
-        status: "Caution",
+        status: "Constraint",
         implication:
-          "Requires on-premises edge processing to safeguard sensitive laboratory intellectual property.",
+          "Sensitive environments may require edge processing and strong privacy controls.",
       },
     ];
-  }, [r.key_signals]);
 
-  /* ============================================================
+  }, [r]);
+
+
+  /* =======================================================
      MARKET SIZING
-  ============================================================ */
+     ======================================================= */
 
   const marketSizing =
     r.market_analysis?.market_sizing ||
     r.market_sizing ||
     {};
+
 
   const tam = safe(
     marketSizing.tam,
@@ -503,11 +650,13 @@ export default function ResultsDashboard({
     "22.4%"
   );
 
-  /* ============================================================
-     WEB SOURCES
-  ============================================================ */
+
+  /* =======================================================
+     SEARCH SOURCES
+     ======================================================= */
 
   const effectiveSources = useMemo(() => {
+
     if (
       Array.isArray(searchResults) &&
       searchResults.length > 0
@@ -532,937 +681,863 @@ export default function ResultsDashboard({
     return [
       {
         title:
-          "Lab Automation Software Market Growth, Size & Outlook 2031",
-
+          "Lab Automation Market Research",
         content:
-          "Pharma Outsourcing Surge in Emerging Markets. Multinational sponsors are shifting preclinical toxicology and early-phase trials to Asia-Pacific to gain budget flexibility and accelerate patient recruitment.",
-
+          "Laboratory automation continues to expand as organizations seek improved efficiency, repeatability and compliance.",
         target_audience:
-          "Research Laboratories, Pharmaceutical Companies, And Academic Institutions",
-
-        url:
-          "https://www.mordorintelligence.com/industry-reports/global-lab-automation-software-market-industry",
+          "Laboratory and pharmaceutical organizations",
+        url: "#",
       },
-
       {
         title:
-          "Top Tracklab Alternatives, Competitors",
-
+          "Tracklab Alternatives & Laboratory Technology",
         content:
-          "LeucineTech offers solutions for the pharmaceutical manufacturing sector, focusing on manufacturing execution systems, quality management systems, and laboratory execution systems.",
-
+          "Modern laboratory platforms increasingly combine workflow automation, monitoring and operational analytics.",
         target_audience:
-          "Research Laboratories, Pharmaceutical Companies, And Academic Institutions",
-
-        url:
-          "https://www.cbinsights.com/company/tracklab/alternatives-competitors",
+          "Laboratory operations teams",
+        url: "#",
       },
-
       {
         title:
-          "Revolutionizing Laboratory Practices: Pioneering Trends in Total Laboratory Automation",
-
+          "Laboratory Automation Trends",
         content:
-          "Ensuring QC and regulatory compliance in automated processes requires additional operational effort and oversight.",
-
+          "Automation is being adopted to reduce repetitive tasks and improve consistency across laboratory processes.",
         target_audience:
-          "Research Laboratories, Pharmaceutical Companies, And Academic Institutions",
-
-        url:
-          "https://pmc.ncbi.nlm.nih.gov/articles/PMC12370808",
+          "Research laboratories",
+        url: "#",
       },
-
       {
         title:
-          "Labviva Introduces Real Time Inventory Management System for Life Sciences Purchasing",
-
+          "AI in Pharmaceutical Operations",
         content:
-          "Labviva's automated Inventory Management System benefits laboratory research organizations.",
-
+          "AI-enabled operational systems are being explored for monitoring, compliance and workflow optimization.",
         target_audience:
-          "Research Laboratories, Pharmaceutical Companies, And Academic Institutions",
-
-        url:
-          "https://finance.yahoo.com/news/labviva-introduces-real-time-inventory-130000270.html",
+          "Pharmaceutical companies",
+        url: "#",
       },
-
       {
         title:
-          "Laboratory Environmental Monitoring Systems",
-
+          "Environmental Monitoring Systems",
         content:
-          "Environmental monitoring systems represent critical infrastructure for research laboratories, pharmaceutical facilities, clinical diagnostic centers, and regulated healthcare environments.",
-
+          "Environmental monitoring is an important component of controlled laboratory and manufacturing environments.",
         target_audience:
-          "Research Laboratories, Pharmaceutical Companies, And Academic Institutions",
-
-        url:
-          "https://aresscientific.com/product-category/environmental-monitoring",
+          "Quality and compliance teams",
+        url: "#",
       },
-
       {
         title:
-          "AI in Laboratory Billing: Real-Time Impact on Revenue Cycle Performance",
-
+          "Laboratory Information & Compliance Systems",
         content:
-          "AI tools within advanced laboratory billing systems automatically monitor regulatory changes.",
-
+          "Compliance platforms help organizations maintain operational records and audit readiness.",
         target_audience:
-          "Healthcare Consumers & Medical Providers",
-
-        url:
-          "https://www.ligolab.com/post/ai-in-laboratory-billing-real-time-impact-on-revenue-cycle-performance",
+          "Compliance teams",
+        url: "#",
       },
-
       {
         title:
-          "Compliance Automation AI Market Research Report 2034",
-
+          "AI Compliance Automation",
         content:
-          "Demand for specialized AI accelerators to support on-premises sensitive compliance data processing is rising.",
-
+          "AI-based compliance automation can reduce repetitive monitoring and documentation tasks.",
         target_audience:
-          "Research Laboratories, Pharmaceutical Companies, And Academic Institutions",
-
-        url:
-          "https://dataintelo.com/report/compliance-automation-ai-market",
+          "Regulated organizations",
+        url: "#",
       },
-
       {
         title:
-          "Pharmaceutical Automation Solutions and Validation Support",
-
+          "Pharmaceutical Automation Solutions",
         content:
-          "Pharmaceutical automation companies can create integrated systems that allow users to analyze operations with automated safety monitoring.",
-
+          "Pharmaceutical manufacturing continues to adopt automation to improve reliability and quality.",
         target_audience:
-          "Research Laboratories, Pharmaceutical Companies, And Academic Institutions",
-
-        url:
-          "https://etechgroup.com/pharmaceutical-automation-companies",
+          "Pharmaceutical manufacturers",
+        url: "#",
       },
-
       {
         title:
-          "Design and Implementation of Laboratory Information Systems",
-
+          "Laboratory Safety Research",
         content:
-          "Proactive compliance management is the direct outcome of real-time monitoring and automatic reporting.",
-
+          "Safety monitoring remains an important concern across research and clinical laboratory environments.",
         target_audience:
-          "Research Laboratories, Pharmaceutical Companies, And Academic Institutions",
-
-        url:
-          "https://www.jisem-journal.com/download/11_ITFH-GTC-Ax-Kr-03.pdf",
+          "Laboratory safety teams",
+        url: "#",
       },
-
       {
         title:
-          "Automated Compliance Monitoring - Mayo Clinic Platform Solutions Studio",
-
+          "Automated Compliance Monitoring",
         content:
-          "Automated compliance monitoring audits interactions and assigns adherence scores based on specific safety, clinical, and accreditation standards.",
-
+          "Automated monitoring can support organizations in identifying compliance events and maintaining records.",
         target_audience:
-          "Healthcare Consumers & Medical Providers",
-
-        url:
-          "https://www.mayoclinicplatform.org/solutions-catalog/listing/automated-compliance-monitoring",
+          "Compliance and quality teams",
+        url: "#",
       },
     ];
+
   }, [
     searchResults,
     r.search_results,
     r.sources,
   ]);
 
-  /* ============================================================
+
+  /* =======================================================
+     COMPACT SOURCE VIEW
+     ======================================================= */
+
+  const visibleSources =
+    effectiveSources.slice(0, 5);
+
+
+  /* =======================================================
      DEEP VALIDATION
-  ============================================================ */
+     ======================================================= */
 
   const deepValidation =
-    r.deep_validation || {};
+    r.deep_validation ||
+    {};
+
 
   const technicalFeasibility =
     deepValidation.technical_feasibility ||
-    r.technical_feasibility || {
+    r.technical_feasibility ||
+    {
       score: 8.1,
-      feasibility_rating: "High",
-
-      key_barriers: [
-        "Ensuring low-latency real-time inference across complex laboratory environments.",
-        "Maintaining data privacy and secure processing boundaries.",
+      rating: "High",
+      barriers: [
+        "Computer vision accuracy",
+        "Edge processing requirements",
       ],
-
-      signal_constraints: [
-        "Camera optical obstruction caused by specialized lab equipment.",
-        "Bandwidth and edge-processing constraints for local video processing.",
+      constraints: [
+        "Hardware deployment",
+        "Data privacy",
       ],
-
-      recommended_tech_stack: [
-        "Supermicro 1U Industrial Edge AI Servers equipped with NVIDIA enterprise GPUs.",
-        "TensorRT, ONNX Runtime, secure RTSP/ONVIF streaming protocols.",
+      stack: [
+        "Computer Vision",
+        "Edge AI",
+        "Cloud Analytics",
       ],
     };
+
 
   const scientificValidation =
     deepValidation.scientific_validation ||
-    r.scientific_validation || {
+    r.scientific_validation ||
+    {
       score: 7.5,
-      evidence_level:
-        "Empirically Validated",
-
-      key_findings: [
-        "Studies on total laboratory automation indicate benefits from automated compliance monitoring.",
-        "Industrial computer vision models demonstrate strong PPE detection accuracy when properly deployed.",
+      evidence: [
+        "Computer vision has established applications in industrial monitoring.",
+        "Automated monitoring can support repeatable safety workflows.",
       ],
-
-      risk_flags: [
-        "Potential false-positive rates in complex laboratory settings.",
-        "Site-specific calibration is required before establishing exact safety improvement metrics.",
+      findings: [
+        "Technical feasibility is supported by existing AI capabilities.",
+        "Real-world validation is still required.",
       ],
-
-      required_trials: [
-        "Controlled sandbox pilot deployment.",
-        "Pilot validation within a partner pharmaceutical research facility.",
+      flags: [
+        "Dataset quality",
+        "Environmental variability",
+      ],
+      trials: [
+        "Pilot deployment",
+        "Controlled environment testing",
       ],
     };
+
 
   const regulatoryCompliance =
     deepValidation.regulatory_compliance ||
-    r.regulatory_compliance || {
+    r.regulatory_compliance ||
+    {
       risk_level: "Medium",
-
-      fda_classification:
-        "ISO 27001 / IEC 62443 / OSHA Safety Standards",
-
-      compliance_requirements: [
-        "Adherence to OSHA safety compliance standards.",
-        "Compliance with data security frameworks such as ISO 27001 and SOC 2 Type II.",
+      compliance_standards: [
+        "GxP",
+        "ISO",
+        "Data protection requirements",
       ],
-
-      recommended_pathway:
-        "Establish foundational compliance via ISO 27001 and IEC 62443 frameworks and align product audit logs with applicable reporting requirements.",
+      requirements: [
+        "Audit trails",
+        "Data security",
+        "Access control",
+      ],
+      pathway: [
+        "Compliance assessment",
+        "Pilot validation",
+        "Documentation",
+      ],
     };
 
-  /* ============================================================
-     MARKET DATA
-  ============================================================ */
+
+  /* =======================================================
+     MARKET ANALYSIS
+     ======================================================= */
 
   const marketAnalysisData =
-    r.market_analysis || {
+    r.market_analysis ||
+    {
       industry:
         "LegalTech, Regulatory Compliance & Workplace Safety Automation",
 
       market_opportunity:
-        "The AI Lab Safety Monitoring System addresses operational and regulatory bottlenecks in research laboratories, pharmaceutical companies, and academic institutions by automating safety compliance and incident prevention.",
+        "AI-powered laboratory safety and compliance monitoring can address operational gaps in regulated environments by combining real-time monitoring with automated reporting.",
 
-      market_trends: [
-        "Pharma outsourcing surge in emerging markets.",
-        "Increasing adoption of automated laboratory systems.",
-        "Rising demand for real-time inventory and compliance data integration.",
+      trends: [
+        "Growth in laboratory automation",
+        "Increasing compliance requirements",
+        "Adoption of AI-assisted monitoring",
       ],
 
       growth_drivers: [
-        "Expanding global pharmaceutical outsourcing.",
-        "Heightened regulatory scrutiny on laboratory environments.",
+        "Operational efficiency",
+        "Regulatory pressure",
       ],
 
-      market_challenges: [
-        "Customer resistance to surveillance or computer vision monitoring.",
-        "Technical complexity integrating AI with legacy laboratory systems.",
+      challenges: [
+        "Long enterprise sales cycles",
+        "Integration complexity",
       ],
     };
 
+
+  /* =======================================================
+     CUSTOMER SEGMENTS
+     ======================================================= */
+
   const customerSegmentsData =
     r.market_analysis?.customer_segments ||
-    r.customer_segments || [
+    r.customer_segments ||
+    [
       {
-        segment:
-          "Pharmaceutical Manufacturing & Quality Control Facilities",
+        name:
+          "Pharmaceutical Manufacturing & QC",
 
         needs: [
-          "Continuous automated audit-ready safety record generation.",
-          "Integration with existing laboratory management systems.",
+          "Automated monitoring",
+          "Audit-ready records",
+          "Compliance visibility",
         ],
 
         pain_points: [
           {
             pain:
-              "High operational effort required to manually track safety protocols.",
+              "Manual safety and compliance monitoring",
             severity: "High",
           },
-
           {
             pain:
-              "Production delays caused by undetected safety violations.",
-            severity: "High",
+              "Fragmented operational records",
+            severity: "Medium",
           },
         ],
       },
 
       {
-        segment:
-          "Academic & Research Laboratory Institutions",
+        name:
+          "Academic & Research Labs",
 
         needs: [
-          "Real-time alerts for unsafe practices.",
-          "Actionable insights for improving safety culture.",
+          "Safety monitoring",
+          "Incident detection",
+          "Simple compliance workflows",
         ],
 
         pain_points: [
           {
             pain:
-              "Inconsistent adherence to laboratory SOPs.",
+              "Limited dedicated safety resources",
             severity: "High",
           },
-
           {
             pain:
-              "Difficulty continuously monitoring complex environments.",
-            severity: "High",
+              "Inconsistent monitoring processes",
+            severity: "Medium",
           },
         ],
       },
     ];
 
-  /* ============================================================
+
+  const visibleCustomers =
+    Array.isArray(customerSegmentsData)
+      ? customerSegmentsData.slice(0, 3)
+      : [];
+
+
+  /* =======================================================
      COMPETITORS
-  ============================================================ */
+     ======================================================= */
 
   const compAnalysis =
-    r.competitor_analysis || {};
+    r.competitor_analysis ||
+    {};
+
 
   const directCompetitors =
     compAnalysis.direct_competitors ||
-    compAnalysis.competitors || [
+    compAnalysis.competitors ||
+    [
       {
         name: "Labviva",
-
-        website:
-          "https://finance.yahoo.com/news/labviva-introduces-real-time-inventory-130000270.html",
-
+        website: "#",
         target_audience:
-          "Laboratory scientists, researchers, and procurement professionals.",
-
+          "Pharmaceutical and laboratory teams",
         what_they_offer:
-          "Automated inventory management and life sciences purchasing software.",
-
-        pricing:
-          "Not available in retrieved sources",
-
+          "Laboratory workflow and information management capabilities.",
+        pricing: "Enterprise",
         key_capabilities: [
-          "Automated inventory management",
-          "Real-time visibility",
-          "Compliance data access",
+          "Laboratory workflows",
+          "Data management",
         ],
-
         strengths: [
-          "Streamlines inventory management.",
-          "Integrates compliance data.",
+          "Established workflows",
+          "Enterprise orientation",
         ],
-
         weaknesses: [
-          "Focuses primarily on purchasing and inventory.",
+          "Limited specialized safety automation",
         ],
       },
 
       {
         name:
           "Ares Scientific Environmental Monitoring Systems",
-
-        website:
-          "https://aresscientific.com/product-category/environmental-monitoring",
-
+        website: "#",
         target_audience:
-          "Research laboratories, pharmaceutical facilities, clinical diagnostic centers.",
-
+          "Controlled environments",
         what_they_offer:
-          "Environmental monitoring systems using wireless sensors and cloud-based management.",
-
-        pricing:
-          "Not available in retrieved sources",
-
+          "Environmental monitoring solutions.",
+        pricing: "Enterprise",
         key_capabilities: [
-          "Wireless sensors",
-          "Cloud management",
-          "Automated alarms",
+          "Environmental monitoring",
+          "Alerts",
         ],
-
         strengths: [
-          "Continuous environmental monitoring.",
+          "Monitoring infrastructure",
         ],
-
         weaknesses: [
-          "Does not primarily focus on human behavioral and PPE monitoring.",
+          "Narrower AI capabilities",
         ],
       },
 
       {
         name: "LigoLab",
-
-        website:
-          "https://www.ligolab.com/post/ai-in-laboratory-billing-real-time-impact-on-revenue-cycle-performance",
-
+        website: "#",
         target_audience:
-          "Healthcare consumers and medical providers.",
-
+          "Clinical and diagnostic laboratories",
         what_they_offer:
-          "Laboratory information system software and AI-powered compliance workflows.",
-
-        pricing:
-          "Pricing varies by solution.",
-
+          "Laboratory information and operational management.",
+        pricing: "Enterprise",
         key_capabilities: [
-          "AI compliance monitoring",
-          "Regulatory change monitoring",
-          "Billing workflow management",
+          "Laboratory management",
+          "Reporting",
         ],
-
         strengths: [
-          "Reduces manual compliance work.",
+          "Laboratory domain experience",
         ],
-
         weaknesses: [
-          "Focused more on billing and revenue-cycle workflows.",
+          "Not primarily focused on real-time safety detection",
         ],
       },
 
       {
         name:
           "E Tech Group Pharmaceutical Automation Solutions",
-
-        website:
-          "https://etechgroup.com/pharmaceutical-automation-companies",
-
+        website: "#",
         target_audience:
-          "Research laboratories, pharmaceutical companies, and academic institutions.",
-
+          "Pharmaceutical manufacturers",
         what_they_offer:
-          "Pharmaceutical automation and information management solutions.",
-
-        pricing:
-          "Not available in retrieved sources",
-
+          "Automation and manufacturing integration.",
+        pricing: "Custom",
         key_capabilities: [
-          "Safety monitoring",
-          "Remote access",
-          "Operational maintenance",
+          "Industrial automation",
+          "Systems integration",
         ],
-
         strengths: [
-          "Integrated automation capabilities.",
+          "Industrial expertise",
         ],
-
         weaknesses: [
-          "Legacy hardware integration can require extensive engineering.",
+          "Potentially higher implementation complexity",
         ],
       },
 
       {
         name:
-          "Mayo Clinic Platform Solutions Studio Automated Compliance Monitoring",
-
-        website:
-          "https://www.mayoclinicplatform.org/solutions-catalog/listing/automated-compliance-monitoring",
-
+          "Mayo Clinic Platform Solutions Studio",
+        website: "#",
         target_audience:
-          "Healthcare consumers and medical providers.",
-
+          "Healthcare and clinical organizations",
         what_they_offer:
-          "Automated compliance monitoring for clinical workflows.",
-
-        pricing:
-          "Enterprise institutional licensing.",
-
+          "AI and healthcare technology solutions.",
+        pricing: "Enterprise",
         key_capabilities: [
-          "Automated interaction auditing",
-          "Adherence scoring",
-          "Real-time guidance",
+          "Healthcare AI",
+          "Analytics",
         ],
-
         strengths: [
-          "Provides managers with compliance visibility.",
+          "Healthcare ecosystem",
         ],
-
         weaknesses: [
-          "Designed for clinical workflows rather than laboratory safety.",
+          "Less specialized laboratory safety focus",
         ],
       },
     ];
+
 
   const marketGapsList =
     compAnalysis.market_gaps ||
-    r.market_gaps || [
-      "Potential opportunity: Real-time computer vision detection of missing PPE specifically tailored for research laboratories.",
-
-      "Potential opportunity: Automated visual monitoring of hazardous material handling and restricted access.",
-
-      "Primary customer research and competitor benchmarking are recommended to validate these potential gaps.",
+    r.market_gaps ||
+    [
+      {
+        gap:
+          "Real-time safety intelligence",
+        description:
+          "Opportunity to combine continuous monitoring with actionable safety alerts.",
+      },
+      {
+        gap:
+          "Automated audit readiness",
+        description:
+          "Organizations may benefit from automatically generated compliance evidence.",
+      },
+      {
+        gap:
+          "Edge-first privacy",
+        description:
+          "Sensitive environments can benefit from local processing of visual data.",
+      },
     ];
 
-  /* ============================================================
+
+  const visibleCompetitors =
+    Array.isArray(directCompetitors)
+      ? directCompetitors.slice(0, 5)
+      : [];
+
+
+  const visibleMarketGaps =
+    Array.isArray(marketGapsList)
+      ? marketGapsList.slice(0, 4)
+      : [];
+
+
+  /* =======================================================
      RISKS
-  ============================================================ */
+     ======================================================= */
 
   const riskAnalysisList =
-    r.risk_analysis || [
+    r.risk_analysis ||
+    [
       {
-        risk:
+        title:
           "Computer Vision Accuracy and Edge Cases",
-
-        severity: "High",
-
         category: "Technical",
-
-        impact:
-          "The AI may fail in difficult lighting or visually ambiguous conditions.",
-
-        mitigation:
-          "Implement continuous model retraining and edge-case testing.",
-      },
-
-      {
-        risk:
-          "Regulatory and Compliance Shift",
-
-        severity: "Medium",
-
-        category: "Market",
-
-        impact:
-          "Changes in privacy laws could affect video monitoring.",
-
-        mitigation:
-          "Use edge processing and privacy-by-design architecture.",
-      },
-
-      {
-        risk:
-          "High Customer Acquisition Cost vs. Long Sales Cycles",
-
         severity: "High",
+        impact:
+          "False positives or false negatives could reduce user trust.",
+        mitigation:
+          "Use diverse datasets, human review and controlled pilot deployments.",
+      },
 
+      {
+        title:
+          "Regulatory and Compliance Shift",
+        category: "Market",
+        severity: "Medium",
+        impact:
+          "Changes in compliance requirements may increase product maintenance.",
+        mitigation:
+          "Build configurable compliance rules and maintain regulatory monitoring.",
+      },
+
+      {
+        title:
+          "High Customer Acquisition Cost vs. Long Sales Cycles",
         category: "Financial",
-
+        severity: "High",
         impact:
-          "Enterprise procurement may involve long sales cycles.",
-
+          "Enterprise customers may require lengthy procurement and validation.",
         mitigation:
-          "Develop a low-friction pilot program.",
+          "Use focused pilots and land-and-expand enterprise sales.",
       },
 
       {
-        risk:
+        title:
           "Incumbent Feature Parity",
-
-        severity: "Medium",
-
         category: "Competition",
-
-        impact:
-          "Established providers could introduce similar functionality.",
-
-        mitigation:
-          "Focus on hardware-agnostic software integration.",
-      },
-
-      {
-        risk:
-          "Hardware Maintenance and Reliability",
-
-        severity: "Low",
-
-        category: "Operational",
-
-        impact:
-          "Physical cameras may require maintenance.",
-
-        mitigation:
-          "Use industrial-grade camera housings and health monitoring.",
-      },
-
-      {
-        risk:
-          "Employee Resistance",
-
         severity: "Medium",
-
-        category: "Customer Adoption",
-
         impact:
-          "Users may have concerns about workplace surveillance.",
-
+          "Existing platforms may add overlapping functionality.",
         mitigation:
-          "Position the system around safety assistance and privacy.",
+          "Differentiate through specialized AI safety intelligence.",
+      },
+
+      {
+        title:
+          "Hardware Maintenance and Reliability",
+        category: "Operational",
+        severity: "Low",
+        impact:
+          "Physical deployments introduce maintenance requirements.",
+        mitigation:
+          "Use modular hardware and remote monitoring.",
+      },
+
+      {
+        title:
+          "Employee Resistance",
+        category: "Customer Adoption",
+        severity: "Medium",
+        impact:
+          "Employees may initially resist automated monitoring.",
+        mitigation:
+          "Communicate benefits clearly and design privacy-conscious workflows.",
       },
     ];
 
-  /* ============================================================
+
+  const visibleRisks =
+    Array.isArray(riskAnalysisList)
+      ? riskAnalysisList.slice(0, 4)
+      : [];
+
+
+  /* =======================================================
      MVP
-  ============================================================ */
+     ======================================================= */
 
   const mvpData =
-    r.mvp_recommendations || {
+    r.mvp_recommendations ||
+    {
       must_have: [
         {
-          feature:
+          title:
             "Core Product Functionality",
-          complexity: "Low",
-          reason:
-            "Provides the primary functionality required to validate the product concept.",
-          customer_value: "High",
+          description:
+            "Essential startup workflow and monitoring capabilities.",
         },
-
         {
-          feature:
-            "Automated safety monitoring",
-          complexity: "High",
-          reason:
-            "Directly addresses the core laboratory safety problem.",
-          customer_value: "High",
+          title:
+            "Automated Safety Monitoring",
+          description:
+            "AI-assisted monitoring of important safety events.",
         },
-
         {
-          feature:
-            "Audit-ready compliance reports",
-          complexity: "Low",
-          reason:
-            "Supports regulatory documentation.",
-          customer_value: "High",
+          title:
+            "Audit-ready Compliance Reports",
+          description:
+            "Generate structured reports for compliance workflows.",
         },
       ],
 
       should_have: [
         {
-          feature:
-            "Real-time PPE detection",
-          complexity: "High",
-          reason:
-            "Provides differentiated laboratory safety monitoring.",
-          customer_value: "High",
+          title:
+            "Real-time PPE Detection",
+          description:
+            "Detect required protective equipment.",
         },
-
         {
-          feature:
-            "Hazardous material monitoring",
-          complexity: "High",
-          reason:
-            "Supports real-time safety enforcement.",
-          customer_value: "High",
+          title:
+            "Hazardous Material Monitoring",
+          description:
+            "Identify important environmental and safety conditions.",
         },
       ],
 
       could_have: [
         {
-          feature:
-            "Usage analytics",
-          complexity: "Low",
-          reason:
-            "Measures adoption.",
-          customer_value: "Medium",
+          title:
+            "Usage Analytics",
+          description:
+            "Track adoption and operational trends.",
         },
-
         {
-          feature:
-            "Multi-channel notifications",
-          complexity: "Medium",
-          reason:
-            "Extends alert delivery.",
-          customer_value: "Medium",
+          title:
+            "Multi-channel Notifications",
+          description:
+            "Send alerts through multiple channels.",
         },
       ],
 
       future_features: [
         {
-          feature:
-            "Advanced AI personalization",
-          complexity: "High",
-          reason:
-            "Enables personalized safety coaching.",
-          customer_value: "Low",
+          title:
+            "Advanced AI Personalization",
+          description:
+            "Personalized recommendations and adaptive monitoring.",
         },
-
         {
-          feature:
-            "Third-party integrations",
-          complexity: "High",
-          reason:
-            "Expands the ecosystem.",
-          customer_value: "Low",
+          title:
+            "Third-party Integrations",
+          description:
+            "Connect with enterprise systems.",
         },
       ],
     };
 
-  /* ============================================================
+
+  /* =======================================================
+     COMPACT MVP DATA
+     ======================================================= */
+
+  const compactMvpData = {
+    ...mvpData,
+
+    must_have:
+      Array.isArray(mvpData.must_have)
+        ? mvpData.must_have.slice(0, 5)
+        : [],
+
+    should_have:
+      Array.isArray(mvpData.should_have)
+        ? mvpData.should_have.slice(0, 3)
+        : [],
+
+    could_have:
+      Array.isArray(mvpData.could_have)
+        ? mvpData.could_have.slice(0, 2)
+        : [],
+
+    future_features:
+      Array.isArray(mvpData.future_features)
+        ? mvpData.future_features.slice(0, 2)
+        : [],
+  };
+
+
+  /* =======================================================
      GTM
-  ============================================================ */
+     ======================================================= */
 
   const gtmData =
-    r.gtm_strategy || {
-      viability: {
-        overall:
-          "Moderate Commercial Viability",
-        score: 0.81,
-        confidence: 0.95,
-      },
+    r.gtm_strategy ||
+    {
+      commercial_viability: "Moderate",
+      score: 0.81,
+      confidence: 0.95,
 
-      gtm_validation: {
-        status: "FAIL",
-        score: 0.5,
-        violations: [
-          "Launch roadmap must contain at least 3 distinct phased milestones.",
-        ],
-      },
+      validation_status: "FAIL",
 
-      business_archetype: {
-        primary:
-          "B2B Enterprise / High-ACV SaaS + DeepTech / Hardware / Regulated Infrastructure",
-
-        confidence: 0.95,
-
-        reasoning:
-          "The model relies on enterprise sales to regulated industries.",
-      },
+      business_archetype:
+        "B2B Enterprise / High-ACV SaaS + DeepTech / Hardware / Regulated Infrastructure",
 
       customer_segments: [
-        {
-          persona:
-            "EHS Managers in Pharmaceutical/Biotech",
-
-          why_they_care:
-            "Reduction of workplace accidents and regulatory risk.",
-
-          core_problem:
-            "Manual oversight of complex safety protocols.",
-
-          buying_behavior:
-            "Annual enterprise licensing.",
-        },
-
-        {
-          persona:
-            "Academic Laboratory Directors",
-
-          why_they_care:
-            "Maintaining institutional accreditation and staff safety.",
-
-          core_problem:
-            "Difficulty enforcing consistent safety culture.",
-
-          buying_behavior:
-            "Institutional procurement cycles.",
-        },
+        "Pharmaceutical manufacturers",
+        "Research laboratories",
       ],
 
       pain_points: [
-        {
-          persona: "EHS Managers",
-          description:
-            "Missing PPE during chemical preparation.",
-        },
-
-        {
-          persona:
-            "Laboratory Directors",
-
-          description:
-            "Unauthorized access to restricted hazardous areas.",
-        },
+        "Manual compliance workflows",
+        "Limited real-time safety visibility",
       ],
 
       competitors:
         directCompetitors,
 
       unit_economics: {
-        cac: "€8,000",
-        arpu: "€50,000",
-        gross_margin: "75%",
+        cac: "€8k",
+        arpu: "€50k",
+        margin: "75%",
         assumptions:
-          "Long sales cycles and relatively low churn.",
+          "Enterprise annual contracts with implementation support.",
       },
 
       marketing_channels: [
-        {
-          channel:
-            "Industry Conferences",
-          type: "Outbound",
-          tactic:
-            "Live demonstrations of simulated safety violations.",
-        },
+        "Direct enterprise sales",
+        "Industry partnerships",
+      ],
 
+      pricing_model:
+        "Tiered SaaS + hardware integration",
+
+      pricing_tiers: [
         {
-          channel:
-            "Direct Sales / Account-Based Marketing",
-          type: "Outbound",
-          tactic:
-            "Targeting EHS decision makers.",
+          name: "Enterprise Pilot",
+          price: "€25k/year",
+        },
+        {
+          name: "Full Facility Scale",
+          price: "€65k/year",
         },
       ],
 
-      pricing_strategy_details: {
-        model:
-          "Tiered SaaS Subscription + Hardware Integration Fee",
-
-        price_tiers: [
-          {
-            tier: "Enterprise Pilot",
-            price: "€25,000/year",
-            description:
-              "Up to 5 labs with standard reporting.",
-          },
-
-          {
-            tier: "Full Facility Scale",
-            price: "€65,000/year",
-            description:
-              "Unlimited labs with integrations.",
-          },
-        ],
-      },
-
       risks: [
-        {
-          risk:
-            "Data privacy and employee surveillance concerns",
-
-          severity: "High",
-
-          test:
-            "Legal review of privacy-by-design architecture.",
-
-          metric:
-            "Institutional ethics approval.",
-        },
+        "Long enterprise procurement cycles",
       ],
 
       launch_roadmap: {
         phases: [
           {
-            phase:
-              "Phase 1 — Prototype",
-
-            objective:
-              "Validate AI accuracy.",
-
-            key_actions: [
-              "5 pilot installations",
-              "95% PPE detection precision target",
+            phase: "Phase 1",
+            title: "Pilot",
+            actions: [
+              "Select design partners",
+              "Validate core workflow",
             ],
-
-            success_metric:
-              "Pilot contracts and detection precision.",
           },
-
           {
-            phase:
-              "Phase 2 — Alpha Deployments",
-
-            objective:
-              "Integrate with LIMS and edge appliances.",
-
-            key_actions: [
-              "Deploy on-premises edge boxes",
-              "Measure alert latency",
+            phase: "Phase 2",
+            title: "Production",
+            actions: [
+              "Expand facility deployment",
+              "Measure ROI",
             ],
-
-            success_metric:
-              "Active facilities and latency target.",
           },
-
           {
-            phase:
-              "Phase 3 — Commercial Launch",
-
-            objective:
-              "Enterprise GTM rollout.",
-
-            key_actions: [
-              "Engage audit partners",
-              "Scale ABM campaign",
+            phase: "Phase 3",
+            title: "Scale",
+            actions: [
+              "Expand enterprise sales",
+              "Develop partnerships",
             ],
-
-            success_metric:
-              "Commercial revenue milestone.",
           },
         ],
       },
     };
 
-  /* ============================================================
+
+  /* =======================================================
+     COMPACT GTM DATA
+     ======================================================= */
+
+  const compactGtmData = {
+    ...gtmData,
+
+    customer_segments:
+      Array.isArray(
+        gtmData.customer_segments
+      )
+        ? gtmData.customer_segments.slice(0, 3)
+        : [],
+
+    pain_points:
+      Array.isArray(
+        gtmData.pain_points
+      )
+        ? gtmData.pain_points.slice(0, 4)
+        : [],
+
+    competitors:
+      Array.isArray(
+        gtmData.competitors
+      )
+        ? gtmData.competitors.slice(0, 5)
+        : [],
+
+    marketing_channels:
+      Array.isArray(
+        gtmData.marketing_channels
+      )
+        ? gtmData.marketing_channels.slice(0, 4)
+        : [],
+
+    risks:
+      Array.isArray(gtmData.risks)
+        ? gtmData.risks.slice(0, 4)
+        : [],
+
+    launch_roadmap: {
+      ...(gtmData.launch_roadmap || {}),
+
+      phases:
+        Array.isArray(
+          gtmData.launch_roadmap?.phases
+        )
+          ? gtmData.launch_roadmap.phases.slice(
+              0,
+              3
+            )
+          : [],
+    },
+  };
+
+
+  /* =======================================================
      VALIDATION REPORT
-  ============================================================ */
+     ======================================================= */
 
   const validationReportData =
-    r.validation_report || {
-      executive_summary: `This report validates the startup idea: "${ideaText}".`,
+    r.validation_report ||
+    {
+      executive_summary:
+        "The analysis indicates a meaningful opportunity for AI-powered safety and compliance automation in regulated laboratory environments.",
 
       market_summary:
-        "The startup operates in regulatory compliance and workplace safety automation.",
+        "The target market benefits from increasing laboratory automation, compliance requirements and demand for operational efficiency.",
 
       competitor_summary:
-        `${directCompetitors.length} competitor(s) were identified.`,
+        "Existing solutions cover laboratory management, environmental monitoring and automation, leaving room for specialized AI safety intelligence.",
 
       swot_summary:
-        "Key strengths include automated safety monitoring and compliance reporting.",
+        "The concept combines AI automation and compliance workflows, with adoption, accuracy and enterprise sales cycles as key considerations.",
 
       risk_summary:
-        `${riskAnalysisList.length} risk(s) identified.`,
+        "Technical accuracy, regulatory changes, customer acquisition and operational deployment should be actively managed.",
 
       mvp_summary:
-        "Recommended MVP features focus on core functionality, automated safety monitoring and compliance reporting.",
+        "The MVP should focus on core monitoring, safety detection and audit-ready reporting.",
 
       gtm_summary:
-        "The proposed GTM focuses on enterprise laboratory and pharmaceutical customers.",
+        "A focused enterprise pilot strategy can validate the solution before broader facility expansion.",
 
-      recommendations:
-        "Prioritize core MVP features, validate high-severity risks and conduct additional customer research.",
+      recommendations: [
+        "Validate the highest-value customer workflow.",
+        "Run a controlled pilot.",
+        "Measure operational and compliance ROI.",
+      ],
 
       conclusion:
-        "The combined analysis provides a structured view of market, competitive, technical and execution considerations.",
+        "The startup concept warrants structured validation through customer discovery and pilot deployment.",
     };
 
-  /* ============================================================
+
+  /* =======================================================
      ACTIVE SECTION
-  ============================================================ */
+     ======================================================= */
 
   const [activeSection, setActiveSection] =
     useState("overview");
 
+
+  /* =======================================================
+     SCROLL SPY
+     ======================================================= */
+
   useEffect(() => {
+
     const handleScroll = () => {
-      const scrollY =
-        window.pageYOffset;
 
       const navOffset = 180;
+
+      let currentSection =
+        "overview";
 
       for (
         let i = SECTIONS.length - 1;
         i >= 0;
         i--
       ) {
+
         const section =
           document.getElementById(
             SECTIONS[i].id
           );
 
-        if (section) {
-          const top =
-            section.offsetTop;
+        if (!section) continue;
 
-          if (
-            scrollY >=
-            top - navOffset
-          ) {
-            setActiveSection(
-              SECTIONS[i].id
-            );
+        const rect =
+          section.getBoundingClientRect();
 
-            break;
-          }
+        if (
+          rect.top <= navOffset
+        ) {
+          currentSection =
+            SECTIONS[i].id;
+
+          break;
         }
       }
+
+      setActiveSection(
+        currentSection
+      );
     };
+
 
     window.addEventListener(
       "scroll",
@@ -1470,22 +1545,26 @@ export default function ResultsDashboard({
       { passive: true }
     );
 
+
     handleScroll();
 
-    return () =>
+
+    return () => {
       window.removeEventListener(
         "scroll",
         handleScroll
       );
+    };
+
   }, []);
 
-  /* ============================================================
-     SCROLL TO SECTION
-  ============================================================ */
+
+  /* =======================================================
+     SECTION SCROLL
+     ======================================================= */
 
   const scrollToSection =
     useCallback((id) => {
-      setActiveSection(id);
 
       const element =
         document.getElementById(id);
@@ -1504,357 +1583,180 @@ export default function ResultsDashboard({
         top: y,
         behavior: "smooth",
       });
+
+      setActiveSection(id);
+
     }, []);
 
-  /* ============================================================
-     VERDICT COLOR
-  ============================================================ */
 
-  const verdictColor =
-    verdict
-      .toUpperCase()
-      .includes("STRONG") ||
-    verdict
-      .toUpperCase()
-      .includes("HIGH")
-      ? "#2DD4BF"
-      : verdict
-          .toUpperCase()
-          .includes("CAUTION") ||
-        verdict
-          .toUpperCase()
-          .includes("MODERATE")
-      ? "#FF8A1F"
-      : "#F43F5E";
-
-  /* ============================================================
+  /* =======================================================
      RETURN
-  ============================================================ */
+     ======================================================= */
 
   return (
-    <div
-      className="results-master-container"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        width: "100%",
-        maxWidth: "1280px",
-        margin: "0 auto",
-        minHeight: "100vh",
-        background:
-          "var(--page-bg, #0c0b0a)",
-        color:
-          "var(--text-primary, #f5f1e8)",
-        fontFamily:
-          "var(--font-family-base, Inter, -apple-system, BlinkMacSystemFont, sans-serif)",
-      }}
-    >
+    <div className="results-master-container">
 
-      {/* ======================================================
-          RESULTS HERO
-      ====================================================== */}
 
-      <header
-        className="results-hero-header"
-        style={{
-          width: "100%",
-          maxWidth: "1280px",
-          margin: "0 auto",
-          padding: "40px 24px 20px",
-        }}
-      >
+      {/* =====================================================
+          HERO
+          ===================================================== */}
+
+      <header className="results-hero-header">
+
+        <div className="results-hero-eyebrow">
+          <Sparkles size={13} />
+          NEXUS AI · VALIDATION DOSSIER
+        </div>
+
+
+        <h1 className="results-hero-title">
+          Validation Results
+        </h1>
+
+
+        <p className="results-hero-subtitle">
+          AI-powered startup validation across
+          market opportunity, technical
+          feasibility, competition, risk,
+          MVP strategy and go-to-market
+          readiness.
+        </p>
+
 
         <div
           style={{
             display: "flex",
-            justifyContent:
-              "space-between",
-            alignItems: "flex-start",
             flexWrap: "wrap",
-            gap: "16px",
-            marginBottom: "24px",
+            gap: "10px",
+            marginTop: "22px",
+            alignItems: "center",
           }}
         >
 
-          <div>
+          <span className="results-status-badge">
+            <ShieldCheck size={12} />
+            Analysis Complete
+          </span>
+
+
+          <span
+            className={`results-status-badge ${
+              verdictClass === "green"
+                ? ""
+                : verdictClass
+            }`}
+          >
+            {verdict}
+          </span>
+
+
+          {onNewAnalysis && (
+            <button
+              type="button"
+              className="results-button"
+              onClick={onNewAnalysis}
+            >
+              <RefreshCw size={13} />
+              New Analysis
+            </button>
+          )}
+
+        </div>
+
+
+        {/* =================================================
+            ANALYZED IDEA
+            ================================================= */}
+
+        <div
+          style={{
+            marginTop: "26px",
+          }}
+        >
+
+          <div
+            className="exec-summary-card"
+          >
 
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: "8px",
-                marginBottom: "6px",
+                marginBottom: "9px",
               }}
             >
+              <Sparkles
+                size={15}
+                color="var(--r-accent)"
+              />
+
               <span
                 style={{
-                  fontSize: "12px",
+                  fontSize: "10px",
                   fontWeight: 800,
-                  letterSpacing: "0.1em",
+                  letterSpacing: "0.08em",
                   textTransform:
                     "uppercase",
-                  color: "#FFC72C",
-                  background:
-                    "linear-gradient(135deg, rgba(255,199,44,0.15), rgba(255,138,31,0.15))",
-                  padding:
-                    "4px 10px",
-                  borderRadius: "20px",
-                  border:
-                    "1px solid rgba(255,199,44,0.3)",
+                  color:
+                    "var(--r-accent)",
                 }}
               >
-                ✦ VALIDATION DOSSIER
+                Analyzed Startup Idea
               </span>
             </div>
 
-            <h1
-              style={{
-                fontSize:
-                  "clamp(26px, 4vw, 36px)",
-                fontWeight: 800,
-                margin:
-                  "0 0 8px 0",
-                color:
-                  "var(--text-primary, #ffffff)",
-                letterSpacing:
-                  "-0.02em",
-              }}
-            >
-              Validation Results
-            </h1>
 
             <p
               style={{
                 margin: 0,
-                fontSize: "15px",
                 color:
-                  "var(--text-secondary, #a8a29e)",
-                maxWidth: "680px",
-                lineHeight: 1.5,
+                  "var(--r-text)",
+                fontSize: "15px",
+                lineHeight: 1.65,
+                fontWeight: 650,
               }}
             >
-              AI-powered research and
-              analysis for your startup
-              idea.
+              {ideaText}
             </p>
 
-          </div>
 
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              flexWrap: "wrap",
-            }}
-          >
-
-            <div
-              style={{
-                display:
-                  "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                background:
-                  "linear-gradient(135deg, rgba(255,199,44,0.18), rgba(255,138,31,0.18))",
-                border:
-                  "1px solid rgba(255,199,44,0.45)",
-                padding:
-                  "8px 16px",
-                borderRadius: "30px",
-                boxShadow:
-                  "0 0 16px rgba(255,199,44,0.15)",
-              }}
-            >
-              <span
+            {(submittedDomain ||
+              submittedCustomers) && (
+              <div
                 style={{
-                  color: "#FFC72C",
-                  fontSize: "13px",
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                  marginTop: "15px",
                 }}
               >
-                ✦
-              </span>
 
-              <span
-                style={{
-                  fontSize: "12px",
-                  fontWeight: 800,
-                  color: "#FFC72C",
-                  letterSpacing:
-                    "0.06em",
-                  textTransform:
-                    "uppercase",
-                }}
-              >
-                RESEARCH CONFIDENCE HIGH
-              </span>
-            </div>
+                {submittedDomain && (
+                  <span className="results-chip accent">
+                    {submittedDomain}
+                  </span>
+                )}
 
-            {onNewAnalysis && (
-              <button
-                type="button"
-                onClick={
-                  onNewAnalysis
-                }
-                style={{
-                  display:
-                    "inline-flex",
-                  alignItems:
-                    "center",
-                  gap: "6px",
-                  background:
-                    "rgba(255,255,255,0.05)",
-                  border:
-                    "1px solid rgba(255,255,255,0.12)",
-                  color: "#f5f1e8",
-                  padding:
-                    "8px 16px",
-                  borderRadius: "30px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                <RefreshCw
-                  size={14}
-                />
+                {submittedCustomers && (
+                  <span className="results-chip">
+                    {submittedCustomers}
+                  </span>
+                )}
 
-                <span>
-                  New Idea
-                </span>
-              </button>
+              </div>
             )}
 
           </div>
 
         </div>
 
-        {/* ANALYZED IDEA */}
-
-        <div
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(255,199,44,0.05) 0%, rgba(24,22,19,0.95) 100%)",
-            border:
-              "1px solid rgba(255,199,44,0.35)",
-            borderRadius: "16px",
-            padding:
-              "24px 28px",
-            marginBottom:
-              "24px",
-            boxShadow:
-              "0 10px 30px rgba(0,0,0,0.4)",
-            position: "relative",
-            overflow: "hidden",
-          }}
-        >
-
-          <div
-            style={{
-              position:
-                "absolute",
-              top: 0,
-              left: 0,
-              width: "4px",
-              height: "100%",
-              background:
-                "linear-gradient(180deg,#FFC72C,#FF8A1F)",
-            }}
-          />
-
-          <span
-            style={{
-              display: "block",
-              fontSize: "11px",
-              fontWeight: 800,
-              letterSpacing:
-                "0.08em",
-              textTransform:
-                "uppercase",
-              color: "#FFC72C",
-              marginBottom:
-                "10px",
-            }}
-          >
-            ANALYZED STARTUP IDEA
-          </span>
-
-          <p
-            style={{
-              margin: 0,
-              fontSize: "15px",
-              lineHeight: 1.65,
-              color:
-                "var(--text-primary, #f5f1e8)",
-            }}
-          >
-            {ideaText}
-          </p>
-
-        </div>
-
-        {/* QUICK STATS */}
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(190px, 1fr))",
-            gap: "12px",
-            marginBottom:
-              "28px",
-          }}
-        >
-
-          <QuickStat
-            icon="✦"
-            label="VALIDATION AREA"
-            value="All"
-            description="Complete validation across all areas"
-          />
-
-          <QuickStat
-            icon="🔎"
-            label="SOURCES"
-            value={
-              effectiveSources.length
-            }
-            description="Relevant web sources found"
-          />
-
-          <QuickStat
-            icon="✓"
-            label="STATUS"
-            value="COMPLETE"
-            description="Research completed"
-            accent="#34D399"
-          />
-
-          <QuickStat
-            icon="🎯"
-            label="CONFIDENCE"
-            value="HIGH"
-            description="Research confidence level"
-          />
-
-          <QuickStat
-            icon="🤖"
-            label="ENGINE"
-            value="NEXUS AI"
-            description="AI-powered intelligence"
-          />
-
-        </div>
-
       </header>
 
-      {/* ======================================================
-          RESULTS SUB NAV
-          
-          IMPORTANT:
-          This is now ONLY the section navigation.
-          History and Export are removed from here.
-      ====================================================== */}
+
+      {/* =====================================================
+          HORIZONTAL NAVIGATION
+          ===================================================== */}
 
       <nav
         className="results-horiz-nav"
@@ -1875,9 +1777,11 @@ export default function ResultsDashboard({
 
         </div>
 
+
         <div className="results-nav-sections">
 
           {SECTIONS.map((section) => {
+
             const Icon =
               section.icon;
 
@@ -1905,13 +1809,13 @@ export default function ResultsDashboard({
                     : undefined
                 }
               >
-                <Icon
-                  size={13}
-                />
+
+                <Icon size={13} />
 
                 <span>
                   {section.label}
                 </span>
+
               </button>
             );
           })}
@@ -1920,347 +1824,272 @@ export default function ResultsDashboard({
 
       </nav>
 
-      {/* ======================================================
+
+      {/* =====================================================
           MAIN CONTENT
-      ====================================================== */}
+          ===================================================== */}
 
-      <main
-        className="results-content-area"
-        style={{
-          maxWidth: "1280px",
-          margin: "0 auto",
-          padding:
-            "32px 24px 100px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "48px",
-        }}
-      >
+      <main className="results-content-area">
 
-        {/* ====================================================
-            SECTION 1
-        ==================================================== */}
+
+        {/* ===================================================
+            1. OVERVIEW
+            =================================================== */}
 
         <section
           id="overview"
           className="results-section-card"
-          style={{
-            background:
-              "rgba(255,255,255,0.02)",
-            border:
-              "1px solid rgba(255,199,44,0.25)",
-            borderRadius: "16px",
-            padding: "32px",
-            position: "relative",
-            overflow: "hidden",
-            boxShadow:
-              "0 12px 36px rgba(0,0,0,0.4)",
-          }}
         >
 
-          <div
-            style={{
-              position:
-                "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              height: "3px",
-              background:
-                "linear-gradient(90deg,#FFC72C,#FF8A1F,#2DD4BF)",
-            }}
+          <SectionHeading
+            eyebrow="OVERVIEW"
+            title="Validation Snapshot"
+            count="Executive View"
+            description="A compact view of the overall validation outcome and the main factors influencing it."
           />
 
-          <div
-            style={{
-              display: "flex",
-              justifyContent:
-                "space-between",
-              alignItems:
-                "flex-start",
-              flexWrap: "wrap",
-              gap: "16px",
-              marginBottom:
-                "28px",
-            }}
-          >
 
-            <div>
+          <div className="overview-top-row">
+
+
+            {/* SCORE */}
+
+            <div className="score-ring-container">
+
+              <svg
+                className="score-ring-svg"
+                viewBox="0 0 160 160"
+              >
+
+                <circle
+                  className="score-ring-bg"
+                  cx="80"
+                  cy="80"
+                  r="62"
+                />
+
+                <circle
+                  className="score-ring-fill"
+                  cx="80"
+                  cy="80"
+                  r="62"
+                  strokeDasharray={
+                    2 *
+                    Math.PI *
+                    62
+                  }
+                  strokeDashoffset={
+                    2 *
+                    Math.PI *
+                    62 *
+                    (1 -
+                      animatedScore /
+                        100)
+                  }
+                />
+
+                <text
+                  x="80"
+                  y="76"
+                  className="score-ring-val"
+                >
+                  {animatedScore}
+                </text>
+
+                <text
+                  x="80"
+                  y="94"
+                  className="score-ring-max"
+                >
+                  /100
+                </text>
+
+              </svg>
+
+
+              <div className="score-ring-caption">
+                Validation Score
+              </div>
+
 
               <div
                 style={{
-                  display:
-                    "flex",
-                  alignItems:
-                    "center",
-                  gap: "6px",
-                  color: "#FFC72C",
-                  fontSize: "11px",
-                  fontWeight: 800,
-                  letterSpacing:
-                    "0.08em",
-                  textTransform:
-                    "uppercase",
-                  marginBottom:
-                    "6px",
+                  marginTop: "10px",
                 }}
               >
-                <Sparkles
-                  size={13}
-                />
-
-                <span>
-                  EXECUTIVE VALIDATION SYNTHESIS
+                <span
+                  className={`results-status-badge ${
+                    verdictClass ===
+                    "green"
+                      ? ""
+                      : verdictClass
+                  }`}
+                >
+                  {verdict}
                 </span>
               </div>
 
-              <h2
-                style={{
-                  margin: 0,
-                  fontSize: "24px",
-                  fontWeight: 800,
-                  color:
-                    "var(--text-primary,#ffffff)",
-                }}
-              >
-                {productName}
-              </h2>
-
-              <p
-                style={{
-                  margin:
-                    "6px 0 0",
-                  fontSize: "13px",
-                  color:
-                    "var(--text-secondary,#a8a29e)",
-                }}
-              >
-                Autonomous multi-agent
-                heuristic validation across
-                market demand, technical
-                feasibility, regulatory
-                compliance, and competitive
-                moat.
-              </p>
-
             </div>
 
-            <div
-              style={{
-                display:
-                  "flex",
-                alignItems:
-                  "center",
-                gap: "8px",
-                padding:
-                  "6px 14px",
-                borderRadius:
-                  "30px",
-                background:
-                  "rgba(255,255,255,0.03)",
-                border:
-                  `1px solid ${verdictColor}`,
-              }}
-            >
 
-              <div
-                style={{
-                  width: "8px",
-                  height: "8px",
-                  borderRadius:
-                    "50%",
-                  background:
-                    verdictColor,
-                  boxShadow:
-                    `0 0 8px ${verdictColor}`,
-                }}
+            {/* QUICK METRICS */}
+
+            <div className="kpi-cards-grid">
+
+              <KpiCard
+                label="Market"
+                value={`${subScores.market}%`}
+                accent="#F5B942"
+                description="Market opportunity"
               />
 
-              <span
-                style={{
-                  fontSize: "12px",
-                  fontWeight: 800,
-                  color:
-                    verdictColor,
-                  textTransform:
-                    "uppercase",
-                }}
-              >
-                {verdict}
-              </span>
+              <KpiCard
+                label="Technical"
+                value={`${subScores.technical}%`}
+                accent="#2DD4BF"
+                description="Technical feasibility"
+              />
+
+              <KpiCard
+                label="Regulatory"
+                value={`${subScores.regulatory}%`}
+                accent="#38BDF8"
+                description="Compliance readiness"
+              />
+
+              <KpiCard
+                label="Execution"
+                value={`${subScores.execution}%`}
+                accent="#A78BFA"
+                description="Execution feasibility"
+              />
 
             </div>
 
           </div>
 
-          {/* SCORE */}
+
+          {/* =================================================
+              MARKET SNAPSHOT
+              ================================================= */}
+
+          <div className="results-metric-grid">
+
+            <KpiCard
+              label="TAM"
+              value={tam}
+              accent="#F5B942"
+              description="Total addressable market"
+            />
+
+            <KpiCard
+              label="SAM"
+              value={sam}
+              accent="#2DD4BF"
+              description="Serviceable available market"
+            />
+
+            <KpiCard
+              label="SOM"
+              value={som}
+              accent="#38BDF8"
+              description="Initial obtainable market"
+            />
+
+            <KpiCard
+              label="CAGR"
+              value={cagr}
+              accent="#A78BFA"
+              description="Estimated market growth"
+            />
+
+          </div>
+
+
+          {/* =================================================
+              KEY SIGNALS
+              ================================================= */}
 
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns:
-                "auto 1fr",
-              gap: "32px",
-              alignItems:
-                "center",
-              padding: "24px",
-              background:
-                "rgba(0,0,0,0.3)",
-              borderRadius: "14px",
-              border:
-                "1px solid rgba(255,199,44,0.15)",
-              marginBottom:
-                "28px",
+              marginTop: "20px",
             }}
           >
 
-            <div
-              style={{
-                position:
-                  "relative",
-                width: 140,
-                height: 140,
-                display:
-                  "flex",
-                alignItems:
-                  "center",
-                justifyContent:
-                  "center",
-              }}
-            >
+            <div className="results-section-eyebrow">
+              STRATEGIC SIGNALS
+            </div>
 
-              <svg
-                width="140"
-                height="140"
-                viewBox="0 0 140 140"
-                style={{
-                  transform:
-                    "rotate(-90deg)",
-                }}
-              >
 
-                <circle
-                  cx="70"
-                  cy="70"
-                  r="56"
-                  stroke="rgba(255,255,255,0.08)"
-                  strokeWidth="8"
-                  fill="transparent"
-                />
+            <div className="results-intelligence-grid">
 
-                <circle
-                  cx="70"
-                  cy="70"
-                  r="56"
-                  stroke="url(#scoreYellowGradient)"
-                  strokeWidth="8"
-                  strokeDasharray={
-                    2 *
-                    Math.PI *
-                    56
-                  }
-                  strokeDashoffset={
-                    2 *
-                    Math.PI *
-                    56 *
-                    (1 -
-                      animatedScore /
-                        100)
-                  }
-                  strokeLinecap="round"
-                  fill="transparent"
-                />
+              {keySignals
+                .slice(0, 3)
+                .map(
+                  (
+                    signal,
+                    index
+                  ) => (
+                    <div
+                      key={index}
+                      className="results-intelligence-card"
+                    >
 
-                <defs>
+                      <div className="results-intelligence-label">
+                        {safe(
+                          signal.status,
+                          "Signal"
+                        )}
+                      </div>
 
-                  <linearGradient
-                    id="scoreYellowGradient"
-                    x1="0%"
-                    y1="0%"
-                    x2="100%"
-                    y2="100%"
-                  >
-                    <stop
-                      offset="0%"
-                      stopColor="#FFC72C"
-                    />
+                      <div className="results-intelligence-value">
+                        {safe(
+                          signal.signal
+                        )}
+                      </div>
 
-                    <stop
-                      offset="60%"
-                      stopColor="#FF8A1F"
-                    />
+                      <div className="results-intelligence-description">
+                        {safe(
+                          signal.implication
+                        )}
+                      </div>
 
-                    <stop
-                      offset="100%"
-                      stopColor="#2DD4BF"
-                    />
-                  </linearGradient>
-
-                </defs>
-
-              </svg>
-
-              <div
-                style={{
-                  position:
-                    "absolute",
-                  display:
-                    "flex",
-                  flexDirection:
-                    "column",
-                  alignItems:
-                    "center",
-                }}
-              >
-
-                <span
-                  style={{
-                    fontSize:
-                      "34px",
-                    fontWeight: 800,
-                  }}
-                >
-                  {animatedScore}
-                </span>
-
-                <span
-                  style={{
-                    fontSize:
-                      "11px",
-                    fontWeight: 700,
-                    color:
-                      "#FFC72C",
-                    marginTop:
-                      "4px",
-                  }}
-                >
-                  / 100
-                </span>
-
-              </div>
+                    </div>
+                  )
+                )}
 
             </div>
 
-            <div
-              style={{
-                display:
-                  "grid",
-                gridTemplateColumns:
-                  "repeat(auto-fit,minmax(180px,1fr))",
-                gap: "18px",
-              }}
-            >
+          </div>
+
+
+          {/* =================================================
+              FEASIBILITY MATRIX
+              ================================================= */}
+
+          <div
+            style={{
+              marginTop: "20px",
+            }}
+          >
+
+            <div className="results-section-eyebrow">
+              FEASIBILITY MATRIX
+            </div>
+
+
+            <div className="feasibility-bars-group">
 
               <SubScoreBar
-                label="Market Opportunity"
+                label="Market"
                 score={
                   subScores.market
                 }
-                accent="#FF8A1F"
+                accent="#F5B942"
               />
 
               <SubScoreBar
-                label="Technical Feasibility"
+                label="Technical"
                 score={
                   subScores.technical
                 }
@@ -2268,15 +2097,15 @@ export default function ResultsDashboard({
               />
 
               <SubScoreBar
-                label="Regulatory & Compliance"
+                label="Regulatory"
                 score={
                   subScores.regulatory
                 }
-                accent="#FFC72C"
+                accent="#38BDF8"
               />
 
               <SubScoreBar
-                label="Execution Defensibility"
+                label="Execution"
                 score={
                   subScores.execution
                 }
@@ -2284,7 +2113,7 @@ export default function ResultsDashboard({
               />
 
               <SubScoreBar
-                label="Competitive Moat"
+                label="Competition"
                 score={
                   subScores.competition
                 }
@@ -2295,915 +2124,769 @@ export default function ResultsDashboard({
 
           </div>
 
-          {/* MARKET KPIs */}
-
-          <div
-            style={{
-              display:
-                "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit,minmax(220px,1fr))",
-              gap: "16px",
-              marginBottom:
-                "28px",
-            }}
-          >
-
-            <KpiCard
-              label="TOTAL ADDRESSABLE (TAM)"
-              value={tam}
-              accent="#FF8A1F"
-              description="Global aggregate annual spend"
-            />
-
-            <KpiCard
-              label="SERVICEABLE (SAM)"
-              value={sam}
-              accent="#FFC72C"
-              description="Direct target architecture match"
-            />
-
-            <KpiCard
-              label="OBTAINABLE (SOM)"
-              value={som}
-              accent="#2DD4BF"
-              description="3-Year capture target"
-            />
-
-            <KpiCard
-              label="MARKET CAGR"
-              value={cagr}
-              accent="#A78BFA"
-              description="Forecasted annual compounding"
-            />
-
-          </div>
-
-          {/* SIGNALS */}
-
-          <div>
-
-            <div
-              style={{
-                fontSize: "11px",
-                fontWeight: 800,
-                color: "#FFC72C",
-                textTransform:
-                  "uppercase",
-                marginBottom:
-                  "12px",
-              }}
-            >
-              STRATEGIC SIGNALS & MACRO CONTEXT
-            </div>
-
-            <div
-              style={{
-                display:
-                  "grid",
-                gridTemplateColumns:
-                  "repeat(auto-fit,minmax(280px,1fr))",
-                gap: "14px",
-              }}
-            >
-
-              {keySignals.map(
-                (signal, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      background:
-                        "rgba(0,0,0,0.25)",
-                      border:
-                        "1px solid rgba(255,255,255,0.06)",
-                      borderRadius:
-                        "10px",
-                      padding:
-                        "14px 16px",
-                    }}
-                  >
-
-                    <div
-                      style={{
-                        display:
-                          "flex",
-                        justifyContent:
-                          "space-between",
-                        gap: "10px",
-                        marginBottom:
-                          "6px",
-                      }}
-                    >
-
-                      <span
-                        style={{
-                          fontSize:
-                            "13px",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {signal.signal}
-                      </span>
-
-                      <span
-                        style={{
-                          fontSize:
-                            "10px",
-                          fontWeight: 700,
-                          color:
-                            signal.status ===
-                            "Positive"
-                              ? "#2DD4BF"
-                              : "#FF8A1F",
-                        }}
-                      >
-                        {signal.status}
-                      </span>
-
-                    </div>
-
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize:
-                          "12px",
-                        color:
-                          "var(--text-secondary,#a8a29e)",
-                        lineHeight: 1.4,
-                      }}
-                    >
-                      {signal.implication}
-                    </p>
-
-                  </div>
-                )
-              )}
-
-            </div>
-
-          </div>
-
         </section>
 
-        {/* ====================================================
-            SECTION 2
-        ==================================================== */}
+
+        {/* ===================================================
+            2. WEB INTELLIGENCE
+            =================================================== */}
 
         <section
           id="web-intelligence"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "16px",
-          }}
+          className="results-section-card"
         >
 
           <SectionHeading
             eyebrow="WEB INTELLIGENCE"
             title="Research Sources"
-            count={`${effectiveSources.length} Sources`}
+            count={`${visibleSources.length} of ${effectiveSources.length} Sources`}
+            description="The most relevant external signals supporting the validation analysis."
           />
 
-          <div
-            style={{
-              display:
-                "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit,minmax(340px,1fr))",
-              gap: "16px",
-            }}
-          >
 
-            {effectiveSources.map(
+          <div className="results-sources-grid">
+
+            {visibleSources.map(
               (source, index) => (
                 <SearchResultCard
-                  key={index}
-                  result={source}
-                  targetCustomer={
-                    submittedCustomers
+                  key={
+                    source.id ||
+                    source.url ||
+                    index
                   }
+                  result={source}
+                  source={source}
+                  index={index}
                 />
               )
             )}
 
           </div>
 
+
+          {effectiveSources.length >
+            visibleSources.length && (
+            <div
+              style={{
+                marginTop: "14px",
+                textAlign: "center",
+                color:
+                  "var(--r-text-muted)",
+                fontSize: "11px",
+              }}
+            >
+              Showing the 5 most relevant
+              sources. Additional research
+              remains available in the
+              underlying analysis.
+            </div>
+          )}
+
         </section>
 
-        {/* ====================================================
-            SECTION 3
-        ==================================================== */}
 
-        <section id="deep-validation">
+        {/* ===================================================
+            3. DEEP VALIDATION
+            =================================================== */}
 
-          <DeepValidationCard
-            technical={
-              technicalFeasibility
-            }
-            scientific={
-              scientificValidation
-            }
-            regulatory={
-              regulatoryCompliance
-            }
+        <section
+          id="deep-validation"
+          className="results-section-card"
+        >
+
+          <SectionHeading
+            eyebrow="DEEP VALIDATION"
+            title="Deep Validation Matrix"
+            count="3 Pillars"
+            description="Technical, scientific and regulatory checks supporting the validation result."
           />
 
+
+          <div className="results-pillars-grid">
+
+            <div className="results-pillar-card">
+
+              <div className="results-pillar-number">
+                01
+              </div>
+
+              <h3 className="results-pillar-title">
+                Technical Feasibility
+              </h3>
+
+              <div className="results-pillar-score">
+                {safe(
+                  technicalFeasibility.score,
+                  "8.1"
+                )}
+                <span>
+                  /10
+                </span>
+              </div>
+
+              <div className="results-status-badge">
+                {safe(
+                  technicalFeasibility.rating,
+                  "High"
+                )}
+              </div>
+
+              <p className="results-pillar-description">
+                {safe(
+                  technicalFeasibility.barriers,
+                  "Technical feasibility supported by existing AI and automation capabilities."
+                )}
+              </p>
+
+            </div>
+
+
+            <div className="results-pillar-card">
+
+              <div className="results-pillar-number">
+                02
+              </div>
+
+              <h3 className="results-pillar-title">
+                Scientific Validation
+              </h3>
+
+              <div className="results-pillar-score">
+                {safe(
+                  scientificValidation.score,
+                  "7.5"
+                )}
+                <span>
+                  /10
+                </span>
+              </div>
+
+              <div className="results-status-badge">
+                Evidence
+              </div>
+
+              <p className="results-pillar-description">
+                {safe(
+                  scientificValidation.findings,
+                  "Available evidence supports the underlying technical approach, subject to pilot validation."
+                )}
+              </p>
+
+            </div>
+
+
+            <div className="results-pillar-card">
+
+              <div className="results-pillar-number">
+                03
+              </div>
+
+              <h3 className="results-pillar-title">
+                Regulatory Compliance
+              </h3>
+
+              <div className="results-pillar-score">
+                {safe(
+                  regulatoryCompliance.risk_level,
+                  "Medium"
+                )}
+              </div>
+
+              <div className="results-status-badge warning">
+                Compliance
+              </div>
+
+              <p className="results-pillar-description">
+                {safe(
+                  regulatoryCompliance.requirements,
+                  "Compliance requirements should be validated for the target deployment environment."
+                )}
+              </p>
+
+            </div>
+
+          </div>
+
+
+          {/* Existing detailed component */}
+
+          <div
+            style={{
+              marginTop: "18px",
+            }}
+          >
+
+            <DeepValidationCard
+              technicalFeasibility={
+                technicalFeasibility
+              }
+              scientificValidation={
+                scientificValidation
+              }
+              regulatoryCompliance={
+                regulatoryCompliance
+              }
+              data={deepValidation}
+            />
+
+          </div>
+
         </section>
 
-        {/* ====================================================
-            SECTION 4
-        ==================================================== */}
+
+        {/* ===================================================
+            4. MARKET & TARGET
+            =================================================== */}
 
         <section
           id="market"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "24px",
-          }}
+          className="results-section-card"
         >
 
-          <MarketAnalysis
-            data={
-              marketAnalysisData
-            }
+          <SectionHeading
+            eyebrow="MARKET & TARGET"
+            title="Market Opportunity"
+            count="Market + Customers"
+            description="Market sizing, growth signals and the customer segments most relevant to the idea."
           />
 
-          <CustomerSegments
-            segments={
-              customerSegmentsData
-            }
-          />
+
+          <div className="market-layout-grid">
+
+            <div className="market-chart-card">
+
+              <h3 className="market-chart-title">
+                Market Sizing
+              </h3>
+
+
+              <div className="market-nested-stack">
+
+                <div className="market-tier-bar">
+
+                  <div className="market-tier-info">
+                    <span className="market-tier-label">
+                      TAM
+                    </span>
+
+                    <span className="market-tier-val">
+                      {tam}
+                    </span>
+                  </div>
+
+                  <div className="market-tier-track">
+                    <div
+                      className="market-tier-fill"
+                      style={{
+                        width: "100%",
+                      }}
+                    />
+                  </div>
+
+                </div>
+
+
+                <div className="market-tier-bar">
+
+                  <div className="market-tier-info">
+                    <span className="market-tier-label">
+                      SAM
+                    </span>
+
+                    <span className="market-tier-val">
+                      {sam}
+                    </span>
+                  </div>
+
+                  <div className="market-tier-track">
+                    <div
+                      className="market-tier-fill"
+                      style={{
+                        width: "72%",
+                      }}
+                    />
+                  </div>
+
+                </div>
+
+
+                <div className="market-tier-bar">
+
+                  <div className="market-tier-info">
+                    <span className="market-tier-label">
+                      SOM
+                    </span>
+
+                    <span className="market-tier-val">
+                      {som}
+                    </span>
+                  </div>
+
+                  <div className="market-tier-track">
+                    <div
+                      className="market-tier-fill"
+                      style={{
+                        width: "45%",
+                      }}
+                    />
+                  </div>
+
+                </div>
+
+
+                <div className="market-tier-bar">
+
+                  <div className="market-tier-info">
+                    <span className="market-tier-label">
+                      CAGR
+                    </span>
+
+                    <span className="market-tier-val">
+                      {cagr}
+                    </span>
+                  </div>
+
+                  <div className="market-tier-track">
+                    <div
+                      className="market-tier-fill"
+                      style={{
+                        width: "68%",
+                      }}
+                    />
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+            <div className="market-chart-card">
+
+              <h3 className="market-chart-title">
+                Market Opportunity
+              </h3>
+
+              <div className="results-text-block">
+                <p>
+                  {safe(
+                    marketAnalysisData.market_opportunity ||
+                      marketAnalysisData.opportunity,
+                    "The market shows potential for AI-enabled automation and compliance workflows."
+                  )}
+                </p>
+              </div>
+
+
+              <div
+                style={{
+                  marginTop: "16px",
+                }}
+              >
+
+                <span className="results-chip accent">
+                  {safe(
+                    marketAnalysisData.industry,
+                    "Target Industry"
+                  )}
+                </span>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+          {/* Market Analysis component */}
+
+          <div
+            style={{
+              marginTop: "18px",
+            }}
+          >
+
+            <MarketAnalysis
+              data={marketAnalysisData}
+            />
+
+          </div>
+
+
+          {/* Customer segments */}
+
+          <div
+            style={{
+              marginTop: "24px",
+            }}
+          >
+
+            <div className="results-section-eyebrow">
+              CUSTOMER SEGMENTS
+            </div>
+
+            <CustomerSegments
+              segments={
+                visibleCustomers
+              }
+            />
+
+          </div>
 
         </section>
 
-        {/* ====================================================
-            SECTION 5
-        ==================================================== */}
+
+        {/* ===================================================
+            5. COMPETITORS
+            =================================================== */}
 
         <section
           id="competitors"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "24px",
-          }}
+          className="results-section-card"
         >
+
+          <SectionHeading
+            eyebrow="COMPETITIVE INTELLIGENCE"
+            title="Competitors & Market Gaps"
+            count={`${visibleCompetitors.length} Competitors`}
+            description="A compact competitive view highlighting existing solutions and whitespace."
+          />
+
 
           <CompetitorAnalysis
             competitors={
-              directCompetitors
-            }
-            indirectCompetitors={[]}
-            comparison={
-              compAnalysis.feature_matrix ||
-              compAnalysis.competitor_comparison ||
-              []
+              visibleCompetitors
             }
             marketGaps={
-              marketGapsList
+              visibleMarketGaps
             }
+            data={compAnalysis}
           />
 
-          <MarketGaps
-            gaps={
-              marketGapsList
-            }
-          />
+
+          <div
+            style={{
+              marginTop: "22px",
+            }}
+          >
+
+            <div className="results-section-eyebrow">
+              MARKET GAPS
+            </div>
+
+
+            <MarketGaps
+              gaps={
+                visibleMarketGaps
+              }
+            />
+
+          </div>
 
         </section>
 
-        {/* ====================================================
-            SECTION 6
-        ==================================================== */}
 
-        <section id="risk">
+        {/* ===================================================
+            6. RISK AUDIT
+            =================================================== */}
+
+        <section
+          id="risk"
+          className="results-section-card"
+        >
+
+          <SectionHeading
+            eyebrow="RISK AUDIT"
+            title="Key Risks & Mitigations"
+            count={`${visibleRisks.length} Priority Risks`}
+            description="The main technical, commercial, competitive and operational risks identified during validation."
+          />
+
 
           <RiskAnalysis
-            risks={
-              riskAnalysisList
-            }
+            risks={visibleRisks}
+            data={{
+              risks:
+                visibleRisks,
+            }}
           />
 
         </section>
 
-        {/* ====================================================
-            SECTION 7
-        ==================================================== */}
 
-        <section id="mvp">
+        {/* ===================================================
+            7. MVP
+            =================================================== */}
+
+        <section
+          id="mvp"
+          className="results-section-card"
+        >
+
+          <SectionHeading
+            eyebrow="MVP ROADMAP"
+            title="What to Build First"
+            count="Prioritized Features"
+            description="The feature set is grouped by implementation priority to keep the initial product focused."
+          />
+
 
           <MvpRecommendations
-            data={mvpData}
-          />
-
-        </section>
-
-        {/* ====================================================
-            SECTION 8
-        ==================================================== */}
-
-        <section id="gtm">
-
-          <GtmStrategy
-            gtmStrategy={
-              gtmData
+            data={compactMvpData}
+            recommendations={
+              compactMvpData
             }
           />
 
         </section>
 
-        {/* ====================================================
-            SECTION 9
-        ==================================================== */}
 
-        <section id="report">
+        {/* ===================================================
+            8. GTM
+            =================================================== */}
+
+        <section
+          id="gtm"
+          className="results-section-card"
+        >
+
+          <SectionHeading
+            eyebrow="GO-TO-MARKET"
+            title="Commercial Strategy"
+            count="3 Launch Phases"
+            description="Customer targeting, pricing, acquisition channels and launch sequencing."
+          />
+
+
+          {/* GTM snapshot */}
+
+          <div className="results-metric-grid">
+
+            <KpiCard
+              label="Viability"
+              value={safe(
+                compactGtmData.commercial_viability,
+                "Moderate"
+              )}
+              accent="#38BDF8"
+            />
+
+            <KpiCard
+              label="CAC"
+              value={safe(
+                compactGtmData.unit_economics?.cac,
+                "—"
+              )}
+              accent="#F5B942"
+            />
+
+            <KpiCard
+              label="ARPU"
+              value={safe(
+                compactGtmData.unit_economics?.arpu,
+                "—"
+              )}
+              accent="#2DD4BF"
+            />
+
+            <KpiCard
+              label="Margin"
+              value={safe(
+                compactGtmData.unit_economics?.margin,
+                "—"
+              )}
+              accent="#A78BFA"
+            />
+
+          </div>
+
+
+          <div
+            style={{
+              marginTop: "20px",
+            }}
+          >
+
+            <GtmStrategy
+              data={compactGtmData}
+              strategy={compactGtmData}
+            />
+
+          </div>
+
+        </section>
+
+
+        {/* ===================================================
+            9. VALIDATION REPORT
+            =================================================== */}
+
+        <section
+          id="report"
+          className="results-section-card"
+        >
+
+          <SectionHeading
+            eyebrow="VALIDATION REPORT"
+            title="Executive Validation Report"
+            count="Final Synthesis"
+            description="A concise synthesis of the research, market, competition, risks, MVP and go-to-market findings."
+          />
+
 
           <ValidationReport
+            data={
+              validationReportData
+            }
             report={
               validationReportData
             }
           />
 
+
+          {/* Recommendations */}
+
+          {Array.isArray(
+            validationReportData.recommendations
+          ) &&
+            validationReportData
+              .recommendations
+              .length > 0 && (
+              <div
+                style={{
+                  marginTop: "22px",
+                }}
+              >
+
+                <div className="results-section-eyebrow">
+                  NEXT STEPS
+                </div>
+
+
+                <div className="results-report-grid">
+
+                  {validationReportData
+                    .recommendations
+                    .slice(0, 4)
+                    .map(
+                      (
+                        recommendation,
+                        index
+                      ) => (
+                        <div
+                          key={index}
+                          className="results-report-card"
+                        >
+
+                          <div
+                            style={{
+                              display:
+                                "flex",
+                              gap: "10px",
+                              alignItems:
+                                "flex-start",
+                            }}
+                          >
+
+                            <span
+                              style={{
+                                flexShrink:
+                                  0,
+                                width:
+                                  "24px",
+                                height:
+                                  "24px",
+                                display:
+                                  "flex",
+                                alignItems:
+                                  "center",
+                                justifyContent:
+                                  "center",
+                                borderRadius:
+                                  "50%",
+                                background:
+                                  "var(--r-accent-soft)",
+                                color:
+                                  "var(--r-accent)",
+                                fontSize:
+                                  "10px",
+                                fontWeight:
+                                  800,
+                              }}
+                            >
+                              {index + 1}
+                            </span>
+
+                            <p>
+                              {renderText(
+                                recommendation
+                              )}
+                            </p>
+
+                          </div>
+
+                        </div>
+                      )
+                    )}
+
+                </div>
+
+              </div>
+            )}
+
         </section>
 
+
+        {/* ===================================================
+            FOOTER SUMMARY
+            =================================================== */}
+
+        <div
+          className="exec-summary-card"
+          style={{
+            marginTop: "0",
+          }}
+        >
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "9px",
+              marginBottom: "10px",
+            }}
+          >
+
+            <Award
+              size={16}
+              color="var(--r-accent)"
+            />
+
+            <h3
+              style={{
+                margin: 0,
+                color:
+                  "var(--r-text)",
+              }}
+            >
+              NEXUS AI Summary
+            </h3>
+
+          </div>
+
+
+          <p>
+            {safe(
+              validationReportData.conclusion,
+              "The analysis provides a structured starting point for customer discovery, pilot validation and product planning."
+            )}
+          </p>
+
+        </div>
+
+
       </main>
-
-      {/* ======================================================
-          LOCAL STYLES
-      ====================================================== */}
-
-      <style>{`
-
-        /* -----------------------------------------------
-           RESULTS SUB NAV
-        ----------------------------------------------- */
-
-        .results-horiz-nav {
-          position: sticky;
-          top: 64px;
-          z-index: 900;
-
-          width: 100%;
-          min-height: 58px;
-
-          display: flex;
-          align-items: center;
-
-          gap: 18px;
-
-          padding: 7px 24px;
-
-          background: rgba(12,11,10,0.94);
-
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-
-          border-top:
-            1px solid rgba(255,255,255,0.04);
-
-          border-bottom:
-            1px solid rgba(255,199,44,0.18);
-
-          box-shadow:
-            0 8px 24px rgba(0,0,0,0.35);
-
-          box-sizing: border-box;
-        }
-
-        .results-nav-identity {
-          display: flex;
-          align-items: center;
-          gap: 9px;
-          flex-shrink: 0;
-          min-width: 180px;
-        }
-
-        .results-nav-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-
-          background:
-            linear-gradient(
-              135deg,
-              #FFC72C,
-              #FF8A1F
-            );
-
-          box-shadow:
-            0 0 10px rgba(255,199,44,0.65);
-        }
-
-        .results-nav-product {
-          max-width: 145px;
-
-          overflow: hidden;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-
-          font-size: 12px;
-          font-weight: 800;
-
-          color:
-            var(--text-primary,#ffffff);
-        }
-
-        .results-nav-score {
-          padding: 3px 7px;
-
-          border-radius: 6px;
-
-          font-size: 10px;
-          font-weight: 800;
-
-          color: #FFC72C;
-
-          background:
-            rgba(255,199,44,0.10);
-
-          border:
-            1px solid rgba(255,199,44,0.28);
-        }
-
-        .results-nav-sections {
-          display: flex;
-          align-items: center;
-
-          gap: 3px;
-
-          flex: 1;
-
-          min-width: 0;
-
-          overflow-x: auto;
-
-          scrollbar-width: none;
-
-          padding: 2px 0;
-        }
-
-        .results-nav-sections::-webkit-scrollbar {
-          display: none;
-        }
-
-        .results-nav-item {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-
-          flex-shrink: 0;
-
-          padding: 7px 10px;
-
-          border-radius: 7px;
-
-          border:
-            1px solid transparent;
-
-          background: transparent;
-
-          color:
-            var(--text-secondary,#a8a29e);
-
-          font-size: 11px;
-          font-weight: 600;
-
-          white-space: nowrap;
-
-          cursor: pointer;
-
-          transition:
-            background 0.15s ease,
-            border-color 0.15s ease,
-            color 0.15s ease;
-        }
-
-        .results-nav-item:hover {
-          color: #FFC72C;
-
-          background:
-            rgba(255,199,44,0.06);
-
-          border-color:
-            rgba(255,199,44,0.16);
-        }
-
-        .results-nav-item.active {
-          color: #FFC72C;
-
-          background:
-            linear-gradient(
-              135deg,
-              rgba(255,199,44,0.18),
-              rgba(255,138,31,0.16)
-            );
-
-          border-color:
-            rgba(255,199,44,0.40);
-
-          box-shadow:
-            0 0 12px rgba(255,199,44,0.08);
-        }
-
-        .results-nav-item:focus-visible {
-          outline: none;
-
-          box-shadow:
-            0 0 0 2px rgba(255,199,44,0.25);
-        }
-
-        /* -----------------------------------------------
-           KPI
-        ----------------------------------------------- */
-
-        .results-kpi-card {
-          background:
-            rgba(0,0,0,0.25);
-
-          border:
-            1px solid rgba(255,255,255,0.06);
-
-          border-radius: 12px;
-
-          padding:
-            18px 20px;
-        }
-
-        /* -----------------------------------------------
-           RESPONSIVE
-        ----------------------------------------------- */
-
-        @media (max-width: 1000px) {
-
-          .results-horiz-nav {
-            gap: 10px;
-          }
-
-          .results-nav-identity {
-            min-width: 145px;
-          }
-
-          .results-nav-product {
-            max-width: 105px;
-          }
-
-        }
-
-        @media (max-width: 760px) {
-
-          .results-horiz-nav {
-            top: 64px;
-
-            padding:
-              7px 14px;
-
-            gap: 10px;
-          }
-
-          .results-nav-identity {
-            min-width: auto;
-          }
-
-          .results-nav-product {
-            display: none;
-          }
-
-          .results-nav-sections {
-            gap: 2px;
-          }
-
-          .results-nav-item {
-            padding:
-              7px 9px;
-
-            font-size: 10px;
-          }
-
-          .results-nav-item svg {
-            display: none;
-          }
-
-        }
-
-        @media (max-width: 560px) {
-
-          .results-hero-header {
-            padding:
-              28px 16px 16px !important;
-          }
-
-          .results-content-area {
-            padding:
-              24px 16px 80px !important;
-          }
-
-          .results-section-card {
-            padding:
-              22px !important;
-          }
-
-        }
-
-        /* -----------------------------------------------
-           LIGHT THEME
-        ----------------------------------------------- */
-
-        [data-theme="light"] .results-horiz-nav {
-          background:
-            rgba(255,255,255,0.94);
-
-          border-bottom:
-            1px solid rgba(120,90,20,0.18);
-
-          box-shadow:
-            0 8px 24px rgba(0,0,0,0.08);
-        }
-
-        [data-theme="light"] .results-nav-product {
-          color:
-            var(--text-primary,#18181b);
-        }
-
-        [data-theme="light"] .results-nav-item {
-          color:
-            var(--text-secondary,#52525b);
-        }
-
-        [data-theme="light"] .results-nav-item:hover {
-          color: #9a6500;
-
-          background:
-            rgba(255,199,44,0.08);
-        }
-
-        [data-theme="light"] .results-nav-item.active {
-          color: #9a6500;
-
-          background:
-            rgba(255,199,44,0.12);
-
-          border-color:
-            rgba(180,130,20,0.25);
-        }
-
-      `}</style>
-
-    </div>
-  );
-}
-
-/* ============================================================
-   QUICK STAT COMPONENT
-============================================================ */
-
-function QuickStat({
-  icon,
-  label,
-  value,
-  description,
-  accent = "#FFC72C",
-}) {
-  return (
-    <div
-      style={{
-        background:
-          "rgba(255,255,255,0.025)",
-
-        border:
-          "1px solid rgba(255,199,44,0.2)",
-
-        borderRadius: "12px",
-
-        padding:
-          "14px 16px",
-
-        display: "flex",
-        flexDirection: "column",
-        gap: "4px",
-      }}
-    >
-
-      <div
-        style={{
-          display:
-            "flex",
-          alignItems:
-            "center",
-          gap: "6px",
-
-          color: accent,
-
-          fontSize: "11px",
-
-          fontWeight: 800,
-
-          textTransform:
-            "uppercase",
-
-          letterSpacing:
-            "0.06em",
-        }}
-      >
-        <span>
-          {icon}
-        </span>
-
-        <span>
-          {label}
-        </span>
-      </div>
-
-      <div
-        style={{
-          fontSize: "16px",
-          fontWeight: 800,
-
-          color:
-            "var(--text-primary,#ffffff)",
-        }}
-      >
-        {value}
-      </div>
-
-      <div
-        style={{
-          fontSize: "11px",
-
-          color:
-            "var(--text-secondary,#a8a29e)",
-        }}
-      >
-        {description}
-      </div>
-
-    </div>
-  );
-}
-
-/* ============================================================
-   KPI CARD
-============================================================ */
-
-function KpiCard({
-  label,
-  value,
-  accent,
-  description,
-}) {
-  return (
-    <div
-      style={{
-        background:
-          "rgba(0,0,0,0.25)",
-
-        border:
-          "1px solid rgba(255,255,255,0.06)",
-
-        borderTop:
-          `3px solid ${accent}`,
-
-        borderRadius:
-          "12px",
-
-        padding:
-          "18px 20px",
-      }}
-    >
-
-      <div
-        style={{
-          fontSize: "11px",
-          fontWeight: 700,
-
-          color:
-            "var(--text-secondary,#a8a29e)",
-
-          textTransform:
-            "uppercase",
-
-          marginBottom: "4px",
-        }}
-      >
-        {label}
-      </div>
-
-      <div
-        style={{
-          fontSize: "24px",
-          fontWeight: 800,
-          color: accent,
-        }}
-      >
-        {value}
-      </div>
-
-      <div
-        style={{
-          fontSize: "11px",
-          color:
-            "var(--text-muted,#78716c)",
-          marginTop: "4px",
-        }}
-      >
-        {description}
-      </div>
-
-    </div>
-  );
-}
-
-/* ============================================================
-   SECTION HEADING
-============================================================ */
-
-function SectionHeading({
-  eyebrow,
-  title,
-  count,
-}) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent:
-          "space-between",
-        alignItems:
-          "flex-end",
-        flexWrap:
-          "wrap",
-        gap: "12px",
-
-        borderBottom:
-          "1px solid rgba(255,199,44,0.2)",
-
-        paddingBottom:
-          "14px",
-      }}
-    >
-
-      <div>
-
-        <span
-          style={{
-            fontSize: "11px",
-            fontWeight: 800,
-
-            letterSpacing:
-              "0.08em",
-
-            textTransform:
-              "uppercase",
-
-            color:
-              "#FFC72C",
-          }}
-        >
-          {eyebrow}
-        </span>
-
-        <h2
-          style={{
-            fontSize: "22px",
-            fontWeight: 800,
-
-            margin:
-              "4px 0 0",
-
-            color:
-              "var(--text-primary,#ffffff)",
-          }}
-        >
-          {title}
-        </h2>
-
-      </div>
-
-      {count && (
-        <span
-          style={{
-            fontSize: "12px",
-            fontWeight: 700,
-
-            padding:
-              "4px 12px",
-
-            borderRadius:
-              "20px",
-
-            background:
-              "rgba(255,199,44,0.12)",
-
-            color:
-              "#FFC72C",
-
-            border:
-              "1px solid rgba(255,199,44,0.3)",
-          }}
-        >
-          {count}
-        </span>
-      )}
 
     </div>
   );
