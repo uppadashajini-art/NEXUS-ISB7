@@ -14,78 +14,254 @@ export function Navbar({
   activeTab = "validator",
   setActiveTab,
   onNavigateToStyleguide,
+  theme = "light",
+  onToggleTheme,
 }) {
-  const { user, isAuthenticated, isSupabaseConnected, activityCount = 0, signOut } = useAuth();
+  const {
+    user,
+    isAuthenticated,
+    isSupabaseConnected,
+    activityCount = 0,
+    signOut,
+  } = useAuth();
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("overview");
 
   const navContainerRef = useRef(null);
   const btnRefs = useRef({});
+
   const [indicatorStyle, setIndicatorStyle] = useState({
     left: 0,
     width: 0,
     opacity: 0,
   });
 
-  // Calculate sliding pill coordinates based on the active tab button
+  const isDarkMode = theme === "dark";
+
+  // =========================================================
+  // Navigation sections
+  // =========================================================
+
+  const navigationSections = [
+    {
+      id: "overview",
+      label: "Overview",
+      description: "Validation score & executive synthesis",
+      keywords: [
+        "Executive Validation Synthesis",
+        "Validation Results",
+      ],
+    },
+    {
+      id: "research",
+      label: "Research",
+      description: "Web intelligence & research sources",
+      keywords: [
+        "Research Sources",
+        "Web Sources",
+      ],
+    },
+    {
+      id: "analysis",
+      label: "Analysis",
+      description: "Market, customers & competitors",
+      keywords: [
+        "Deep Validation Matrix",
+        "Market Intelligence",
+        "Market Analysis",
+        "Customer Segments",
+        "Competitor",
+      ],
+    },
+    {
+      id: "strategy",
+      label: "Strategy",
+      description: "Risks, MVP & go-to-market",
+      keywords: [
+        "Risk Analysis",
+        "MVP Recommendations",
+        "Go-To-Market",
+        "GTM Strategy",
+      ],
+    },
+    {
+      id: "report",
+      label: "Report",
+      description: "Complete startup validation report",
+      keywords: [
+        "Startup Validation Report",
+        "Validation Report",
+      ],
+    },
+  ];
+
+  // =========================================================
+  // Find content section and scroll to it
+  // =========================================================
+
+  const scrollToSection = useCallback((section) => {
+    setActiveSection(section.id);
+
+    /*
+      We try to find a matching heading/content area.
+
+      If your existing page does not have IDs yet, the fallback
+      simply returns to the main validator view.
+    */
+    const allElements = Array.from(
+      document.querySelectorAll(
+        "h1, h2, h3, h4, section, article, [data-section]"
+      )
+    );
+
+    const target = allElements.find((element) => {
+      const text = element.textContent?.trim().toLowerCase() || "";
+
+      return section.keywords.some((keyword) =>
+        text.includes(keyword.toLowerCase())
+      );
+    });
+
+    if (target) {
+      const headerOffset = 90;
+
+      const targetPosition =
+        target.getBoundingClientRect().top +
+        window.scrollY -
+        headerOffset;
+
+      window.scrollTo({
+        top: Math.max(0, targetPosition),
+        behavior: "smooth",
+      });
+    } else {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+    }
+
+    if (setActiveTab) {
+      setActiveTab("validator");
+    }
+  }, [setActiveTab]);
+
+  // =========================================================
+  // Sliding indicator
+  // =========================================================
+
   const updateIndicator = useCallback(() => {
     const container = navContainerRef.current;
+
     if (!container) return;
 
-    const currentKey = activeTab in btnRefs.current ? activeTab : "validator";
-    const activeEl = btnRefs.current[currentKey];
+    const activeEl = btnRefs.current[activeSection];
 
     if (activeEl) {
       const containerRect = container.getBoundingClientRect();
-      const elRect = activeEl.getBoundingClientRect();
+      const elementRect = activeEl.getBoundingClientRect();
 
       setIndicatorStyle({
-        left: Math.round(elRect.left - containerRect.left),
-        width: Math.round(elRect.width),
+        left: Math.round(elementRect.left - containerRect.left),
+        width: Math.round(elementRect.width),
         opacity: 1,
       });
     }
-  }, [activeTab]);
+  }, [activeSection]);
 
   useEffect(() => {
     updateIndicator();
-    // Re-check shortly after mount in case web fonts finish loading layout
-    const t1 = setTimeout(updateIndicator, 60);
-    const t2 = setTimeout(updateIndicator, 250);
+
+    const timer1 = setTimeout(updateIndicator, 50);
+    const timer2 = setTimeout(updateIndicator, 250);
 
     window.addEventListener("resize", updateIndicator);
+
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
       window.removeEventListener("resize", updateIndicator);
     };
-  }, [updateIndicator, activityCount]);
+  }, [updateIndicator]);
 
-  const handleSelectTab = (tab) => {
-    setActiveTab(tab);
-    if (tab === "history" && onOpenHistory) {
+  // =========================================================
+  // User / account
+  // =========================================================
+
+  const displayName = isAuthenticated
+    ? user?.user_metadata?.full_name ||
+      user?.email?.split("@")[0] ||
+      "Founder"
+    : "Guest Founder";
+
+  const userInitials = isAuthenticated
+    ? user?.email
+      ? user.email.slice(0, 2).toUpperCase()
+      : "NX"
+    : "NX";
+
+  const themeLabel = isDarkMode
+    ? "Switch to light mode"
+    : "Switch to dark mode";
+
+  // =========================================================
+  // Utility actions
+  // =========================================================
+
+  const openHistory = () => {
+    setDropdownOpen(false);
+
+    if (onOpenHistory) {
       onOpenHistory();
     }
   };
 
-  const displayName = isAuthenticated
-    ? user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Founder"
-    : "Guest Founder";
+  const openSupabase = () => {
+    setDropdownOpen(false);
 
-  const userInitials = isAuthenticated
-    ? (user?.email ? user.email.slice(0, 2).toUpperCase() : "NX")
-    : "NX";
+    if (onOpenSupabase) {
+      onOpenSupabase();
+    }
+  };
+
+  const openAuth = () => {
+    setDropdownOpen(false);
+
+    if (onOpenAuth) {
+      onOpenAuth();
+    }
+  };
+
+  const handleMobileNavigation = (section) => {
+    setMobileMenuOpen(false);
+    scrollToSection(section);
+  };
 
   return (
     <header className="nexus-shell-header">
       <div className="nexus-shell-header-inner">
-        {/* Left: Logo + "NEXUS" wordmark + "v2.5" badge */}
-        <div
+
+        {/* =====================================================
+            BRAND
+            ===================================================== */}
+
+        <button
+          type="button"
           className="shell-brand-group"
-          onClick={() => handleSelectTab("validator")}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => e.key === "Enter" && handleSelectTab("validator")}
+          onClick={() => {
+            setActiveSection("overview");
+
+            if (setActiveTab) {
+              setActiveTab("validator");
+            }
+
+            window.scrollTo({
+              top: 0,
+              behavior: "smooth",
+            });
+          }}
           aria-label="NEXUS Home"
         >
           <div className="shell-brand-logo-frame">
@@ -98,18 +274,25 @@ export function Navbar({
               }}
             />
           </div>
-          <span className="shell-brand-wordmark">NEXUS</span>
-          <span className="shell-brand-badge">v2.5</span>
-        </div>
 
-        {/* Center: Centered segmented control (Analysis Studio / Activity Log with count badge) */}
+          <span className="shell-brand-wordmark">
+            NEXUS
+          </span>
+
+          <span className="shell-brand-badge">
+            v2.5
+          </span>
+        </button>
+
+        {/* =====================================================
+            PRIMARY NAVIGATION
+            ===================================================== */}
+
         <nav
           className="shell-center-nav"
           ref={navContainerRef}
-          role="tablist"
-          aria-label="Application views"
+          aria-label="Validation sections"
         >
-          {/* Active nav indicator: sliding pill using brand gradient at 12% opacity with 1px gradient border */}
           <div
             className="shell-sliding-pill"
             style={{
@@ -120,77 +303,117 @@ export function Navbar({
             aria-hidden="true"
           />
 
-          <button
-            ref={(el) => (btnRefs.current["validator"] = el)}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "validator"}
-            className={`shell-segment-btn ${activeTab === "validator" ? "active" : ""}`}
-            onClick={() => handleSelectTab("validator")}
-          >
-            <span>Analysis Studio</span>
-          </button>
-
-          <button
-            ref={(el) => (btnRefs.current["history"] = el)}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "history"}
-            className={`shell-segment-btn ${activeTab === "history" ? "active" : ""}`}
-            onClick={() => handleSelectTab("history")}
-          >
-            <span>Activity Log</span>
-            <span className="shell-segment-counter">{activityCount}</span>
-          </button>
-
-          {onNavigateToStyleguide && (
+          {navigationSections.map((section) => (
             <button
-              ref={(el) => (btnRefs.current["styleguide"] = el)}
+              key={section.id}
+              ref={(element) => {
+                btnRefs.current[section.id] = element;
+              }}
               type="button"
-              role="tab"
-              aria-selected={activeTab === "styleguide"}
-              className={`shell-segment-btn ${activeTab === "styleguide" ? "active" : ""}`}
-              onClick={onNavigateToStyleguide}
+              className={`shell-segment-btn ${
+                activeSection === section.id ? "active" : ""
+              }`}
+              onClick={() => scrollToSection(section)}
+              title={section.description}
             >
-              <span>Styleguide</span>
+              <span>{section.label}</span>
             </button>
-          )}
+          ))}
         </nav>
 
-        {/* Right side: Supabase status pill and user avatar menu */}
+        {/* =====================================================
+            RIGHT ACTIONS
+            ===================================================== */}
+
         <div className="shell-header-actions">
-          {/* Supabase Status Pill */}
+
+          {/* History */}
+
+          <button
+            type="button"
+            className="shell-history-btn"
+            onClick={openHistory}
+            title="Validation history"
+            aria-label="Open validation history"
+          >
+            <HistoryIcon size={15} />
+
+            <span className="shell-history-label">
+              History
+            </span>
+
+            <span className="shell-segment-counter">
+              {activityCount}
+            </span>
+          </button>
+
+          {/* Theme */}
+
+          <button
+            type="button"
+            className="shell-theme-toggle"
+            onClick={onToggleTheme}
+            aria-label={themeLabel}
+            title={themeLabel}
+          >
+            <span
+              className={`shell-theme-toggle-track ${
+                isDarkMode ? "dark" : ""
+              }`}
+            >
+              <span className="shell-theme-toggle-thumb">
+                {isDarkMode ? "D" : "L"}
+              </span>
+            </span>
+          </button>
+
+          {/* Supabase */}
+
           <button
             type="button"
             className="shell-status-pill"
             onClick={onOpenSupabase}
             title={
               isSupabaseConnected
-                ? "Connected to Supabase Cloud Database"
-                : "Local session • Click to configure Supabase Cloud"
+                ? "Connected to Supabase Cloud"
+                : "Click to configure Supabase Cloud"
             }
-            aria-label="Supabase database status"
           >
             <span
-              className={`shell-status-dot ${isSupabaseConnected ? "" : "shell-status-dot--warning"}`}
-              aria-hidden="true"
+              className={`shell-status-dot ${
+                isSupabaseConnected
+                  ? ""
+                  : "shell-status-dot--warning"
+              }`}
             />
+
             <DatabaseIcon size={14} />
-            <span>{isSupabaseConnected ? "Supabase Cloud" : "Connect Cloud"}</span>
+
+            <span className="shell-status-text">
+              {isSupabaseConnected
+                ? "Cloud"
+                : "Connect"}
+            </span>
           </button>
 
-          {/* User Avatar Menu with Fixed User Chip (No Overlap) */}
+          {/* =================================================
+              USER
+              ================================================= */}
+
           <div className="shell-user-menu-wrapper">
+
             <button
               type="button"
               className="shell-user-chip-btn"
-              onClick={() => setDropdownOpen(!dropdownOpen)}
+              onClick={() =>
+                setDropdownOpen((value) => !value)
+              }
               aria-expanded={dropdownOpen}
               aria-haspopup="true"
-              aria-label="User profile and settings menu"
             >
               <div className="shell-user-avatar">
-                {isAuthenticated && user?.user_metadata?.avatar_url ? (
+                {isAuthenticated &&
+                user?.user_metadata?.avatar_url ? (
                   <img
                     src={user.user_metadata.avatar_url}
                     alt={displayName}
@@ -201,185 +424,161 @@ export function Navbar({
                 )}
               </div>
 
-              {/* Bug Fix: Explicit flex column ensures name and secondary status NEVER overlap */}
               <div className="shell-user-info-col">
-                <span className="shell-user-name">{displayName}</span>
+                <span className="shell-user-name">
+                  {displayName}
+                </span>
+
                 <span className="shell-user-secondary-label">
-                  {isSupabaseConnected ? "Supabase Cloud" : "Local Mode"}
+                  {isAuthenticated
+                    ? "Founder"
+                    : "Guest"}
                 </span>
               </div>
+
+              <span className="shell-user-chevron">
+                {dropdownOpen ? "⌃" : "⌄"}
+              </span>
             </button>
 
-            {/* Dropdown Menu */}
+            {/* Backdrop */}
+
             {dropdownOpen && (
-              <>
-                <div
-                  className="shell-backdrop"
-                  onClick={() => setDropdownOpen(false)}
-                  aria-hidden="true"
-                />
-                <div
-                  className="shell-dropdown-menu"
-                  role="menu"
-                  aria-label="User account actions"
-                >
-                  <div className="shell-dropdown-header" style={{ padding: "6px 12px 8px" }}>
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        color: "var(--text-primary)",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {isAuthenticated ? user?.email : "Guest Founder Session"}
-                    </p>
-                    <span
-                      style={{
-                        fontSize: "10px",
-                        color: "var(--text-tertiary)",
-                        display: "block",
-                        marginTop: "2px",
-                      }}
-                    >
-                      {isSupabaseConnected ? "Connected to Cloud Database" : "Using Local In-Memory Cache"}
-                    </span>
-                  </div>
+              <div
+                className="shell-backdrop"
+                onClick={() => setDropdownOpen(false)}
+                aria-hidden="true"
+              />
+            )}
 
-                  <div className="shell-dropdown-divider" />
+            {/* Dropdown */}
 
-                  {isAuthenticated ? (
-                    <>
-                      <button
-                        type="button"
-                        className="shell-dropdown-item"
-                        role="menuitem"
-                        onClick={() => {
-                          setDropdownOpen(false);
-                          if (onOpenHistory) onOpenHistory();
-                        }}
-                      >
-                        <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <HistoryIcon size={14} />
-                          <span>Activity Log</span>
-                        </span>
-                        <span className="shell-segment-counter">{activityCount}</span>
-                      </button>
+            {dropdownOpen && (
+              <div
+                className="shell-dropdown-menu"
+                role="menu"
+              >
+                <div className="shell-dropdown-header">
+                  <p className="shell-dropdown-email">
+                    {isAuthenticated
+                      ? user?.email
+                      : "Guest Founder Session"}
+                  </p>
 
-                      <button
-                        type="button"
-                        className="shell-dropdown-item"
-                        role="menuitem"
-                        onClick={() => {
-                          setDropdownOpen(false);
-                          if (onOpenSupabase) onOpenSupabase();
-                        }}
-                      >
-                        <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <DatabaseIcon size={14} />
-                          <span>Supabase Settings</span>
-                        </span>
-                      </button>
-
-                      <div className="shell-dropdown-divider" />
-
-                      <button
-                        type="button"
-                        className="shell-dropdown-item danger"
-                        role="menuitem"
-                        onClick={() => {
-                          setDropdownOpen(false);
-                          signOut();
-                        }}
-                      >
-                        <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <LogOutIcon size={14} />
-                          <span>Sign Out</span>
-                        </span>
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        className="shell-dropdown-item"
-                        role="menuitem"
-                        onClick={() => {
-                          setDropdownOpen(false);
-                          if (onOpenAuth) onOpenAuth();
-                        }}
-                      >
-                        <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <UserIcon size={14} />
-                          <span>Sign In / Register</span>
-                        </span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="shell-dropdown-item"
-                        role="menuitem"
-                        onClick={() => {
-                          setDropdownOpen(false);
-                          if (onOpenHistory) onOpenHistory();
-                        }}
-                      >
-                        <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <HistoryIcon size={14} />
-                          <span>Activity Log</span>
-                        </span>
-                        <span className="shell-segment-counter">{activityCount}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="shell-dropdown-item"
-                        role="menuitem"
-                        onClick={() => {
-                          setDropdownOpen(false);
-                          if (onOpenSupabase) onOpenSupabase();
-                        }}
-                      >
-                        <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <DatabaseIcon size={14} />
-                          <span>Supabase Settings</span>
-                        </span>
-                      </button>
-                    </>
-                  )}
+                  <span className="shell-dropdown-status">
+                    {isSupabaseConnected
+                      ? "Supabase Cloud connected"
+                      : "Local mode"}
+                  </span>
                 </div>
-              </>
+
+                <div className="shell-dropdown-divider" />
+
+                <button
+                  type="button"
+                  className="shell-dropdown-item"
+                  onClick={openHistory}
+                >
+                  <span className="shell-dropdown-item-left">
+                    <HistoryIcon size={14} />
+                    Activity Log
+                  </span>
+
+                  <span className="shell-segment-counter">
+                    {activityCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  className="shell-dropdown-item"
+                  onClick={openSupabase}
+                >
+                  <span className="shell-dropdown-item-left">
+                    <DatabaseIcon size={14} />
+                    Supabase Settings
+                  </span>
+                </button>
+
+                {!isAuthenticated && (
+                  <button
+                    type="button"
+                    className="shell-dropdown-item"
+                    onClick={openAuth}
+                  >
+                    <span className="shell-dropdown-item-left">
+                      <UserIcon size={14} />
+                      Sign In / Register
+                    </span>
+                  </button>
+                )}
+
+                {isAuthenticated && (
+                  <>
+                    <div className="shell-dropdown-divider" />
+
+                    <button
+                      type="button"
+                      className="shell-dropdown-item danger"
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        signOut();
+                      }}
+                    >
+                      <span className="shell-dropdown-item-left">
+                        <LogOutIcon size={14} />
+                        Sign Out
+                      </span>
+                    </button>
+                  </>
+                )}
+
+                {onNavigateToStyleguide && (
+                  <>
+                    <div className="shell-dropdown-divider" />
+
+                    <button
+                      type="button"
+                      className="shell-dropdown-item"
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        onNavigateToStyleguide();
+                      }}
+                    >
+                      Styleguide
+                    </button>
+                  </>
+                )}
+              </div>
             )}
           </div>
 
-          {/* Mobile Menu Hamburger Button (< 860px) */}
+          {/* =================================================
+              MOBILE BUTTON
+              ================================================= */}
+
           <button
             type="button"
             className="shell-mobile-menu-btn"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            onClick={() =>
+              setMobileMenuOpen((value) => !value)
+            }
             aria-label="Toggle navigation menu"
             aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
+              <span className="shell-menu-icon">×</span>
             ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="3" y1="12" x2="21" y2="12" />
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <line x1="3" y1="18" x2="21" y2="18" />
-              </svg>
+              <span className="shell-menu-icon">☰</span>
             )}
           </button>
         </div>
       </div>
 
-      {/* Mobile Drawer Navigation (< 860px) */}
+      {/* =======================================================
+          MOBILE NAVIGATION
+          ======================================================= */}
+
       {mobileMenuOpen && (
         <>
           <div
@@ -387,44 +586,39 @@ export function Navbar({
             onClick={() => setMobileMenuOpen(false)}
             aria-hidden="true"
           />
-          <nav className="shell-mobile-drawer" aria-label="Mobile navigation">
-            <button
-              type="button"
-              className={`shell-mobile-nav-item ${activeTab === "validator" ? "active" : ""}`}
-              onClick={() => {
-                setMobileMenuOpen(false);
-                handleSelectTab("validator");
-              }}
-            >
-              <span>Analysis Studio</span>
-            </button>
 
-            <button
-              type="button"
-              className={`shell-mobile-nav-item ${activeTab === "history" ? "active" : ""}`}
-              onClick={() => {
-                setMobileMenuOpen(false);
-                handleSelectTab("history");
-              }}
-            >
-              <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-                <span>Activity Log</span>
-                <span className="shell-segment-counter">{activityCount}</span>
-              </span>
-            </button>
+          <nav
+            className="shell-mobile-drawer"
+            aria-label="Mobile navigation"
+          >
+            <div className="shell-mobile-heading">
+              <span>Validation Workspace</span>
+              <small>KubeSRE Copilot</small>
+            </div>
 
-            {onNavigateToStyleguide && (
+            {navigationSections.map((section) => (
               <button
+                key={section.id}
                 type="button"
-                className="shell-mobile-nav-item"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onNavigateToStyleguide();
-                }}
+                className={`shell-mobile-nav-item ${
+                  activeSection === section.id
+                    ? "active"
+                    : ""
+                }`}
+                onClick={() =>
+                  handleMobileNavigation(section)
+                }
               >
-                <span>Styleguide</span>
+                <span className="shell-mobile-nav-copy">
+                  <strong>{section.label}</strong>
+                  <small>{section.description}</small>
+                </span>
+
+                <span className="shell-mobile-arrow">
+                  →
+                </span>
               </button>
-            )}
+            ))}
 
             <div className="shell-dropdown-divider" />
 
@@ -433,13 +627,70 @@ export function Navbar({
               className="shell-mobile-nav-item"
               onClick={() => {
                 setMobileMenuOpen(false);
-                if (onOpenSupabase) onOpenSupabase();
+                openHistory();
               }}
             >
-              <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <DatabaseIcon size={14} />
-                <span>{isSupabaseConnected ? "Supabase Cloud (Connected)" : "Connect Supabase"}</span>
+              <span className="shell-mobile-nav-copy">
+                <strong>History</strong>
+                <small>
+                  Previous validation runs
+                </small>
               </span>
+
+              <span className="shell-segment-counter">
+                {activityCount}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              className="shell-mobile-nav-item"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                onToggleTheme();
+              }}
+            >
+              <span className="shell-mobile-nav-copy">
+                <strong>
+                  {isDarkMode
+                    ? "Light Mode"
+                    : "Dark Mode"}
+                </strong>
+
+                <small>
+                  Change appearance
+                </small>
+              </span>
+
+              <span className="shell-mobile-theme-indicator">
+                {isDarkMode ? "DARK" : "LIGHT"}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              className="shell-mobile-nav-item"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                openSupabase();
+              }}
+            >
+              <span className="shell-mobile-nav-copy">
+                <strong>Supabase</strong>
+                <small>
+                  {isSupabaseConnected
+                    ? "Cloud connected"
+                    : "Connect cloud database"}
+                </small>
+              </span>
+
+              <span
+                className={`shell-status-dot ${
+                  isSupabaseConnected
+                    ? ""
+                    : "shell-status-dot--warning"
+                }`}
+              />
             </button>
 
             {!isAuthenticated && (
@@ -448,13 +699,37 @@ export function Navbar({
                 className="shell-mobile-nav-item"
                 onClick={() => {
                   setMobileMenuOpen(false);
-                  if (onOpenAuth) onOpenAuth();
+                  openAuth();
                 }}
               >
-                <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <UserIcon size={14} />
-                  <span>Sign In / Register</span>
+                <span className="shell-mobile-nav-copy">
+                  <strong>Sign In / Register</strong>
+                  <small>
+                    Access your founder account
+                  </small>
                 </span>
+
+                <UserIcon size={15} />
+              </button>
+            )}
+
+            {isAuthenticated && (
+              <button
+                type="button"
+                className="shell-mobile-nav-item danger"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  signOut();
+                }}
+              >
+                <span className="shell-mobile-nav-copy">
+                  <strong>Sign Out</strong>
+                  <small>
+                    End your current session
+                  </small>
+                </span>
+
+                <LogOutIcon size={15} />
               </button>
             )}
           </nav>
