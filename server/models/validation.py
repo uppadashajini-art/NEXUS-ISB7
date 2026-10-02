@@ -122,6 +122,25 @@ class RegulatoryRisk(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# SWOT & Risk Analysis Models (Member 1 — Milestone 3/4)
+# ---------------------------------------------------------------------------
+
+class SWOTAnalysis(BaseModel):
+    strengths: List[str] = Field(default_factory=list, description="Unique features, technological edge, customer value, and competitive advantages")
+    weaknesses: List[str] = Field(default_factory=list, description="Technical bottlenecks, resource constraints, brand absence, and product limits")
+    opportunities: List[str] = Field(default_factory=list, description="Market expansion, emerging customer demands, new tech, and untapped niches")
+    threats: List[str] = Field(default_factory=list, description="Incumbent reactions, price wars, regulatory hurdles, and adoption barriers")
+
+
+class RiskItem(BaseModel):
+    risk: str = Field(..., description="Description of the identified risk")
+    category: str = Field(..., description="Technical, Market, Financial, Competition, Operational, or Adoption")
+    severity: str = Field(default="Medium", description="High, Medium, or Low")
+    impact: str = Field(..., description="Concrete business consequence if this risk materializes")
+    mitigation: str = Field(..., description="Actionable strategic countermeasure to minimize or eliminate this risk")
+
+
+# ---------------------------------------------------------------------------
 # Combined Response Model (what FastAPI returns to React)
 # ---------------------------------------------------------------------------
 
@@ -132,6 +151,8 @@ class ValidationResponse(BaseModel):
     technical_feasibility: Optional[TechnicalFeasibility] = None
     scientific_validation: Optional[ScientificValidation] = None
     regulatory_risk: Optional[RegulatoryRisk] = None
+    swot_analysis: Optional[SWOTAnalysis] = None
+    risk_analysis: Optional[List[RiskItem]] = Field(default_factory=list)
     # The exact search results the analysis agents used — returned to the
     # frontend so it can display Research Sources without a second API call.
     search_results: List[Dict[str, Any]] = Field(default_factory=list)
