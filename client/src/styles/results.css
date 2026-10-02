@@ -4,9 +4,9 @@
    Dark + Light Theme
    ========================================================= */
 
-/* =========================================================
-   DESIGN TOKENS
-   ========================================================= */
+/* ---------------------------------------------------------
+   LOCAL DESIGN TOKENS
+   --------------------------------------------------------- */
 
 .results-master-container {
   --r-bg: var(--page-bg, #0c0b0a);
@@ -19,7 +19,7 @@
     rgba(255, 255, 255, 0.08)
   );
 
-  --r-border-strong: rgba(255, 255, 255, 0.15);
+  --r-border-strong: rgba(255, 255, 255, 0.14);
 
   --r-text: var(--text-primary, #f5f1e8);
   --r-text-secondary: var(--text-secondary, #b9b0a5);
@@ -40,11 +40,8 @@
   --r-purple: #a78bfa;
   --r-purple-soft: rgba(167, 139, 250, 0.12);
 
-  --r-shadow:
-    0 12px 35px rgba(0, 0, 0, 0.22);
-
-  --r-shadow-small:
-    0 5px 18px rgba(0, 0, 0, 0.14);
+  --r-shadow: 0 12px 35px rgba(0, 0, 0, 0.22);
+  --r-shadow-small: 0 5px 18px rgba(0, 0, 0, 0.14);
 
   --r-radius: 16px;
   --r-radius-small: 12px;
@@ -72,63 +69,42 @@
 
 
 /* =========================================================
-   LIGHT MODE
+   LIGHT THEME
    ========================================================= */
 
 [data-theme="light"] .results-master-container {
-  --r-bg: #f5f7fa;
-
+  --r-bg: #f6f7f9;
   --r-surface: #ffffff;
-  --r-surface-2: #fafbfc;
-  --r-surface-3: #f1f4f7;
+  --r-surface-2: #f8f9fb;
+  --r-surface-3: #f1f3f6;
 
-  --r-border: #dfe4ea;
-  --r-border-strong: #cbd2da;
+  --r-border: #e0e4e9;
+  --r-border-strong: #cfd5dc;
 
   --r-text: #171a1f;
-  --r-text-secondary: #4b5561;
-  --r-text-muted: #707a86;
+  --r-text-secondary: #4e5661;
+  --r-text-muted: #707985;
 
-  --r-accent: #a86600;
-  --r-accent-soft: rgba(168, 102, 0, 0.09);
+  --r-accent: #b87800;
+  --r-accent-soft: rgba(184, 120, 0, 0.10);
 
-  --r-green: #087f52;
-  --r-green-soft: rgba(8, 127, 82, 0.09);
+  --r-green: #16895d;
+  --r-green-soft: rgba(22, 137, 93, 0.10);
 
-  --r-red: #bd3040;
-  --r-red-soft: rgba(189, 48, 64, 0.08);
+  --r-red: #c53b49;
+  --r-red-soft: rgba(197, 59, 73, 0.09);
 
-  --r-blue: #2464bf;
-  --r-blue-soft: rgba(36, 100, 191, 0.08);
+  --r-blue: #2768c7;
+  --r-blue-soft: rgba(39, 104, 199, 0.09);
 
-  --r-purple: #694bb5;
-  --r-purple-soft: rgba(105, 75, 181, 0.08);
+  --r-purple: #7654c7;
+  --r-purple-soft: rgba(118, 84, 199, 0.09);
 
   --r-shadow:
-    0 10px 28px rgba(27, 39, 51, 0.07);
+    0 10px 30px rgba(25, 32, 40, 0.08);
 
   --r-shadow-small:
-    0 4px 14px rgba(27, 39, 51, 0.055);
-
-  /* IMPORTANT:
-     ResultsDashboard.jsx currently has inline dark colors.
-     !important ensures light mode wins. */
-  background: #f5f7fa !important;
-  color: #171a1f !important;
-}
-
-
-/* =========================================================
-   GLOBAL LIGHT MODE OVERRIDES
-   ========================================================= */
-
-[data-theme="light"] .results-master-container,
-[data-theme="light"] .results-master-container * {
-  color-scheme: light;
-}
-
-[data-theme="light"] .results-master-container {
-  background: #f5f7fa !important;
+    0 4px 14px rgba(25, 32, 40, 0.07);
 }
 
 
@@ -138,13 +114,12 @@
 
 .results-hero-header {
   position: relative;
-
-  padding: 42px 32px 34px;
+  padding: 44px 32px 34px;
 
   background:
     radial-gradient(
-      circle at 12% 20%,
-      rgba(245, 185, 66, 0.09),
+      circle at 15% 20%,
+      rgba(245, 185, 66, 0.08),
       transparent 30%
     ),
     var(--r-bg);
@@ -158,30 +133,17 @@
   content: "";
 
   position: absolute;
+  right: -100px;
+  top: -150px;
 
-  right: -110px;
-  top: -160px;
-
-  width: 380px;
-  height: 380px;
+  width: 360px;
+  height: 360px;
 
   border-radius: 50%;
 
   background: rgba(245, 185, 66, 0.05);
 
   pointer-events: none;
-}
-
-[data-theme="light"] .results-hero-header {
-  background:
-    radial-gradient(
-      circle at 12% 20%,
-      rgba(184, 120, 0, 0.07),
-      transparent 30%
-    ),
-    #f5f7fa !important;
-
-  border-bottom-color: #dfe4ea;
 }
 
 .results-hero-eyebrow,
@@ -226,13 +188,12 @@
 
 
 /* =========================================================
-   HORIZONTAL NAV
+   TOP HORIZONTAL NAVIGATION
    ========================================================= */
 
 .results-horiz-nav {
   position: sticky !important;
   top: 64px !important;
-
   z-index: 900;
 
   width: 100%;
@@ -263,10 +224,12 @@
   background: rgba(255, 255, 255, 0.96) !important;
 
   border-top: 1px solid #e8ebef !important;
-  border-bottom: 1px solid #e2d5bb !important;
+  border-bottom: 1px solid rgba(184, 120, 0, 0.22) !important;
 
   box-shadow:
-    0 6px 20px rgba(27, 39, 51, 0.08) !important;
+    0 7px 22px rgba(25, 32, 40, 0.08) !important;
+
+  color: #171a1f !important;
 }
 
 .results-nav-identity {
@@ -283,8 +246,6 @@
 .results-nav-dot {
   width: 8px;
   height: 8px;
-
-  flex-shrink: 0;
 
   border-radius: 50%;
 
@@ -374,7 +335,7 @@
 }
 
 [data-theme="light"] .results-nav-item:hover {
-  background: #f1f3f6;
+  background: rgba(0, 0, 0, 0.045);
 }
 
 .results-nav-item.active {
@@ -383,11 +344,6 @@
   background: var(--r-accent-soft);
 
   border-color: rgba(245, 185, 66, 0.2);
-}
-
-[data-theme="light"] .results-nav-item.active {
-  background: rgba(168, 102, 0, 0.08);
-  border-color: rgba(168, 102, 0, 0.18);
 }
 
 
@@ -409,10 +365,6 @@
   flex-direction: column;
 
   gap: 32px;
-}
-
-[data-theme="light"] .results-content-area {
-  background: #f5f7fa;
 }
 
 
@@ -442,19 +394,6 @@
 
 .results-section-card:hover {
   border-color: var(--r-border-strong);
-}
-
-[data-theme="light"] .results-section-card {
-  background: #ffffff;
-
-  border-color: #dfe4ea;
-
-  box-shadow:
-    0 4px 16px rgba(27, 39, 51, 0.055);
-}
-
-[data-theme="light"] .results-section-card:hover {
-  border-color: #cbd2da;
 }
 
 .results-section-header {
@@ -530,7 +469,7 @@
 
 
 /* =========================================================
-   SCORE
+   SCORE CARD
    ========================================================= */
 
 .score-ring-container {
@@ -553,11 +492,6 @@
   box-sizing: border-box;
 }
 
-[data-theme="light"] .score-ring-container {
-  background: #fafbfc;
-  border-color: #dfe4ea;
-}
-
 .score-ring-svg {
   width: 150px;
   height: 150px;
@@ -571,10 +505,6 @@
   stroke: rgba(255, 255, 255, 0.08);
 
   stroke-width: 9;
-}
-
-[data-theme="light"] .score-ring-bg {
-  stroke: #e1e6eb;
 }
 
 .score-ring-fill {
@@ -591,6 +521,10 @@
 
   transition:
     stroke-dashoffset 0.8s ease;
+}
+
+[data-theme="light"] .score-ring-bg {
+  stroke: #e2e6eb;
 }
 
 .score-ring-content {
@@ -651,11 +585,6 @@
   transition:
     transform 0.18s ease,
     border-color 0.18s ease;
-}
-
-[data-theme="light"] .kpi-card {
-  background: #fafbfc;
-  border-color: #e0e5ea;
 }
 
 .kpi-card:hover {
@@ -741,18 +670,6 @@
   border-radius: var(--r-radius-small);
 }
 
-[data-theme="light"] .exec-summary-card {
-  background:
-    linear-gradient(
-      135deg,
-      rgba(168, 102, 0, 0.055),
-      transparent 60%
-    ),
-    #fafbfc;
-
-  border-color: #dfe4ea;
-}
-
 .exec-summary-card h3 {
   margin: 0 0 10px;
 
@@ -818,7 +735,7 @@
 
 
 /* =========================================================
-   FEASIBILITY
+   FEASIBILITY BARS
    ========================================================= */
 
 .feasibility-bars-group {
@@ -840,10 +757,6 @@
   border: 1px solid var(--r-border);
 
   border-radius: var(--r-radius-small);
-}
-
-[data-theme="light"] .feasibility-bar-item {
-  background: #fafbfc;
 }
 
 .feasibility-bar-header {
@@ -896,7 +809,7 @@
 
 
 /* =========================================================
-   MARKET
+   MARKET METRICS
    ========================================================= */
 
 .market-layout-grid {
@@ -917,10 +830,6 @@
   border: 1px solid var(--r-border);
 
   border-radius: var(--r-radius-small);
-}
-
-[data-theme="light"] .market-chart-card {
-  background: #fafbfc;
 }
 
 .market-chart-title {
@@ -956,6 +865,7 @@
 
 .market-tier-info {
   width: 80px;
+
   flex-shrink: 0;
 }
 
@@ -1027,10 +937,6 @@
   border-radius: var(--r-radius-small);
 }
 
-[data-theme="light"] .persona-card {
-  background: #fafbfc;
-}
-
 .persona-header {
   display: flex;
   align-items: flex-start;
@@ -1061,6 +967,7 @@
   border-radius: 6px;
 
   background: var(--r-red-soft);
+
   color: var(--r-red);
 
   font-size: 9px;
@@ -1156,18 +1063,16 @@
 }
 
 [data-theme="light"] .competitor-gap-row {
-  background: #fff7f8 !important;
+  background: #fff6f7 !important;
 }
 
 [data-theme="light"] .competitor-gap-row td {
   color: #343942 !important;
 }
 
-[data-theme="light"]
-.competitor-gap-row
-.competitor-sticky-col {
-  background: #fff0f2 !important;
-  color: #a6293a !important;
+[data-theme="light"] .competitor-gap-row .competitor-sticky-col {
+  background: #fff1f3 !important;
+  color: #b3263a !important;
 }
 
 
@@ -1196,10 +1101,6 @@
   border: 1px solid var(--r-border);
 
   border-radius: var(--r-radius-small);
-}
-
-[data-theme="light"] .mvp-column {
-  background: #fafbfc;
 }
 
 .mvp-column-header {
@@ -1266,10 +1167,6 @@
   border-radius: 9px;
 }
 
-[data-theme="light"] .mvp-feature-item {
-  background: #ffffff;
-}
-
 .mvp-feature-title {
   margin: 0;
 
@@ -1321,10 +1218,6 @@
   border: 1px solid var(--r-border);
 
   border-radius: var(--r-radius-small);
-}
-
-[data-theme="light"] .gtm-timeline-phase {
-  background: #fafbfc;
 }
 
 .gtm-phase-badge {
@@ -1393,7 +1286,7 @@
 
 
 /* =========================================================
-   GENERAL METRICS
+   GENERAL METRIC GRID
    ========================================================= */
 
 .results-metric-grid {
@@ -1413,10 +1306,6 @@
   border: 1px solid var(--r-border);
 
   border-radius: var(--r-radius-small);
-}
-
-[data-theme="light"] .results-metric-card {
-  background: #fafbfc;
 }
 
 .results-metric-label {
@@ -1494,7 +1383,6 @@
   content: "";
 
   position: absolute;
-
   left: 0;
   top: 8px;
 
@@ -1536,10 +1424,6 @@
     border-color 0.18s ease;
 }
 
-[data-theme="light"] .results-source-card {
-  background: #fafbfc;
-}
-
 .results-source-card:hover {
   transform: translateY(-2px);
 
@@ -1548,6 +1432,7 @@
 
 .results-source-type {
   display: inline-flex;
+
   align-items: center;
 
   gap: 6px;
@@ -1605,6 +1490,7 @@
   gap: 10px;
 
   margin-top: 13px;
+
   padding-top: 11px;
 
   border-top: 1px solid var(--r-border);
@@ -1625,7 +1511,7 @@
 
 
 /* =========================================================
-   INTELLIGENCE
+   RESEARCH / INTELLIGENCE CARDS
    ========================================================= */
 
 .results-intelligence-grid {
@@ -1645,10 +1531,6 @@
   border: 1px solid var(--r-border);
 
   border-radius: var(--r-radius-small);
-}
-
-[data-theme="light"] .results-intelligence-card {
-  background: #fafbfc;
 }
 
 .results-intelligence-label {
@@ -1683,7 +1565,7 @@
 
 
 /* =========================================================
-   RISKS
+   RISK CARDS
    ========================================================= */
 
 .results-risk-grid {
@@ -1705,10 +1587,6 @@
   border-radius: var(--r-radius-small);
 
   border-left: 3px solid var(--r-red);
-}
-
-[data-theme="light"] .results-risk-card {
-  background: #fafbfc;
 }
 
 .results-risk-card.medium {
@@ -1755,14 +1633,12 @@
   text-transform: uppercase;
 }
 
-.results-risk-card.medium
-.results-risk-severity {
+.results-risk-card.medium .results-risk-severity {
   background: var(--r-accent-soft);
   color: var(--r-accent);
 }
 
-.results-risk-card.low
-.results-risk-severity {
+.results-risk-card.low .results-risk-severity {
   background: var(--r-green-soft);
   color: var(--r-green);
 }
@@ -1778,7 +1654,6 @@
 
 .results-risk-mitigation {
   margin-top: 10px;
-
   padding-top: 10px;
 
   border-top: 1px solid var(--r-border);
@@ -1791,7 +1666,7 @@
 
 
 /* =========================================================
-   DEEP VALIDATION
+   DEEP VALIDATION PILLARS
    ========================================================= */
 
 .results-pillars-grid {
@@ -1811,10 +1686,6 @@
   border: 1px solid var(--r-border);
 
   border-radius: var(--r-radius-small);
-}
-
-[data-theme="light"] .results-pillar-card {
-  background: #fafbfc;
 }
 
 .results-pillar-number {
@@ -1882,10 +1753,6 @@
   border-radius: var(--r-radius-small);
 }
 
-[data-theme="light"] .results-report-card {
-  background: #fafbfc;
-}
-
 .results-report-card h3 {
   margin: 0 0 8px;
 
@@ -1923,20 +1790,6 @@
   box-shadow: var(--r-shadow-small);
 }
 
-[data-theme="light"]
-.startup-advisor,
-[data-theme="light"]
-.ai-advisor-card,
-[data-theme="light"]
-.advisor-card {
-  background: #ffffff !important;
-
-  border-color: #dfe4ea !important;
-
-  box-shadow:
-    0 5px 18px rgba(27, 39, 51, 0.06);
-}
-
 .startup-advisor *,
 .ai-advisor-card *,
 .advisor-card * {
@@ -1957,21 +1810,6 @@
     var(--r-surface-2);
 
   border-bottom: 1px solid var(--r-border);
-}
-
-[data-theme="light"]
-.startup-advisor-header,
-[data-theme="light"]
-.ai-advisor-header,
-[data-theme="light"]
-.advisor-header {
-  background:
-    linear-gradient(
-      135deg,
-      rgba(105, 75, 181, 0.05),
-      transparent 65%
-    ),
-    #fafbfc;
 }
 
 .startup-advisor-header h2,
@@ -2001,6 +1839,7 @@
   color: var(--r-text-secondary) !important;
 
   font-size: 12px;
+
   line-height: 1.6;
 }
 
@@ -2020,16 +1859,6 @@
   color: var(--r-text) !important;
 
   border-radius: 10px;
-}
-
-[data-theme="light"]
-.advisor-input,
-[data-theme="light"]
-.startup-advisor-input,
-[data-theme="light"]
-.ai-advisor-input {
-  background: #ffffff !important;
-  border-color: #d8dee5 !important;
 }
 
 .advisor-input input,
@@ -2219,7 +2048,7 @@
 
 
 /* =========================================================
-   CHIPS
+   TAGS / CHIPS
    ========================================================= */
 
 .results-chip {
@@ -2257,7 +2086,7 @@
 
 
 /* =========================================================
-   EMPTY STATE
+   EMPTY STATES
    ========================================================= */
 
 .results-empty-state {
@@ -2325,13 +2154,12 @@
   animation: resultsSkeleton 1.4s infinite;
 }
 
-[data-theme="light"]
-.results-skeleton::after {
+[data-theme="light"] .results-skeleton::after {
   background:
     linear-gradient(
       90deg,
       transparent,
-      rgba(0, 0, 0, 0.035),
+      rgba(0, 0, 0, 0.045),
       transparent
     );
 }
@@ -2393,7 +2221,7 @@
 
 
 /* =========================================================
-   DIVIDER
+   DIVIDERS
    ========================================================= */
 
 .results-divider {
@@ -2407,7 +2235,7 @@
 
 
 /* =========================================================
-   DETAILS
+   COLLAPSIBLE / DETAILS
    ========================================================= */
 
 .results-details {
@@ -2463,6 +2291,7 @@
 @media (max-width: 900px) {
   .results-content-area {
     padding: 24px 18px 70px;
+
     gap: 24px;
   }
 
@@ -2604,7 +2433,6 @@
 
   .results-master-container {
     background: white !important;
-
     color: black !important;
   }
 }
