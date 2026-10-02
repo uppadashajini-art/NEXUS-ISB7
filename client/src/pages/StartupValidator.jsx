@@ -1,22 +1,147 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import confetti from "canvas-confetti";
 
-import SearchResultCard from "../components/SearchResultCard";
-import MarketAnalysis from "../components/MarketAnalysis";
-import CustomerSegments from "../components/CustomerSegments";
-import CompetitorAnalysis from "../components/CompetitorAnalysis";
-import MarketGaps from "../components/MarketGaps";
-import DeepValidationCard from "../components/DeepValidationCard";
+import StartupAdvisor from "../components/StartupAdvisor";
+import ResultsDashboard from "../components/ResultsDashboard";
+import StreamingProgressLoader from "../components/StreamingProgressLoader";
 
+import Navbar from "../components/Navbar";
+import AuthModal from "../components/AuthModal";
+import SupabaseConfigModal from "../components/SupabaseConfigModal";
+import ActivityLogModal from "../components/ActivityLogModal";
+import AdvisorySlideOver from "../components/AdvisorySlideOver";
+
+import { useAuth } from "../context/AuthContext";
+import { saveValidationActivity } from "../services/supabaseClient";
 import { validateIdea } from "../services/validationService";
 
-function StartupValidator() {
+import {
+  SparklesIcon,
+  HistoryIcon,
+  ArrowRightIcon,
+  CloseIcon,
+} from "../components/Icons";
+
+const INSPIRATION_IDEAS = [
+  {
+    id: "sre",
+    badge: "DevOps & Cloud",
+    badgeClass: "studio-badge-idea",
+    title: "Kubernetes AI SRE",
+    idea:
+      "Autonomous AI site reliability engineer for Kubernetes clusters that predicts outages from Prometheus metrics and auto-submits GitOps PRs.",
+    domain: "DevOps & Cloud Infrastructure",
+    target: "Enterprise DevOps & Platform Engineers",
+  },
+  {
+    id: "scribe",
+    badge: "HealthTech",
+    badgeClass: "studio-badge-customer",
+    title: "Ambient Oncology Scribe",
+    idea:
+      "Ambient voice AI for specialist oncologists that automatically produces structured clinical EHR notes and matches rare disease patients to open clinical trials.",
+    domain: "Healthcare & BioTech",
+    target: "Private Oncology & Specialty Clinics",
+  },
+  {
+    id: "escrow",
+    badge: "FinTech",
+    badgeClass: "studio-badge-market",
+    title: "Cross-Border Escrow Micro-SaaS",
+    idea:
+      "Instant cross-border B2B settlement agent with automated invoice OCR reconciliation and smart dispute escrow.",
+    domain: "FinTech & Payments",
+    target: "SMB Exporters and Global Freelance Agencies",
+  },
+  {
+    id: "carbon",
+    badge: "ClimateTech",
+    badgeClass: "studio-badge-feasibility",
+    title: "Real-time Cloud Carbon API",
+    idea:
+      "Developer API that hooks into AWS and GCP billing lines to quantify Scope 1-3 cloud carbon emissions and recommend green workload scheduling.",
+    domain: "ClimateTech & SaaS",
+    target: "Engineering Leaders at ESG-committed Enterprises",
+  },
+];
+
+function StartupValidator({
+  onNavigateToStyleguide,
+  theme,
+  onToggleTheme,
+}) {
+  const {
+    user,
+    updateActivityCount,
+    activityCount,
+  } = useAuth();
+
+  // =========================================
+  // MODALS STATE
+  // =========================================
+
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [supabaseModalOpen, setSupabaseModalOpen] =
+    useState(false);
+  const [historyModalOpen, setHistoryModalOpen] =
+    useState(false);
+
+  const [activeTab, setActiveTab] =
+    useState("validator");
+
+  const [toastMessage, setToastMessage] =
+    useState("");
+
+  const [loadedFromHistoryMeta, setLoadedFromHistoryMeta] =
+    useState(null);
+
   // =========================================
   // FORM STATE
   // =========================================
 
   const [idea, setIdea] = useState("");
   const [domain, setDomain] = useState("");
-  const [targetCustomers, setTargetCustomers] = useState("");
+  const [targetCustomers, setTargetCustomers] =
+    useState("");
+
+  const [animatingField, setAnimatingField] =
+    useState(null);
+
+  const [activeTemplateIdx, setActiveTemplateIdx] =
+    useState(null);
+
+  const [isAdvisoryOpen, setIsAdvisoryOpen] =
+    useState(false);
+
+  // =========================================
+  // KEYBOARD SHORTCUT
+  // CMD / CTRL + J
+  // =========================================
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.key.toLowerCase() === "j"
+      ) {
+        e.preventDefault();
+
+        setIsAdvisoryOpen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+    };
+  }, []);
 
   // =========================================
   // SEARCH STATE
@@ -30,9 +155,15 @@ function StartupValidator() {
   // SUBMITTED VALUES
   // =========================================
 
-  const [submittedIdea, setSubmittedIdea] = useState("");
-  const [submittedDomain, setSubmittedDomain] = useState("");
-  const [submittedCustomers, setSubmittedCustomers] = useState("");
+  const [submittedIdea, setSubmittedIdea] =
+    useState("");
+
+  const [submittedDomain, setSubmittedDomain] =
+    useState("");
+
+  const [submittedCustomers, setSubmittedCustomers] =
+    useState("");
+
   const [submittedValidation, setSubmittedValidation] =
     useState("all");
 
@@ -40,8 +171,11 @@ function StartupValidator() {
   // VALIDATION STATE
   // =========================================
 
-  const [searchCompleted, setSearchCompleted] = useState(false);
-  const [selectedOption, setSelectedOption] = useState("all");
+  const [searchCompleted, setSearchCompleted] =
+    useState(false);
+
+  const [selectedOption, setSelectedOption] =
+    useState("all");
 
   const [validationResult, setValidationResult] =
     useState(null);
@@ -59,56 +193,432 @@ function StartupValidator() {
   const validationOptions = [
     {
       id: "all",
-      icon: "✦",
-      title: "All",
+      title: "Full Analysis",
+      dotColor: "#FFC72C",
       description:
-        "Complete validation across all areas",
+        "Holistic multi-vector synthesis across market demand, competitor moats, ICPs, and launch strategy.",
     },
     {
       id: "market",
-      icon: "📈",
-      title: "Market Demand",
+      title: "Market Sizing",
+      dotColor: "#FF8A1F",
       description:
-        "Analyze market size, demand and trends",
+        "TAM, SAM, SOM quantitative projections, market CAGR velocity, and adoption tailwinds.",
     },
     {
       id: "competition",
-      icon: "🏢",
-      title: "Competition",
+      title: "Competitors & Gaps",
+      dotColor: "#F23D5C",
       description:
-        "Find competitors and alternative solutions",
+        "Direct and indirect feature benchmark, incumbent moats, and unaddressed market white-spaces.",
     },
     {
       id: "customers",
-      icon: "👥",
       title: "Target Customers",
+      dotColor: "#FF5A4E",
       description:
-        "Identify users, needs and pain points",
+        "Detailed ICP profiles, customer pain severity breakdown, and high-conversion acquisition loops.",
     },
     {
-      id: "business",
-      icon: "💰",
-      title: "Business Potential",
+      id: "feasibility",
+      title: "Tech Feasibility",
+      dotColor: "#2DD4BF",
       description:
-        "Explore monetization and opportunities",
+        "Architecture constraints, API dependency risks, compliance friction, and implementation hurdles.",
     },
     {
-      id: "risks",
-      icon: "⚠️",
-      title: "Risks",
+      id: "mvp",
+      title: "MVP & Scope",
+      dotColor: "#8B7CF6",
       description:
-        "Identify challenges and potential risks",
+        "Prioritized MVP feature cut, non-essential backlog pruning, and 90-day milestone roadmap.",
     },
   ];
 
-  // =========================================
-  // SELECTED VALIDATION
-  // =========================================
-
   const selectedValidation =
     validationOptions.find(
-      (option) => option.id === selectedOption
+      (option) =>
+        option.id === selectedOption
     ) || validationOptions[0];
+
+  const isIdeaValid =
+    idea.trim().length >= 40;
+
+  // =========================================
+  // TEMPLATE STAGGER ANIMATION
+  // =========================================
+
+  const handleSelectInspiration = (
+    item,
+    idx
+  ) => {
+    setActiveTemplateIdx(idx);
+    setError("");
+    setValidationError("");
+    setLoadedFromHistoryMeta(null);
+
+    setIdea(item.idea);
+    setAnimatingField("idea");
+
+    setTimeout(() => {
+      setDomain(item.domain);
+      setAnimatingField("domain");
+    }, 200);
+
+    setTimeout(() => {
+      setTargetCustomers(item.target);
+      setAnimatingField("target");
+    }, 400);
+
+    setTimeout(() => {
+      setAnimatingField(null);
+    }, 700);
+
+    document
+      .getElementById("startup-idea")
+      ?.focus();
+  };
+
+  // =========================================
+  // SCROLL TO INPUT
+  // =========================================
+
+  const handleScrollToInput = () => {
+    const el =
+      document.getElementById(
+        "startup-idea"
+      );
+
+    if (el) {
+      el.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      el.focus();
+    }
+  };
+
+  // =========================================
+  // LOAD IDEA FROM ACTIVITY LOG
+  // =========================================
+
+  const handleLoadIdeaFromHistory = (
+    activity
+  ) => {
+    setIdea(activity.idea || "");
+    setDomain(activity.domain || "");
+    setTargetCustomers(
+      activity.target_customer || ""
+    );
+
+    setSelectedOption(
+      activity.validation_type || "all"
+    );
+
+    setSubmittedIdea(
+      activity.idea || ""
+    );
+
+    setSubmittedDomain(
+      activity.domain || ""
+    );
+
+    setSubmittedCustomers(
+      activity.target_customer || ""
+    );
+
+    setSubmittedValidation(
+      activity.validation_type || "all"
+    );
+
+    const full =
+      activity.full_result || {};
+
+    setValidationResult(full);
+
+    setResults(
+      Array.isArray(full.search_results)
+        ? full.search_results
+        : []
+    );
+
+    setSearchCompleted(true);
+    setLoading(false);
+    setValidationLoading(false);
+    setError("");
+    setValidationError("");
+
+    setLoadedFromHistoryMeta({
+      id: activity.id,
+      title: activity.idea_title,
+      score: activity.viability_score,
+      overallScore:
+        activity.viability_score,
+      domain: activity.domain,
+      created_at: activity.created_at,
+    });
+
+    setToastMessage(
+      `📂 Restored "${activity.idea_title}" from Activity Log!`
+    );
+
+    setTimeout(
+      () => setToastMessage(""),
+      5000
+    );
+
+    setTimeout(() => {
+      document
+        .getElementById(
+          "results-dashboard"
+        )
+        ?.scrollIntoView({
+          behavior: "smooth",
+        });
+    }, 120);
+  };
+
+  // =========================================
+  // DUPLICATE IDEA
+  // =========================================
+
+  const handleDuplicateIdea = (
+    activity
+  ) => {
+    setIdea(activity.idea || "");
+    setDomain(activity.domain || "");
+    setTargetCustomers(
+      activity.target_customer || ""
+    );
+
+    setSelectedOption(
+      activity.validation_type || "all"
+    );
+
+    setError("");
+    setValidationError("");
+
+    setToastMessage(
+      `📋 Cloned "${activity.idea_title || "idea"}" into form for iteration!`
+    );
+
+    setTimeout(
+      () => setToastMessage(""),
+      5000
+    );
+
+    setTimeout(() => {
+      handleScrollToInput();
+    }, 150);
+  };
+
+  // =========================================
+  // EXPORT MARKDOWN DOSSIER
+  // =========================================
+
+  const handleExportActiveDossier = () => {
+    if (!validationResult) return;
+
+    const report =
+      validationResult.validation_report ||
+      {};
+
+    let content =
+      `# NEXUS Startup Validation Dossier\n\n`;
+
+    content += `**Startup Idea**: ${
+      submittedIdea || idea
+    }\n`;
+
+    content += `**Domain / Industry**: ${
+      submittedDomain ||
+      domain ||
+      "Technology"
+    }\n`;
+
+    content += `**Target Customer**: ${
+      submittedCustomers ||
+      targetCustomers ||
+      "General Market"
+    }\n`;
+
+    content += `**Generated Date**: ${new Date().toLocaleString()}\n\n`;
+
+    content +=
+      `---\n\n## Executive Summary\n${
+        report.executive_summary ||
+        "Complete AI validation dossier."
+      }\n\n`;
+
+    if (
+      validationResult.market_analysis
+    ) {
+      content +=
+        `## Market Opportunity\n${
+          validationResult
+            .market_analysis
+            .market_opportunity ||
+          ""
+        }\n\n`;
+
+      if (
+        validationResult
+          .market_analysis
+          .market_trends
+      ) {
+        content +=
+          `### Market Trends\n`;
+
+        validationResult.market_analysis.market_trends.forEach(
+          (t) => {
+            content += `- ${t}\n`;
+          }
+        );
+
+        content += `\n`;
+      }
+    }
+
+    if (
+      validationResult
+        .competitor_analysis
+        ?.direct_competitors
+    ) {
+      content +=
+        `## Competitor Landscape\n`;
+
+      validationResult.competitor_analysis.direct_competitors.forEach(
+        (c) => {
+          content += `### ${
+            c.name
+          }\n`;
+
+          if (c.strengths) {
+            content +=
+              `- Strengths: ${c.strengths.join(
+                ", "
+              )}\n`;
+          }
+
+          if (c.weaknesses) {
+            content +=
+              `- Weaknesses: ${c.weaknesses.join(
+                ", "
+              )}\n`;
+          }
+        }
+      );
+
+      content += `\n`;
+    }
+
+    if (
+      validationResult
+        .mvp_recommendations
+        ?.must_have
+    ) {
+      content +=
+        `## Must-Have MVP Features\n`;
+
+      validationResult.mvp_recommendations.must_have.forEach(
+        (f) => {
+          content +=
+            `- **${f.feature}**: ${
+              f.reason || ""
+            }\n`;
+        }
+      );
+
+      content += `\n`;
+    }
+
+    content +=
+      `---\n*Generated by NEXUS AI Intelligence Engine*\n`;
+
+    const blob = new Blob(
+      [content],
+      {
+        type: "text/markdown",
+      }
+    );
+
+    const url =
+      URL.createObjectURL(blob);
+
+    const a =
+      document.createElement("a");
+
+    a.href = url;
+
+    a.download = `nexus_validation_${(
+      submittedDomain || "startup"
+    ).replace(
+      /[^a-zA-Z0-9]/g,
+      "_"
+    )}.md`;
+
+    a.click();
+
+    URL.revokeObjectURL(url);
+
+    setToastMessage(
+      "📄 Markdown dossier exported successfully!"
+    );
+
+    setTimeout(
+      () => setToastMessage(""),
+      4000
+    );
+  };
+
+  // =========================================
+  // KEYBOARD SHORTCUT
+  // CTRL / CMD + ENTER
+  // =========================================
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        e.key === "Enter"
+      ) {
+        e.preventDefault();
+
+        const formEl =
+          document.getElementById(
+            "validator-form"
+          );
+
+        if (formEl) {
+          if (
+            formEl.requestSubmit
+          ) {
+            formEl.requestSubmit();
+          } else {
+            formEl.dispatchEvent(
+              new Event("submit", {
+                cancelable: true,
+                bubbles: true,
+              })
+            );
+          }
+        }
+      }
+    };
+
+    window.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+    };
+  }, []);
 
   // =========================================
   // FORM SUBMIT
@@ -117,29 +627,38 @@ function StartupValidator() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const trimmedIdea = idea.trim();
-    const trimmedDomain = domain.trim();
-    const trimmedCustomers = targetCustomers.trim();
+    const trimmedIdea =
+      idea.trim();
 
-    // =========================================
-    // INPUT VALIDATION
-    // =========================================
+    const trimmedDomain =
+      domain.trim();
+
+    const trimmedCustomers =
+      targetCustomers.trim();
+
+    // -----------------------------------------
+    // VALIDATION
+    // -----------------------------------------
 
     if (!trimmedIdea) {
-      setError("Please enter your startup idea.");
-      return;
-    }
-
-    if (trimmedIdea.length < 10) {
       setError(
-        "Please provide a little more detail about your startup idea."
+        "Please describe your startup concept."
       );
       return;
     }
 
-    // =========================================
+    if (
+      trimmedIdea.length < 40
+    ) {
+      setError(
+        `Please provide at least 40 characters describing your concept (${trimmedIdea.length}/40).`
+      );
+      return;
+    }
+
+    // -----------------------------------------
     // START LOADING
-    // =========================================
+    // -----------------------------------------
 
     setLoading(true);
     setValidationLoading(true);
@@ -151,62 +670,150 @@ function StartupValidator() {
     setSearchCompleted(false);
     setValidationResult(null);
 
-    // =========================================
+    setLoadedFromHistoryMeta(null);
+
+    // -----------------------------------------
     // SAVE SUBMITTED VALUES
-    // =========================================
+    // -----------------------------------------
 
-    setSubmittedIdea(trimmedIdea);
-    setSubmittedDomain(trimmedDomain);
-    setSubmittedCustomers(trimmedCustomers);
-    setSubmittedValidation(selectedOption);
+    setSubmittedIdea(
+      trimmedIdea
+    );
 
-    // =========================================
-    // DEBUG
-    // =========================================
+    setSubmittedDomain(
+      trimmedDomain
+    );
 
-    console.log("=================================");
-    console.log("NEXUS STARTUP VALIDATION");
-    console.log("=================================");
-    console.log("Startup Idea:", trimmedIdea);
-    console.log("Domain / Industry:", trimmedDomain);
-    console.log("Target Customers:", trimmedCustomers);
-    console.log("Validation Type:", selectedOption);
+    setSubmittedCustomers(
+      trimmedCustomers
+    );
+
+    setSubmittedValidation(
+      selectedOption
+    );
+
+    // -----------------------------------------
+    // VALIDATE
+    // -----------------------------------------
 
     try {
-      // =========================================
-      // CALL BACKEND
-      // =========================================
+      const analysisData =
+        await validateIdea(
+          trimmedIdea,
+          trimmedDomain,
+          trimmedCustomers,
+          selectedOption
+        );
 
-      const analysisData = await validateIdea(
-        trimmedIdea,
-        trimmedDomain,
-        trimmedCustomers,
-        selectedOption
+      const searchResults =
+        Array.isArray(
+          analysisData?.search_results
+        )
+          ? analysisData.search_results
+          : [];
+
+      setResults(
+        searchResults
       );
 
-      console.log(
-        "Validation response:",
+      setValidationResult(
         analysisData
       );
 
-      // =========================================
-      // WEB SEARCH RESULTS
-      // =========================================
+      setSearchCompleted(
+        true
+      );
 
-      const searchResults = Array.isArray(
-        analysisData?.search_results
-      )
-        ? analysisData.search_results
-        : [];
+      // ---------------------------------------
+      // AUTO SAVE TO SUPABASE
+      // ---------------------------------------
 
-      setResults(searchResults);
+      try {
+        const currentUserId =
+          user?.id ||
+          (user?.email
+            ? user.email
+            : "active_founder_id");
 
-      // =========================================
-      // COMPLETE VALIDATION RESULT
-      // =========================================
+        const currentUserEmail =
+          user?.email ||
+          "founder@nexus-intelligence.ai";
 
-      setValidationResult(analysisData);
-      setSearchCompleted(true);
+        const saveRes =
+          await saveValidationActivity(
+            {
+              userId:
+                currentUserId,
+
+              userEmail:
+                currentUserEmail,
+
+              idea:
+                trimmedIdea,
+
+              domain:
+                trimmedDomain,
+
+              targetCustomer:
+                trimmedCustomers,
+
+              validationType:
+                selectedOption,
+
+              fullResult:
+                analysisData,
+            }
+          );
+
+        if (
+          saveRes?.savedToSupabase
+        ) {
+          setToastMessage(
+            "✨ Idea validated & saved to your Supabase Cloud Activity Log!"
+          );
+        } else {
+          setToastMessage(
+            "✨ Idea validated & saved to your Activity Log!"
+          );
+        }
+
+        updateActivityCount(
+          activityCount + 1
+        );
+
+        // -------------------------------------
+        // CONFETTI
+        // -------------------------------------
+
+        try {
+          confetti({
+            particleCount: 80,
+            spread: 70,
+            origin: {
+              y: 0.65,
+            },
+            colors: [
+              "#6366f1",
+              "#e8c77b",
+              "#38bdf8",
+              "#ec4899",
+              "#10b981",
+            ],
+          });
+        } catch {
+          // Ignore confetti errors
+        }
+      } catch (saveErr) {
+        console.warn(
+          "Could not save to activity log:",
+          saveErr
+        );
+      }
+
+      setTimeout(
+        () => setToastMessage(""),
+        6000
+      );
     } catch (err) {
       console.error(
         "Validation error:",
@@ -222,11 +829,21 @@ function StartupValidator() {
           .toLowerCase()
           .includes("analysis")
       ) {
-        setValidationError(errorMessage);
-        setValidationResult(null);
+        setValidationError(
+          errorMessage
+        );
+
+        setValidationResult(
+          null
+        );
       } else {
-        setError(errorMessage);
-        setSearchCompleted(false);
+        setError(
+          errorMessage
+        );
+
+        setSearchCompleted(
+          false
+        );
       }
     } finally {
       setLoading(false);
@@ -239,13 +856,19 @@ function StartupValidator() {
   // =========================================
 
   const handleRetry = () => {
-    if (!submittedIdea) {
-      return;
-    }
+    if (!submittedIdea) return;
 
-    setIdea(submittedIdea);
-    setDomain(submittedDomain);
-    setTargetCustomers(submittedCustomers);
+    setIdea(
+      submittedIdea
+    );
+
+    setDomain(
+      submittedDomain
+    );
+
+    setTargetCustomers(
+      submittedCustomers
+    );
 
     setSelectedOption(
       submittedValidation || "all"
@@ -253,13 +876,15 @@ function StartupValidator() {
 
     setTimeout(() => {
       document
-        .getElementById("validator-form")
+        .getElementById(
+          "validator-form"
+        )
         ?.requestSubmit();
     }, 0);
   };
 
   // =========================================
-  // CLEAR
+  // CLEAR / NEW ANALYSIS
   // =========================================
 
   const handleClear = () => {
@@ -269,8 +894,14 @@ function StartupValidator() {
 
     setResults([]);
 
-    setValidationResult(null);
-    setValidationLoading(false);
+    setValidationResult(
+      null
+    );
+
+    setValidationLoading(
+      false
+    );
+
     setValidationError("");
 
     setError("");
@@ -278,10 +909,25 @@ function StartupValidator() {
     setSubmittedIdea("");
     setSubmittedDomain("");
     setSubmittedCustomers("");
-    setSubmittedValidation("all");
+    setSubmittedValidation(
+      "all"
+    );
 
-    setSearchCompleted(false);
-    setSelectedOption("all");
+    setSearchCompleted(
+      false
+    );
+
+    setSelectedOption(
+      "all"
+    );
+
+    setLoadedFromHistoryMeta(
+      null
+    );
+
+    setActiveTemplateIdx(
+      null
+    );
 
     window.scrollTo({
       top: 0,
@@ -290,23 +936,25 @@ function StartupValidator() {
   };
 
   // =========================================
-  // IDEA CHANGE
+  // INPUT HANDLERS
   // =========================================
 
   const handleIdeaChange = (e) => {
-    setIdea(e.target.value);
+    setIdea(
+      e.target.value
+    );
 
     if (error) {
       setError("");
     }
   };
 
-  // =========================================
-  // CUSTOMER CHANGE
-  // =========================================
-
-  const handleCustomerChange = (e) => {
-    setTargetCustomers(e.target.value);
+  const handleCustomerChange = (
+    e
+  ) => {
+    setTargetCustomers(
+      e.target.value
+    );
 
     if (error) {
       setError("");
@@ -318,1046 +966,1243 @@ function StartupValidator() {
   // =========================================
 
   return (
-    <main className="startup-validator">
+    <div className="nexus-app-wrapper nexus-app-shell">
 
-      {/* =========================================
-          HERO
-      ========================================= */}
+      {/* =====================================
+          NAVBAR
+      ===================================== */}
 
-      <section className="hero">
+      <Navbar
+        onOpenAuth={() =>
+          setAuthModalOpen(true)
+        }
 
-        <div className="hero-badge">
-          <span className="status-dot"></span>
-          NEXUS AI • STARTUP INTELLIGENCE
-        </div>
+        onOpenHistory={() =>
+          setHistoryModalOpen(true)
+        }
 
-        <h1>
-          AI Startup
-          <span> Idea Validator</span>
-        </h1>
+        onOpenSupabase={() =>
+          setSupabaseModalOpen(true)
+        }
 
-        <p>
-          Validate your startup idea using AI-powered
-          market intelligence and real-time web research.
-        </p>
+        activeTab={activeTab}
+        setActiveTab={
+          setActiveTab
+        }
 
-        <div className="hero-features">
+        onNavigateToStyleguide={
+          onNavigateToStyleguide
+        }
 
-          <div className="hero-feature">
-            <span>✦</span>
-            Market Research
-          </div>
+        theme={theme}
+        onToggleTheme={
+          onToggleTheme
+        }
+      />
 
-          <div className="hero-feature">
-            <span>◈</span>
-            Competition Analysis
-          </div>
+      {/* =====================================
+          FLOATING SYSTEM TOAST
+      ===================================== */}
 
-          <div className="hero-feature">
-            <span>⌁</span>
-            AI Insights
-          </div>
-
-        </div>
-
-      </section>
-
-      {/* =========================================
-          INPUT SECTION
-      ========================================= */}
-
-      <section className="input-section">
-
-        <div className="section-header">
-
-          <div className="section-number">
-            01
-          </div>
-
-          <div>
-            <h2>
-              Describe Your Startup
-            </h2>
-
-            <p>
-              Enter your startup idea and provide optional
-              customer details for better validation.
-            </p>
-          </div>
-
-        </div>
-
-        <form
-          id="validator-form"
-          className="validator-form"
-          onSubmit={handleSubmit}
+      {toastMessage && (
+        <aside
+          aria-label="System notification"
+          className="nexus-floating-toast"
         >
-
-          {/* =========================================
-              STARTUP IDEA
-          ========================================= */}
-
-          <div className="idea-input-wrapper">
-
-            <div className="field-heading">
-
-              <label htmlFor="startup-idea">
-                Enter your startup idea
-              </label>
-
-              <span className="required-label">
-                Required
-              </span>
-
-            </div>
-
-            <textarea
-              id="startup-idea"
-              value={idea}
-              onChange={handleIdeaChange}
-              placeholder="Example: AI platform that provides personalized fitness plans for college students"
-              rows={5}
-              disabled={loading}
-              aria-required="true"
-            />
-
-            <div className="textarea-footer">
-
-              <span>
-                {idea.length} characters
-              </span>
-
-              <span>
-                Be specific for better results
-              </span>
-
-            </div>
-
+          <div className="toast-sparkle">
+            <SparklesIcon size={16} />
           </div>
 
-          {/* =========================================
-              DOMAIN / INDUSTRY
-          ========================================= */}
+          <p className="toast-text">
+            {toastMessage}
+          </p>
 
-          <div className="domain-input-wrapper">
+          <button
+            type="button"
+            className="toast-action-btn"
+            onClick={() =>
+              setHistoryModalOpen(
+                true
+              )
+            }
+          >
+            <span>
+              View Log
+            </span>
 
-            <div className="field-heading">
-
-              <label htmlFor="startup-domain">
-                Domain / Industry
-              </label>
-
-              <span className="optional-label">
-                Optional
-              </span>
-
-            </div>
-
-            <input
-              id="startup-domain"
-              type="text"
-              value={domain}
-              onChange={(e) =>
-                setDomain(e.target.value)
-              }
-              placeholder="e.g. EdTech, HealthTech, FinTech, B2B SaaS, E-Commerce, DevTools"
-              disabled={loading}
+            <ArrowRightIcon
+              size={13}
             />
+          </button>
 
-            <div className="input-description">
+          <button
+            type="button"
+            className="toast-close-btn"
+            onClick={() =>
+              setToastMessage("")
+            }
+          >
+            <CloseIcon size={14} />
+          </button>
+        </aside>
+      )}
 
-              <span className="description-icon">
-                🌐
-              </span>
+      {/* =====================================
+          MAIN CONTENT
+      ===================================== */}
 
-              <span>
-                Specify your startup domain or industry
-                sector to target market and competitor
-                intelligence.
-              </span>
+      <main className="startup-validator nexus-shell-container page-shell-transition">
 
-            </div>
+        {/* ===================================
+            HISTORY BANNER
+        =================================== */}
 
-          </div>
+        {loadedFromHistoryMeta && (
+          <div className="active-history-banner">
 
-          {/* =========================================
-              TARGET CUSTOMERS
-          ========================================= */}
+            <div className="banner-left">
 
-          <div className="customer-input-wrapper">
+              <span className="banner-pulse" />
 
-            <div className="field-heading">
+              <div className="banner-text">
 
-              <label htmlFor="target-customers">
-                <span>👥</span>{" "}
-                Target Customers
-              </label>
-
-              <span className="optional-label">
-                Optional
-              </span>
-
-            </div>
-
-            <input
-              id="target-customers"
-              type="text"
-              value={targetCustomers}
-              onChange={handleCustomerChange}
-              placeholder="e.g. College students and working professionals"
-              disabled={loading}
-            />
-
-            <div className="input-description">
-
-              <span className="description-icon">
-                👥
-              </span>
-
-              <span>
-                Specify who is most likely to use or pay
-                for your product. This helps NEXUS tailor
-                its market, customer, and competitor
-                research.
-              </span>
-
-            </div>
-
-          </div>
-
-          {/* =========================================
-              VALIDATION FOCUS
-          ========================================= */}
-
-          <div className="validation-focus">
-
-            <div className="options-header">
-
-              <div>
-
-                <span className="mini-label">
-                  VALIDATION FOCUS
+                <span>
+                  Loaded from Activity Log:
                 </span>
 
-                <h3>
-                  What do you want to analyze?
-                </h3>
+                <strong>
+                  {
+                    loadedFromHistoryMeta.domain ||
+                    "Startup Analysis"
+                  }
+                </strong>
 
-                <p>
-                  Select one area or choose All for
-                  complete startup validation.
-                </p>
+                {loadedFromHistoryMeta.overallScore && (
+                  <span className="banner-score-tag">
+                    Score:{" "}
+                    {
+                      loadedFromHistoryMeta.overallScore
+                    }
+                    /100
+                  </span>
+                )}
 
               </div>
+            </div>
+
+            <div className="banner-right">
+
+              <button
+                type="button"
+                className="banner-new-btn"
+                onClick={
+                  handleClear
+                }
+              >
+                New Analysis
+              </button>
 
             </div>
 
-            <div className="validation-options">
+          </div>
+        )}
 
-              {validationOptions.map(
-                (option) => {
+        {/* ===================================
+            HOME / FOUNDER HEADER
+        =================================== */}
 
-                  const isSelected =
-                    selectedOption === option.id;
+        {!validationResult && (
+          <header className="studio-header">
 
-                  return (
+            <div className="studio-eyebrow">
+
+              <span
+                className="studio-live-dot"
+                aria-hidden="true"
+              />
+
+              <span>
+                FOUNDER ANALYTICS
+              </span>
+
+            </div>
+
+            <h1 className="studio-title">
+              Validate Your Startup Idea
+            </h1>
+
+            <p className="studio-subcopy">
+              Turn an early-stage idea into
+              a data-backed validation report
+              using live market, customer,
+              competitor, and execution
+              intelligence.
+            </p>
+
+            {/* =============================
+                TEMPLATES
+            ============================= */}
+
+            <div className="studio-templates-section">
+
+              <span className="studio-templates-label">
+                Templates:
+              </span>
+
+              <div className="studio-templates-grid">
+
+                {INSPIRATION_IDEAS.map(
+                  (item, idx) => (
                     <button
-                      key={option.id}
+                      key={item.id}
                       type="button"
-                      disabled={loading}
-                      className={`validation-option ${
-                        isSelected
-                          ? "selected"
+                      className={`studio-template-chip ${
+                        activeTemplateIdx ===
+                        idx
+                          ? "active"
                           : ""
                       }`}
                       onClick={() =>
-                        setSelectedOption(
-                          option.id
+                        handleSelectInspiration(
+                          item,
+                          idx
                         )
                       }
+                      aria-label={`Load template: ${item.title}`}
                     >
 
-                      <div className="option-icon">
-                        {option.icon}
-                      </div>
+                      <span className="studio-template-chip-title">
+                        {item.title}
+                      </span>
 
-                      <div className="option-content">
+                      <span
+                        className={`studio-industry-badge ${item.badgeClass}`}
+                      >
+                        {item.badge}
+                      </span>
 
-                        <h4>
-                          {option.title}
-                        </h4>
+                    </button>
+                  )
+                )}
+
+              </div>
+            </div>
+
+          </header>
+        )}
+
+        {/* ===================================
+            FORM CARD
+        =================================== */}
+
+        {!validationResult && (
+          <section className="studio-form-card">
+
+            <form
+              id="validator-form"
+              onSubmit={
+                handleSubmit
+              }
+              noValidate
+            >
+
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection:
+                    "column",
+                  gap: "24px",
+                }}
+              >
+
+                {/* =========================
+                    STARTUP IDEA
+                ========================= */}
+
+                <div className="studio-field-group">
+
+                  <div className="studio-field-label-row">
+
+                    <label
+                      htmlFor="startup-idea"
+                      className="studio-field-label"
+                    >
+                      Startup Concept /
+                      Problem Statement
+                    </label>
+
+                    <div className="studio-counter-row">
+
+                      <span className="studio-char-count">
+                        {idea.length}{" "}
+                        characters
+                      </span>
+
+                      <span className="studio-optional-tag">
+                        •
+                      </span>
+
+                      <span
+                        className={`studio-min-hint ${
+                          idea.trim()
+                            .length >=
+                          40
+                            ? "ready"
+                            : "pending"
+                        }`}
+                      >
+                        {idea.trim()
+                          .length >=
+                        40
+                          ? "✓ Ready"
+                          : `${
+                              40 -
+                              idea.trim()
+                                .length
+                            } more chars needed`}
+                      </span>
+
+                    </div>
+                  </div>
+
+                  <textarea
+                    id="startup-idea"
+                    value={idea}
+                    onChange={
+                      handleIdeaChange
+                    }
+                    placeholder="Describe the problem, target audience, and business model for live market benchmarking..."
+                    rows={4}
+                    disabled={loading}
+                    aria-required="true"
+                    aria-invalid={
+                      Boolean(error)
+                    }
+                    className={`studio-textarea ${
+                      animatingField ===
+                      "idea"
+                        ? "field-stagger-pop"
+                        : ""
+                    } ${
+                      error
+                        ? "invalid"
+                        : ""
+                    }`}
+                  />
+
+                  {error && (
+                    <div
+                      className="studio-inline-error"
+                      role="alert"
+                    >
+                      <span
+                        className="studio-error-dot"
+                        aria-hidden="true"
+                      />
+
+                      <span>
+                        {error}
+                      </span>
+                    </div>
+                  )}
+
+                </div>
+
+                {/* =========================
+                    DOMAIN + CUSTOMER
+                ========================= */}
+
+                <div className="studio-two-col">
+
+                  <div className="studio-field-group">
+
+                    <div className="studio-field-label-row">
+
+                      <label
+                        htmlFor="startup-domain"
+                        className="studio-field-label"
+                      >
+                        Industry / Domain
+                      </label>
+
+                      <span className="studio-optional-tag">
+                        Optional
+                      </span>
+
+                    </div>
+
+                    <input
+                      id="startup-domain"
+                      type="text"
+                      value={domain}
+                      onChange={(e) =>
+                        setDomain(
+                          e.target.value
+                        )
+                      }
+                      placeholder="e.g. DevOps, HealthTech, FinTech"
+                      disabled={loading}
+                      className={`studio-input ${
+                        animatingField ===
+                        "domain"
+                          ? "field-stagger-pop"
+                          : ""
+                      }`}
+                    />
+
+                  </div>
+
+                  <div className="studio-field-group">
+
+                    <div className="studio-field-label-row">
+
+                      <label
+                        htmlFor="target-customers"
+                        className="studio-field-label"
+                      >
+                        Target Customer /
+                        ICP
+                      </label>
+
+                      <span className="studio-optional-tag">
+                        Optional
+                      </span>
+
+                    </div>
+
+                    <input
+                      id="target-customers"
+                      type="text"
+                      value={
+                        targetCustomers
+                      }
+                      onChange={
+                        handleCustomerChange
+                      }
+                      placeholder="e.g. Enterprise Platform Engineers, SMB Clinics"
+                      disabled={loading}
+                      className={`studio-input ${
+                        animatingField ===
+                        "target"
+                          ? "field-stagger-pop"
+                          : ""
+                      }`}
+                    />
+
+                  </div>
+
+                </div>
+
+                {/* =========================
+                    ANALYSIS SCOPE
+                ========================= */}
+
+                <div className="studio-scope-section">
+
+                  <div className="studio-field-label-row">
+
+                    <label className="studio-field-label">
+                      Analysis Scope
+                    </label>
+
+                  </div>
+
+                  <div
+                    className="studio-scope-grid"
+                    role="radiogroup"
+                    aria-label="Analysis Scope"
+                  >
+
+                    {validationOptions.map(
+                      (option) => {
+                        const isSelected =
+                          selectedOption ===
+                          option.id;
+
+                        return (
+                          <button
+                            key={
+                              option.id
+                            }
+                            type="button"
+                            role="radio"
+                            aria-checked={
+                              isSelected
+                            }
+                            disabled={
+                              loading
+                            }
+                            className={`studio-scope-btn ${
+                              isSelected
+                                ? "active"
+                                : ""
+                            }`}
+                            onClick={() =>
+                              setSelectedOption(
+                                option.id
+                              )
+                            }
+                          >
+
+                            <span
+                              className="studio-scope-dot"
+                              style={{
+                                backgroundColor:
+                                  option.dotColor,
+                              }}
+                              aria-hidden="true"
+                            />
+
+                            <span className="studio-scope-title">
+                              {
+                                option.title
+                              }
+                            </span>
+
+                          </button>
+                        );
+                      }
+                    )}
+
+                  </div>
+
+                  <div className="studio-scope-desc-box">
+
+                    <span
+                      className="studio-scope-dot"
+                      style={{
+                        backgroundColor:
+                          selectedValidation.dotColor,
+                      }}
+                      aria-hidden="true"
+                    />
+
+                    <span>
+
+                      <strong className="studio-scope-desc-strong">
+                        {
+                          selectedValidation.title
+                        }:
+                      </strong>{" "}
+
+                      {
+                        selectedValidation.description
+                      }
+
+                    </span>
+
+                  </div>
+
+                </div>
+
+                {/* =========================
+                    RUN ANALYSIS
+                ========================= */}
+
+                <div className="studio-cta-bar">
+
+                  <button
+                    type="submit"
+                    disabled={
+                      loading ||
+                      !isIdeaValid
+                    }
+                    className="studio-primary-cta"
+                    aria-label="Run Market and Competitor Analysis"
+                  >
+
+                    {loading ? (
+                      <>
+                        <span
+                          className="clean-spinner"
+                          style={{
+                            width:
+                              "16px",
+                            height:
+                              "16px",
+                            borderWidth:
+                              "2px",
+                          }}
+                        />
+
+                        <span>
+                          Synthesizing
+                          Market
+                          Intelligence...
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span>
+                          Run Analysis
+                        </span>
+
+                        <ArrowRightIcon
+                          size={14}
+                        />
+
+                        <kbd className="studio-cta-shortcut-badge">
+                          {typeof navigator !==
+                            "undefined" &&
+                          navigator.platform
+                            ?.toUpperCase()
+                            .indexOf(
+                              "MAC"
+                            ) >= 0
+                            ? "⌘↵"
+                            : "Ctrl+↵"}
+                        </kbd>
+                      </>
+                    )}
+
+                  </button>
+
+                  <span className="studio-cta-caption">
+                    Queries live web
+                    data via Tavily
+                    API, benchmarks
+                    competitors, and
+                    calculates market
+                    sizing.
+                  </span>
+
+                </div>
+
+              </div>
+
+            </form>
+
+          </section>
+        )}
+
+        {/* ===================================
+            HOME DASHBOARD
+            ONLY BEFORE VALIDATION
+        =================================== */}
+
+        {!validationResult &&
+          !loading && (
+            <section className="founder-dashboard">
+
+              {/* =============================
+                  DASHBOARD HEADER
+              ============================= */}
+
+              <div className="founder-dashboard-header">
+
+                <div>
+
+                  <span className="dashboard-eyebrow">
+                    NEXUS INTELLIGENCE
+                  </span>
+
+                  <h2>
+                    Your Founder Dashboard
+                  </h2>
+
+                  <p>
+                    Everything you need to
+                    turn an early-stage idea
+                    into a structured,
+                    data-backed validation
+                    report.
+                  </p>
+
+                </div>
+
+                <button
+                  type="button"
+                  className="dashboard-start-btn"
+                  onClick={
+                    handleScrollToInput
+                  }
+                >
+                  Start Validation
+
+                  <ArrowRightIcon
+                    size={15}
+                  />
+                </button>
+
+              </div>
+
+              {/* =============================
+                  FOUR ANALYSIS MODULES
+              ============================= */}
+
+              <div className="dashboard-analysis-grid">
+
+                <article className="dashboard-analysis-card">
+
+                  <div className="dashboard-card-number">
+                    01
+                  </div>
+
+                  <h3>
+                    Market Intelligence
+                  </h3>
+
+                  <p>
+                    Market demand,
+                    trends, sizing and
+                    growth signals from
+                    live web research.
+                  </p>
+
+                </article>
+
+                <article className="dashboard-analysis-card">
+
+                  <div className="dashboard-card-number">
+                    02
+                  </div>
+
+                  <h3>
+                    Customer Intelligence
+                  </h3>
+
+                  <p>
+                    Understand your
+                    ideal customers,
+                    pain points and
+                    buying signals.
+                  </p>
+
+                </article>
+
+                <article className="dashboard-analysis-card">
+
+                  <div className="dashboard-card-number">
+                    03
+                  </div>
+
+                  <h3>
+                    Competitor Intelligence
+                  </h3>
+
+                  <p>
+                    Compare direct and
+                    indirect competitors,
+                    features and
+                    market gaps.
+                  </p>
+
+                </article>
+
+                <article className="dashboard-analysis-card">
+
+                  <div className="dashboard-card-number">
+                    04
+                  </div>
+
+                  <h3>
+                    Execution Strategy
+                  </h3>
+
+                  <p>
+                    Identify risks,
+                    MVP priorities and
+                    go-to-market
+                    opportunities.
+                  </p>
+
+                </article>
+
+              </div>
+
+              {/* =============================
+                  BOTTOM DASHBOARD
+              ============================= */}
+
+              <div className="dashboard-bottom-grid">
+
+                {/* HOW IT WORKS */}
+
+                <div className="dashboard-info-card">
+
+                  <span className="dashboard-small-label">
+                    HOW IT WORKS
+                  </span>
+
+                  <h3>
+                    From idea to validation
+                  </h3>
+
+                  <div className="dashboard-steps">
+
+                    <div className="dashboard-step">
+
+                      <span>
+                        1
+                      </span>
+
+                      <div>
+
+                        <strong>
+                          Describe your idea
+                        </strong>
 
                         <p>
-                          {option.description}
+                          Give NEXUS the
+                          problem, product
+                          and target
+                          audience.
                         </p>
 
                       </div>
 
-                      <div className="option-check">
-                        {isSelected
-                          ? "✓"
-                          : "→"}
+                    </div>
+
+                    <div className="dashboard-step">
+
+                      <span>
+                        2
+                      </span>
+
+                      <div>
+
+                        <strong>
+                          Run live research
+                        </strong>
+
+                        <p>
+                          NEXUS researches
+                          markets,
+                          customers and
+                          competitors.
+                        </p>
+
                       </div>
 
-                    </button>
-                  );
-                }
-              )}
+                    </div>
 
-            </div>
+                    <div className="dashboard-step">
 
-          </div>
+                      <span>
+                        3
+                      </span>
 
-          {/* =========================================
-              SELECTED VALIDATION
-          ========================================= */}
+                      <div>
 
-          <div className="selected-validation">
+                        <strong>
+                          Get your validation
+                          dossier
+                        </strong>
 
-            <div className="selected-icon">
-              {selectedValidation.icon}
-            </div>
+                        <p>
+                          Review market
+                          opportunities,
+                          risks, MVP and
+                          launch strategy.
+                        </p>
 
-            <div className="selected-info">
+                      </div>
 
-              <span>
-                SELECTED VALIDATION
-              </span>
+                    </div>
 
-              <strong>
-                {selectedValidation.title}
-              </strong>
+                  </div>
 
-              <p>
-                {selectedValidation.description}
-              </p>
+                </div>
 
-            </div>
+                {/* ACTIVITY */}
 
-          </div>
+                <div className="dashboard-activity-card">
 
-          {/* =========================================
-              INLINE ERROR
-          ========================================= */}
+                  <span className="dashboard-small-label">
+                    ACTIVITY
+                  </span>
 
-          {error && (
-            <div
-              className="inline-error"
-              role="alert"
-            >
+                  <div className="dashboard-activity-number">
+                    {activityCount ||
+                      0}
+                  </div>
 
-              <span>!</span>
+                  <h3>
+                    Validations completed
+                  </h3>
 
-              <p>
-                {error}
-              </p>
+                  <p>
+                    Your previous startup
+                    analyses are stored
+                    in the Activity Log.
+                  </p>
 
-            </div>
+                  <button
+                    type="button"
+                    className="dashboard-history-btn"
+                    onClick={() =>
+                      setHistoryModalOpen(
+                        true
+                      )
+                    }
+                  >
+                    <HistoryIcon
+                      size={15}
+                    />
+
+                    View History
+                  </button>
+
+                </div>
+
+              </div>
+
+            </section>
           )}
 
-          {/* =========================================
-              SUBMIT
-          ========================================= */}
+        {/* ===================================
+            LOADING
+        =================================== */}
 
-          <div className="validate-action">
+        {loading && (
+          <StreamingProgressLoader
+            conceptTitle={
+              submittedIdea ||
+              idea
+            }
+          />
+        )}
 
-            <button
-              type="submit"
-              className={`validate-button ${
-                idea.trim().length >= 10
-                  ? "active"
-                  : ""
-              }`}
-              disabled={
-                loading ||
-                idea.trim().length < 10
-              }
+        {/* ===================================
+            VALIDATION ERROR
+        =================================== */}
+
+        {validationError &&
+          !loading && (
+            <section className="error-section">
+
+              <div className="error-card">
+
+                <div className="error-icon">
+                  !
+                </div>
+
+                <div className="error-content">
+
+                  <span className="mini-label">
+                    VALIDATION ERROR
+                  </span>
+
+                  <h3>
+                    Analysis could not
+                    be completed
+                  </h3>
+
+                  <p>
+                    {
+                      validationError
+                    }
+                  </p>
+
+                  <div className="error-actions">
+
+                    <button
+                      type="button"
+                      className="retry-button"
+                      onClick={
+                        handleRetry
+                      }
+                    >
+                      ↻ Retry Validation
+                    </button>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </section>
+          )}
+
+        {/* ===================================
+            GENERAL ERROR
+        =================================== */}
+
+        {error &&
+          !loading &&
+          !validationError && (
+            <section className="error-section">
+
+              <div className="error-card">
+
+                <div className="error-icon">
+                  !
+                </div>
+
+                <div className="error-content">
+
+                  <span className="mini-label">
+                    VALIDATION ERROR
+                  </span>
+
+                  <h3>
+                    Something went wrong
+                  </h3>
+
+                  <p>
+                    {error}
+                  </p>
+
+                  <div className="error-actions">
+
+                    <button
+                      type="button"
+                      className="retry-button"
+                      onClick={
+                        handleRetry
+                      }
+                    >
+                      ↻ Retry Validation
+                    </button>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </section>
+          )}
+
+        {/* ===================================
+            RESULTS DASHBOARD
+            ONLY AFTER VALIDATION
+        =================================== */}
+
+        {validationResult &&
+          !loading &&
+          !error &&
+          !validationError && (
+            <section
+              id="results-dashboard"
+              style={{
+                width: "100%",
+                margin: "0 auto",
+              }}
             >
 
-              {loading ? (
-                <>
-                  <span className="button-spinner"></span>
-                  Researching...
-                </>
-              ) : (
-                <>
-                  <span>✦</span>
-                  Validate Idea
-                  <span className="button-arrow">
-                    →
-                  </span>
-                </>
-              )}
+              <ResultsDashboard
+                validationResult={
+                  validationResult
+                }
 
-            </button>
+                searchResults={
+                  results
+                }
 
-            <p className="validate-caption">
-              NEXUS will research real-time web sources
-              based on your selected validation focus.
-            </p>
+                submittedIdea={
+                  submittedIdea ||
+                  idea
+                }
 
-          </div>
+                submittedDomain={
+                  submittedDomain ||
+                  domain
+                }
 
-          {/* =========================================
-              INPUT HINT
-          ========================================= */}
+                submittedCustomers={
+                  submittedCustomers ||
+                  targetCustomers
+                }
 
-          <div className="input-hint">
+                onExport={
+                  handleExportActiveDossier
+                }
 
-            <span>💡</span>
+                onOpenHistory={() =>
+                  setHistoryModalOpen(
+                    true
+                  )
+                }
 
-            <p>
-              Include your target users, problem,
-              industry, or business model for better
-              research results.
-            </p>
+                onNewAnalysis={
+                  handleClear
+                }
+              />
 
-          </div>
+              {/* =============================
+                  STARTUP ADVISOR
+              ============================= */}
 
-        </form>
+              <StartupAdvisor
+                validationContext={{
+                  ...validationResult,
 
-      </section>
+                  idea:
+                    validationResult.idea ||
+                    submittedIdea ||
+                    idea,
 
-      {/* =========================================
-          LOADING
-      ========================================= */}
+                  domain:
+                    submittedDomain ||
+                    domain ||
+                    validationResult
+                      ?.market_analysis
+                      ?.industry,
 
-      {loading && (
+                  target_customer:
+                    submittedCustomers ||
+                    targetCustomers ||
+                    validationResult?.target_customer,
+                }}
+              />
 
-        <section className="loading-section">
+            </section>
+          )}
 
-          <div className="loading-card">
+        {/* ===================================
+            EMPTY RESULTS
+        =================================== */}
 
-            <div className="loading-animation">
-              <div className="loading-spinner"></div>
-            </div>
+        {!loading &&
+          !error &&
+          !validationError &&
+          searchCompleted &&
+          !validationResult &&
+          (!results ||
+            results.length === 0) && (
+            <section className="empty-results">
 
-            <div className="loading-content">
-
-              <span className="mini-label">
-                NEXUS RESEARCH ENGINE
-              </span>
+              <div className="empty-icon">
+                🔍
+              </div>
 
               <h2>
-                Researching Your Idea
+                No Relevant Information Found
               </h2>
 
               <p>
-                Searching real-time web sources for
-                relevant startup and market information.
+                We couldn't find enough
+                relevant information for
+                this startup idea. Try
+                adding more details.
               </p>
 
-              <div className="research-target">
-
-                <span>
-                  ANALYZING
-                </span>
-
-                <strong>
-                  {selectedValidation.title}
-                </strong>
-
-              </div>
-
-              {targetCustomers.trim() && (
-
-                <div className="research-target">
-
-                  <span>
-                    TARGET AUDIENCE
-                  </span>
-
-                  <strong>
-                    {targetCustomers.trim()}
-                  </strong>
-
-                </div>
-
-              )}
-
-              <div className="loading-steps">
-
-                <div className="loading-step completed">
-                  <span>✓</span>
-                  Processing startup idea
-                </div>
-
-                <div className="loading-step active">
-                  <span>◌</span>
-                  Searching web sources
-                </div>
-
-                <div className="loading-step">
-                  <span>○</span>
-                  Identifying market signals
-                </div>
-
-                <div className="loading-step">
-                  <span>○</span>
-                  Preparing validation
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </section>
-
-      )}
-
-      {/* =========================================
-          ERROR SECTION
-      ========================================= */}
-
-      {error && !loading && (
-
-        <section className="error-section">
-
-          <div className="error-card">
-
-            <div className="error-icon">
-              !
-            </div>
-
-            <div className="error-content">
-
-              <span className="mini-label">
-                VALIDATION ERROR
-              </span>
-
-              <h3>
-                Something went wrong
-              </h3>
-
-              <p>
-                {error}
-              </p>
-
-              <div className="error-actions">
-
-                <button
-                  type="button"
-                  className="retry-button"
-                  onClick={handleRetry}
-                >
-                  Try Again
-                </button>
-
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={handleClear}
-                >
-                  Clear
-                </button>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </section>
-
-      )}
-
-      {/* =========================================
-          VALIDATION RESULTS
-      ========================================= */}
-
-      {searchCompleted &&
-        !loading &&
-        !error && (
-
-          <section className="validation-dashboard">
-
-            {/* =========================================
-                HEADER
-            ========================================= */}
-
-            <div className="section-header">
-
-              <div className="section-number">
-                02
-              </div>
-
-              <div>
-
-                <h2>
-                  Validation Results
-                </h2>
-
-                <p>
-                  AI-powered research and analysis
-                  for your startup idea.
-                </p>
-
-              </div>
-
-              <div className="header-score-actions">
-
-                <div className="top-score-badge general-score">
-
-                  <span className="score-icon">
-                    ✦
-                  </span>
-
-                  <div className="score-info">
-
-                    <span className="score-label">
-                      RESEARCH CONFIDENCE
-                    </span>
-
-                    <strong className="score-value">
-                      HIGH
-                    </strong>
-
-                  </div>
-
-                </div>
-
-                <button
-                  type="button"
-                  className="clear-button"
-                  onClick={handleClear}
-                >
-                  ↻ New Idea
-                </button>
-
-              </div>
-
-            </div>
-
-            {/* =========================================
-                IDEA
-            ========================================= */}
-
-            <div className="idea-display">
-
-              <span>
-                ANALYZED STARTUP IDEA
-              </span>
-
-              <h3>
-                {submittedIdea}
-              </h3>
-
-            </div>
-
-            {/* =========================================
-                DOMAIN
-            ========================================= */}
-
-            {submittedDomain && (
-
-              <div className="idea-display domain-result">
-
-                <span>
-                  DOMAIN / INDUSTRY
-                </span>
-
-                <h3>
-                  {submittedDomain}
-                </h3>
-
-              </div>
-
-            )}
-
-            {/* =========================================
-                TARGET CUSTOMERS
-            ========================================= */}
-
-            {submittedCustomers && (
-
-              <div className="idea-display customer-result">
-
-                <span>
-                  TARGET CUSTOMERS
-                </span>
-
-                <h3>
-                  {submittedCustomers}
-                </h3>
-
-              </div>
-
-            )}
-
-            {/* =========================================
-                SELECTED ANALYSIS
-            ========================================= */}
-
-            <div className="selected-analysis">
-
-              <div className="selected-analysis-icon">
-                {selectedValidation.icon}
-              </div>
-
-              <div>
-
-                <span>
-                  VALIDATION AREA
-                </span>
-
-                <h3>
-                  {selectedValidation.title}
-                </h3>
-
-                <p>
-                  {selectedValidation.description}
-                </p>
-
-              </div>
-
-            </div>
-
-            {/* =========================================
-                DASHBOARD SUMMARY
-            ========================================= */}
-
-            <div className="dashboard-grid">
-
-              <div className="dashboard-card">
-
-                <div className="card-icon">
-                  🔎
-                </div>
-
-                <span className="card-label">
-                  SOURCES
-                </span>
-
-                <strong className="big-number">
-                  {results.length}
-                </strong>
-
-                <p>
-                  Relevant web sources found
-                </p>
-
-              </div>
-
-              <div className="dashboard-card">
-
-                <div className="card-icon">
-                  ✓
-                </div>
-
-                <span className="card-label">
-                  STATUS
-                </span>
-
-                <strong className="status-success">
-                  COMPLETE
-                </strong>
-
-                <p>
-                  Research completed
-                </p>
-
-              </div>
-
-              <div className="dashboard-card">
-
-                <div className="card-icon">
-                  🎯
-                </div>
-
-                <span className="card-label">
-                  CONFIDENCE
-                </span>
-
-                <strong className="big-number score-number">
-                  HIGH
-                </strong>
-
-                <p>
-                  Research confidence level
-                </p>
-
-              </div>
-
-              <div className="dashboard-card">
-
-                <div className="card-icon">
-                  🤖
-                </div>
-
-                <span className="card-label">
-                  ENGINE
-                </span>
-
-                <strong>
-                  NEXUS AI
-                </strong>
-
-                <p>
-                  AI-powered intelligence
-                </p>
-
-              </div>
-
-            </div>
-
-            {/* =========================================
-                WEB RESEARCH SOURCES
-            ========================================= */}
-
-            {results.length > 0 && (
-
-              <div className="results-section">
-
-                <div className="results-header">
-
-                  <div>
-
-                    <span className="mini-label">
-                      WEB INTELLIGENCE
-                    </span>
-
-                    <h3>
-                      Research Sources
-                    </h3>
-
-                  </div>
-
-                  <div className="result-count">
-
-                    <strong>
-                      {results.length}
-                    </strong>
-
-                    <span>
-                      {results.length === 1
-                        ? "Source"
-                        : "Sources"}
-                    </span>
-
-                  </div>
-
-                </div>
-
-                <div className="results-list">
-
-                  {results.map(
-                    (result, index) => (
-
-                      <SearchResultCard
-                        key={`${
-                          result?.url ||
-                          "result"
-                        }-${index}`}
-                        result={result}
-                        validationType={
-                          submittedValidation
-                        }
-                        targetCustomer={
-                          submittedCustomers
-                        }
-                      />
-
-                    )
-                  )}
-
-                </div>
-
-              </div>
-
-            )}
-
-            {/* =========================================
-                AI ANALYSIS LOADING
-            ========================================= */}
-
-            {validationLoading && (
-
-              <div className="analysis-loading">
-
-                <span className="button-spinner"></span>
-
-                <p>
-                  Analyzing market, customers,
-                  competitors and opportunities...
-                </p>
-
-              </div>
-
-            )}
-
-            {/* =========================================
-                AI ANALYSIS ERROR
-            ========================================= */}
-
-            {validationError && (
-
-              <div
-                className="inline-error"
-                role="alert"
+              <button
+                type="button"
+                className="primary-button"
+                onClick={
+                  handleClear
+                }
               >
+                Try Another Idea
+              </button>
 
-                <span>!</span>
+            </section>
+          )}
 
-                <p>
-                  {validationError}
-                </p>
+      </main>
 
-              </div>
+      {/* =====================================
+          AUTH MODAL
+      ===================================== */}
 
-            )}
+      <AuthModal
+        isOpen={
+          authModalOpen
+        }
+        onClose={() =>
+          setAuthModalOpen(
+            false
+          )
+        }
+      />
 
-            {/* =========================================
-                AI ANALYSIS RESULTS
-            ========================================= */}
+      {/* =====================================
+          SUPABASE MODAL
+      ===================================== */}
 
-            {validationResult && (
+      <SupabaseConfigModal
+        isOpen={
+          supabaseModalOpen
+        }
+        onClose={() =>
+          setSupabaseModalOpen(
+            false
+          )
+        }
+      />
 
-              <>
+      {/* =====================================
+          ACTIVITY LOG
+      ===================================== */}
 
-                {/* ================================
-                    DEEP VALIDATION
-                ================================= */}
+      <ActivityLogModal
+        isOpen={
+          historyModalOpen
+        }
+        onClose={() =>
+          setHistoryModalOpen(
+            false
+          )
+        }
+        onLoadIdeaIntoCanvas={
+          handleLoadIdeaFromHistory
+        }
+        onDuplicateIdea={
+          handleDuplicateIdea
+        }
+      />
 
-                {(validationResult.technical_feasibility ||
-                  validationResult.scientific_validation ||
-                  validationResult.regulatory_risk) && (
+      {/* =====================================
+          ADVISORY COPILOT BUTTON
+      ===================================== */}
 
-                  <DeepValidationCard
-                    technical={
-                      validationResult
-                        .technical_feasibility
-                    }
-                    scientific={
-                      validationResult
-                        .scientific_validation
-                    }
-                    regulatory={
-                      validationResult
-                        .regulatory_risk
-                    }
-                  />
+      <button
+        type="button"
+        className="advisory-float-trigger"
+        onClick={() =>
+          setIsAdvisoryOpen(
+            true
+          )
+        }
+        aria-label="Open Advisory Assistant"
+      >
 
-                )}
+        <SparklesIcon
+          size={15}
+        />
 
-                {/* ================================
-                    MARKET ANALYSIS
-                ================================= */}
+        <span>
+          Advisory Copilot
+        </span>
 
-                {validationResult.market_analysis && (
+        <kbd className="advisory-shortcut-badge">
+          {typeof navigator !==
+            "undefined" &&
+          navigator.platform
+            ?.toUpperCase()
+            .indexOf("MAC") >= 0
+            ? "⌘J"
+            : "Ctrl+J"}
+        </kbd>
 
-                  <MarketAnalysis
-                    data={
-                      validationResult
-                        .market_analysis
-                    }
-                  />
+      </button>
 
-                )}
+      {/* =====================================
+          ADVISORY SLIDE OVER
+      ===================================== */}
 
-                {/* ================================
-                    CUSTOMER SEGMENTS
-                ================================= */}
+      <AdvisorySlideOver
+        isOpen={
+          isAdvisoryOpen
+        }
+        onClose={() =>
+          setIsAdvisoryOpen(
+            false
+          )
+        }
+        currentIdea={
+          submittedIdea ||
+          idea
+        }
+        validationResult={
+          validationResult
+        }
+      />
 
-                {validationResult.market_analysis
-                  ?.customer_segments && (
-
-                  <CustomerSegments
-                    segments={
-                      validationResult
-                        .market_analysis
-                        .customer_segments
-                    }
-                  />
-
-                )}
-
-                {/* ================================
-                    COMPETITOR ANALYSIS
-                ================================= */}
-
-                {validationResult.competitor_analysis && (
-
-                  <CompetitorAnalysis
-                    data={
-                      validationResult
-                        .competitor_analysis
-                    }
-                  />
-
-                )}
-
-                {/* ================================
-                    MARKET GAPS
-                ================================= */}
-
-                {Array.isArray(
-                  validationResult
-                    .competitor_analysis
-                    ?.market_gaps
-                ) &&
-                  validationResult
-                    .competitor_analysis
-                    .market_gaps
-                    .length > 0 && (
-
-                    <MarketGaps
-                      gaps={
-                        validationResult
-                          .competitor_analysis
-                          .market_gaps
-                      }
-                    />
-
-                  )}
-
-              </>
-
-            )}
-
-          </section>
-
-        )}
-
-      {/* =========================================
-          NO RESULTS
-      ========================================= */}
-
-      {!loading &&
-        !error &&
-        searchCompleted &&
-        results.length === 0 && (
-
-          <section className="empty-results">
-
-            <div className="empty-icon">
-              🔍
-            </div>
-
-            <h2>
-              No Relevant Information Found
-            </h2>
-
-            <p>
-              We couldn't find enough relevant
-              information for this startup idea.
-              Try adding more details.
-            </p>
-
-            <button
-              type="button"
-              className="primary-button"
-              onClick={handleClear}
-            >
-              Try Another Idea
-            </button>
-
-          </section>
-
-        )}
-
-    </main>
+    </div>
   );
 }
 

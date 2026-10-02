@@ -6,3 +6,7 @@ __pycache__/
 server/venv/
 server/.env
 client/.env
+server/idea_*.json
+server/verify_live_api.py
+dist/
+*.log

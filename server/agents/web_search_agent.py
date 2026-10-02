@@ -1414,8 +1414,10 @@ async def _decompose_with_gemini_async(idea: str) -> Optional[Dict[str, str]]:
     """
     Decompose startup idea using Gemini with explicit primary business function instructions.
     """
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key or not api_key.strip():
+    from server.utils.gemini_client import get_gemini_api_key, get_groq_api_key
+    gemini_key = get_gemini_api_key()
+    groq_key = get_groq_api_key()
+    if not gemini_key and not groq_key:
         return None
 
     import httpx, json
@@ -1432,37 +1434,31 @@ Return ONLY a valid JSON object with these exact keys:
   "solution": "Core mechanism or solution (e.g. 'bidding and scheduling platform')"
 }}
 """
-    models = ["gemini-3.6-flash", "gemini-3-flash-preview", "gemini-flash-lite-latest", "gemini-2.5-flash"]
-    for model in models:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key.strip()}"
-        payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0.1, "responseMimeType": "application/json"}
-        }
-        try:
-            timeout_config = httpx.Timeout(15.0, connect=3.0)
-            async with httpx.AsyncClient(timeout=timeout_config) as client:
-                resp = await client.post(url, json=payload)
-                if resp.status_code == 200:
-                    cand = resp.json().get("candidates", [])
-                    if cand:
-                        parts = cand[0].get("content", {}).get("parts", [])
-                        if parts:
-                            raw_text = parts[0].get("text", "").strip()
-                            if raw_text.startswith("```"):
-                                raw_text = re.sub(r"^```(?:json)?\s*", "", raw_text, flags=re.MULTILINE)
-                                raw_text = re.sub(r"\s*```$", "", raw_text, flags=re.MULTILINE)
-                            res = json.loads(raw_text.strip())
-                            if isinstance(res, dict) and res.get("domain"):
-                                return {
-                                    "domain": str(res.get("domain", "")).strip(),
-                                    "audience": str(res.get("audience", "")).strip(),
-                                    "problem": str(res.get("problem", "")).strip(),
-                                    "solution": str(res.get("solution", "")).strip(),
-                                }
-        except Exception as exc:
-            logger.warning(f"Gemini decomposition call to {model} failed: {exc}")
-            continue
+    try:
+        from server.utils.gemini_client import call_gemini_generate_content, clean_llm_json_text
+        result = await call_gemini_generate_content(
+            prompt=prompt,
+            api_key=gemini_key,
+            temperature=0.1,
+            response_mime_type="application/json",
+            timeout_per_model=10.0,
+            tag="WEB-SEARCH-DECOMPOSITION"
+        )
+        if result:
+            raw_text, successful_model = result
+            cleaned = clean_llm_json_text(raw_text)
+            res = json.loads(cleaned.strip())
+            if isinstance(res, dict) and res.get("domain"):
+                logger.info(f"Gemini idea decomposition succeeded via {successful_model}")
+                return {
+                    "domain": str(res.get("domain", "")).strip(),
+                    "audience": str(res.get("audience", "")).strip(),
+                    "problem": str(res.get("problem", "")).strip(),
+                    "solution": str(res.get("solution", "")).strip(),
+                }
+    except Exception as exc:
+        logger.warning(f"Universal Gemini decomposition error: {exc}")
+
     return None
 
 

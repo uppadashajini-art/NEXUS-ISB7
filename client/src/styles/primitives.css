@@ -1,0 +1,535 @@
+/* ==============================================================================
+   NEXUS PRIMITIVES STYLESHEET
+   Button, Card, Badge, Input, Textarea, Tag, Tooltip
+   Hover, Focus-Visible (2px accent ring), Disabled states
+   ============================================================================== */
+
+/* --- Type Scale Classes --- */
+.type-display {
+  font-family: var(--font-family-base) !important;
+  font-size: var(--type-display-size);
+  line-height: var(--type-display-line);
+  font-weight: var(--type-display-weight);
+  letter-spacing: var(--type-display-tracking);
+  color: var(--text-primary);
+}
+
+.type-h1 {
+  font-family: var(--font-family-base) !important;
+  font-size: var(--type-h1-size);
+  line-height: var(--type-h1-line);
+  font-weight: var(--type-h1-weight);
+  letter-spacing: var(--type-h1-tracking);
+  color: var(--text-primary);
+}
+
+.type-h2 {
+  font-family: var(--font-family-base) !important;
+  font-size: var(--type-h2-size);
+  line-height: var(--type-h2-line);
+  font-weight: var(--type-h2-weight);
+  letter-spacing: var(--type-h2-tracking);
+  color: var(--text-primary);
+}
+
+.type-body {
+  font-family: var(--font-family-base) !important;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: var(--type-body-weight);
+  letter-spacing: var(--type-body-tracking);
+  color: var(--text-secondary);
+}
+
+.type-label {
+  font-family: var(--font-family-base) !important;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
+  font-weight: var(--type-label-weight);
+  letter-spacing: var(--type-label-tracking);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* ==============================================================================
+   1. BUTTON PRIMITIVE
+   ============================================================================== */
+
+.nexus-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 1px solid transparent;
+  font-family: var(--font-family-base) !important;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+.nexus-btn:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+.nexus-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--surface-bg), 0 0 0 4px var(--accent-idea);
+}
+
+/* Button Sizes */
+.nexus-btn--sm {
+  height: 32px;
+  padding: 0 var(--space-3);
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+}
+
+.nexus-btn--md {
+  height: 40px;
+  padding: 0 var(--space-4);
+  font-size: 14px;
+  border-radius: var(--radius-sm);
+}
+
+.nexus-btn--lg {
+  height: 48px;
+  padding: 0 var(--space-6);
+  font-size: 15px;
+  border-radius: var(--radius-md);
+}
+
+/* Button Variants */
+.nexus-btn--primary {
+  background: var(--brand-gradient);
+  color: #0B0B0E;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.nexus-btn--primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.nexus-btn--secondary {
+  background: var(--surface-2);
+  border-color: var(--surface-border);
+  color: var(--text-primary);
+}
+
+.nexus-btn--secondary:hover:not(:disabled) {
+  background: #1C1C24;
+  border-color: var(--surface-border-strong);
+}
+
+.nexus-btn--ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.nexus-btn--ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.nexus-btn:disabled,
+.nexus-btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ==============================================================================
+   2. CARD PRIMITIVE
+   ============================================================================== */
+
+.nexus-card {
+  position: relative;
+  background-color: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.nexus-card--surface-2 {
+  background-color: var(--surface-2);
+}
+
+/* Elevation Levels */
+.nexus-card--elevated-1 {
+  box-shadow: var(--elevation-1);
+}
+
+.nexus-card--elevated-2 {
+  box-shadow: var(--elevation-2);
+}
+
+.nexus-card--elevated-3 {
+  box-shadow: var(--elevation-3);
+  border-radius: var(--radius-lg);
+}
+
+/* Card Padding */
+.nexus-card--p-none {
+  padding: 0;
+}
+
+.nexus-card--p-sm {
+  padding: var(--space-4);
+}
+
+.nexus-card--p-md {
+  padding: var(--space-6);
+}
+
+.nexus-card--p-lg {
+  padding: var(--space-8);
+}
+
+/* ==============================================================================
+   3. BADGE PRIMITIVE
+   ============================================================================== */
+
+.nexus-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-base) !important;
+  font-size: var(--type-label-size);
+  line-height: var(--type-label-line);
+  font-weight: var(--type-label-weight);
+  letter-spacing: var(--type-label-tracking);
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  user-select: none;
+  width: fit-content;
+}
+
+.nexus-badge--idea {
+  background: rgba(255, 199, 44, 0.12);
+  border-color: rgba(255, 199, 44, 0.25);
+  color: var(--accent-idea);
+}
+
+.nexus-badge--market {
+  background: rgba(255, 138, 31, 0.12);
+  border-color: rgba(255, 138, 31, 0.25);
+  color: var(--accent-market);
+}
+
+.nexus-badge--customer {
+  background: rgba(255, 90, 78, 0.12);
+  border-color: rgba(255, 90, 78, 0.25);
+  color: var(--accent-customer);
+}
+
+.nexus-badge--competitor {
+  background: rgba(242, 61, 92, 0.12);
+  border-color: rgba(242, 61, 92, 0.25);
+  color: var(--accent-competitor);
+}
+
+.nexus-badge--feasibility {
+  background: rgba(45, 212, 191, 0.12);
+  border-color: rgba(45, 212, 191, 0.25);
+  color: var(--accent-feasibility);
+}
+
+.nexus-badge--advisory {
+  background: rgba(139, 124, 246, 0.12);
+  border-color: rgba(139, 124, 246, 0.25);
+  color: var(--accent-advisory);
+}
+
+.nexus-badge--neutral {
+  background: var(--surface-2);
+  border-color: var(--surface-border);
+  color: var(--text-secondary);
+}
+
+/* ==============================================================================
+   4. INPUT & TEXTAREA PRIMITIVES
+   ============================================================================== */
+
+.nexus-field-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.nexus-field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nexus-field-label {
+  font-family: var(--font-family-base) !important;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.nexus-field-hint {
+  font-family: var(--font-family-base) !important;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.nexus-input,
+.nexus-textarea {
+  width: 100%;
+  background-color: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-family-base) !important;
+  font-size: 14px;
+  line-height: 20px;
+  padding: 10px 12px;
+  outline: none;
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.nexus-input:hover:not(:disabled),
+.nexus-textarea:hover:not(:disabled) {
+  border-color: var(--surface-border-strong);
+}
+
+.nexus-input:focus-visible,
+.nexus-textarea:focus-visible {
+  border-color: var(--accent-idea);
+  box-shadow: 0 0 0 2px var(--surface-bg), 0 0 0 4px var(--accent-idea);
+}
+
+.nexus-input:disabled,
+.nexus-textarea:disabled {
+  opacity: 0.45;
+  background-color: var(--surface-2);
+  cursor: not-allowed;
+}
+
+.nexus-field--error .nexus-input,
+.nexus-field--error .nexus-textarea {
+  border-color: var(--accent-competitor);
+}
+
+.nexus-field--error .nexus-input:focus-visible,
+.nexus-field--error .nexus-textarea:focus-visible {
+  box-shadow: 0 0 0 2px var(--surface-bg), 0 0 0 4px var(--accent-competitor);
+}
+
+.nexus-field-helper {
+  font-family: var(--font-family-base) !important;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.nexus-field-helper--error {
+  color: var(--accent-competitor);
+}
+
+.nexus-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* ==============================================================================
+   5. TAG PRIMITIVE
+   ============================================================================== */
+
+.nexus-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  color: var(--text-secondary);
+  font-family: var(--font-family-base) !important;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: default;
+  user-select: none;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.nexus-tag--interactive {
+  cursor: pointer;
+}
+
+.nexus-tag--interactive:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  border-color: var(--surface-border-strong);
+}
+
+.nexus-tag--selected {
+  background: rgba(255, 199, 44, 0.12);
+  border-color: rgba(255, 199, 44, 0.3);
+  color: var(--accent-idea);
+}
+
+.nexus-tag:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--surface-bg), 0 0 0 4px var(--accent-idea);
+}
+
+.nexus-tag-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: 2px;
+  line-height: 1;
+}
+
+.nexus-tag-close-btn:hover {
+  color: var(--text-primary);
+}
+
+/* ==============================================================================
+   6. TOOLTIP PRIMITIVE
+   ============================================================================== */
+
+.nexus-tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.nexus-tooltip-content {
+  position: absolute;
+  z-index: 1000;
+  pointer-events: none;
+  background: var(--surface-2);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--elevation-2);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  color: var(--text-primary);
+  font-family: var(--font-family-base) !important;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast),
+    visibility var(--transition-fast);
+}
+
+.nexus-tooltip-content--visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Tooltip Placements */
+.nexus-tooltip-content--top {
+  bottom: calc(100% + var(--space-2));
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+}
+.nexus-tooltip-content--top.nexus-tooltip-content--visible {
+  transform: translateX(-50%) translateY(0);
+}
+
+.nexus-tooltip-content--bottom {
+  top: calc(100% + var(--space-2));
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+}
+.nexus-tooltip-content--bottom.nexus-tooltip-content--visible {
+  transform: translateX(-50%) translateY(0);
+}
+
+.nexus-tooltip-content--left {
+  right: calc(100% + var(--space-2));
+  top: 50%;
+  transform: translateY(-50%) translateX(4px);
+}
+.nexus-tooltip-content--left.nexus-tooltip-content--visible {
+  transform: translateY(-50%) translateX(0);
+}
+
+.nexus-tooltip-content--right {
+  left: calc(100% + var(--space-2));
+  top: 50%;
+  transform: translateY(-50%) translateX(-4px);
+}
+.nexus-tooltip-content--right.nexus-tooltip-content--visible {
+  transform: translateY(-50%) translateX(0);
+}
+
+/* ==============================================================================
+   7. MODAL OVERLAY & CARD PRIMITIVES (TOKEN ALIGNED)
+   ============================================================================== */
+
+.nexus-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  animation: modalFadeIn var(--transition-fast) ease-out;
+}
+
+.nexus-modal-card {
+  background: var(--surface);
+  border: 1px solid var(--surface-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-3);
+  width: 100%;
+  max-width: 520px;
+  overflow: hidden;
+  position: relative;
+  animation: modalSlideUp var(--transition-base) var(--ease-nexus);
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+

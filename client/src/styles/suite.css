@@ -1,0 +1,462 @@
+/* ==============================================================================
+   ANALYSIS SUITE STYLESHEET
+   4 Core Module Cards (2x2 Grid) • Top 2px Accent Lines • Tinted Badges & Chips
+   Integrations & Data Sources (3x2 Grid) • Lucide 1.5 Stroke Colored Icon Tiles
+   Montserrat 11px Uppercase Tracking on all labels (Zero Monospace)
+   ============================================================================== */
+
+.suite-section {
+  max-width: 1200px;
+  margin: var(--space-12) auto var(--space-16) auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+/* ==============================================================================
+   SECTION HEADER & FILTER TABS
+   ============================================================================== */
+
+.suite-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.suite-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: fit-content;
+  padding: 4px 10px;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-base) !important;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.suite-headline-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.suite-title {
+  font-family: var(--font-family-base) !important;
+  font-size: clamp(22px, 3vw, 28px);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2) 0;
+}
+
+.suite-subtitle {
+  font-family: var(--font-family-base) !important;
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 620px;
+}
+
+/* Filter Tabs Row (All, Idea, Market, Customer, Competitor) */
+.suite-filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+.suite-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-family-base) !important;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.suite-tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.suite-tab-btn.active {
+  background: var(--surface);
+  border-color: var(--surface-border-strong);
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: var(--elevation-1);
+}
+
+/* ==============================================================================
+   4 CORE MODULE CARDS (2x2 GRID)
+   ============================================================================== */
+
+.suite-modules-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .suite-modules-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.suite-module-card {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+/* 2px Top Accent Line */
+.suite-module-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--module-accent);
+}
+
+/* Hover: Lift 2px & border brightens to accent */
+.suite-module-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--module-accent);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 12px rgba(var(--module-accent-rgb), 0.15);
+}
+
+.suite-module-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.suite-module-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Tinted Index Badge (Montserrat uppercase 11px tracking) */
+.suite-index-badge {
+  font-family: var(--font-family-base) !important;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--module-accent);
+  background: rgba(var(--module-accent-rgb), 0.12);
+  border: 1px solid rgba(var(--module-accent-rgb), 0.25);
+  border-radius: var(--radius-sm);
+  padding: 2px 7px;
+  line-height: 16px;
+  flex-shrink: 0;
+}
+
+.suite-module-card-title {
+  font-family: var(--font-family-base) !important;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.suite-module-card-subtitle {
+  font-family: var(--font-family-base) !important;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-3) 0;
+}
+
+.suite-module-card-desc {
+  font-family: var(--font-family-base) !important;
+  font-size: 13px;
+  line-height: 22px;
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-5) 0;
+  flex-grow: 1;
+}
+
+/* 3 Stat Tiles */
+.suite-stat-tiles-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: var(--space-5);
+}
+
+@media (max-width: 480px) {
+  .suite-stat-tiles-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.suite-stat-tile {
+  background: var(--surface-2);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.suite-stat-label {
+  font-family: var(--font-family-base) !important;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+}
+
+.suite-stat-val {
+  font-family: var(--font-family-base) !important;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 3 Tag Chips: Accent at 10% bg, 30% border, Montserrat 11px uppercase tracking */
+.suite-tag-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.suite-tag-chip {
+  font-family: var(--font-family-base) !important;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: rgba(var(--module-accent-rgb), 0.10);
+  border: 1px solid rgba(var(--module-accent-rgb), 0.30);
+  color: var(--text-primary);
+  padding: 4px 10px;
+  border-radius: 4px;
+  line-height: 14px;
+}
+
+/* Module accent variable mappings */
+.module-accent-idea {
+  --module-accent: var(--accent-idea);
+  --module-accent-rgb: 255, 199, 44;
+}
+
+.module-accent-market {
+  --module-accent: var(--accent-market);
+  --module-accent-rgb: 255, 138, 31;
+}
+
+.module-accent-customer {
+  --module-accent: var(--accent-customer);
+  --module-accent-rgb: 255, 90, 78;
+}
+
+.module-accent-competitor {
+  --module-accent: var(--accent-competitor);
+  --module-accent-rgb: 242, 61, 92;
+}
+
+/* ==============================================================================
+   INTEGRATIONS & DATA SOURCES (3x2 GRID)
+   ============================================================================== */
+
+.suite-integrations-card {
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+@media (max-width: 600px) {
+  .suite-integrations-card {
+    padding: var(--space-5);
+  }
+}
+
+.suite-integrations-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.suite-integrations-title {
+  font-family: var(--font-family-base) !important;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  margin: var(--space-2) 0 4px 0;
+}
+
+.suite-integrations-subtitle {
+  font-family: var(--font-family-base) !important;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.suite-scroll-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-family-base) !important;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
+  white-space: nowrap;
+}
+
+.suite-scroll-btn:hover {
+  background: #1C1C24;
+  border-color: var(--surface-border-strong);
+  transform: translateY(-1px);
+}
+
+/* 3x2 Grid */
+.suite-integrations-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 960px) {
+  .suite-integrations-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 580px) {
+  .suite-integrations-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.suite-integration-item {
+  background: var(--surface-2);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.suite-integration-item:hover {
+  border-color: var(--surface-border-strong);
+  background: #1C1C26;
+  transform: translateY(-1px);
+}
+
+/* Small Colored Icon Tile (Lucide-react 1.5 stroke) */
+.suite-icon-tile {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--tile-accent-rgb), 0.12);
+  border: 1px solid rgba(var(--tile-accent-rgb), 0.25);
+  color: var(--tile-accent);
+  flex-shrink: 0;
+}
+
+.suite-integration-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.suite-integration-provider {
+  font-family: var(--font-family-base) !important;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+}
+
+.suite-integration-name {
+  font-family: var(--font-family-base) !important;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 20px;
+}
+
+.suite-integration-desc {
+  font-family: var(--font-family-base) !important;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--text-secondary);
+  margin: 4px 0 0 0;
+}

@@ -2,6 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from server.routes.validation import router as validation_router
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Ensure server/.env is loaded
+env_path = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 from server.routes import search
 
@@ -17,6 +23,12 @@ app.add_middleware(
 
 app.include_router(validation_router)
 app.include_router(search.router)
+
+try:
+    from server.routes.advisor import router as advisor_router
+    app.include_router(advisor_router)
+except ImportError:
+    pass
 
 
 @app.get("/")

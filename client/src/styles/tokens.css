@@ -1,0 +1,249 @@
+/* ==============================================================================
+   NEXUS FOUNDATION DESIGN TOKENS
+   Restrained, enterprise-grade design system
+   Font: Montserrat only • No glows • No emojis • Precise elevations
+   ============================================================================== */
+
+:root {
+  /* --- Typography --- */
+  --font-family-base: 'Montserrat', sans-serif;
+  --font-family-form: 'Montserrat', sans-serif;
+  --font-family-code: 'Montserrat', sans-serif;
+
+  /* Type Scale */
+  --type-display-size: 48px;
+  --type-display-line: 56px;
+  --type-display-weight: 700;
+  --type-display-tracking: -0.02em;
+
+  --type-h1-size: 32px;
+  --type-h1-line: 40px;
+  --type-h1-weight: 700;
+  --type-h1-tracking: -0.015em;
+
+  --type-h2-size: 20px;
+  --type-h2-line: 28px;
+  --type-h2-weight: 600;
+  --type-h2-tracking: -0.01em;
+
+  --type-body-size: 15px;
+  --type-body-line: 24px;
+  --type-body-weight: 400;
+  --type-body-tracking: 0;
+
+  --type-label-size: 11px;
+  --type-label-line: 16px;
+  --type-label-weight: 600;
+  --type-label-tracking: 0.08em;
+
+  /* --- Surfaces --- */
+  --surface-bg: #0B0B0E;
+  --surface: #121217;
+  --surface-2: #17171E;
+  --surface-border: rgba(255, 255, 255, 0.07);
+  --surface-border-strong: rgba(255, 255, 255, 0.12);
+
+  /* --- Text --- */
+  --text-primary: #F5F5F7;
+  --text-secondary: #A1A1AA;
+  --text-tertiary: #8E8E98;
+
+  /* --- Brand Gradient --- */
+  --brand-gradient: linear-gradient(135deg, #FFC72C 0%, #FF8A1F 50%, #F23D5C 100%);
+
+  /* --- Accents --- */
+  --accent-idea: #FFC72C;
+  --accent-market: #FF8A1F;
+  --accent-customer: #FF5A4E;
+  --accent-competitor: #F23D5C;
+  --accent-feasibility: #2DD4BF;
+  --accent-advisory: #8B7CF6;
+
+  /* --- 4px Spacing Scale --- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-9: 36px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* --- Radii --- */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* --- Three Elevation Levels (Architectural, No Default-Looking Shadows) --- */
+  --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--surface-border);
+  --elevation-2: 0 4px 12px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--surface-border);
+  --elevation-3: 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--surface-border-strong);
+
+  /* Focus Ring */
+  --focus-ring: 0 0 0 2px #0B0B0E, 0 0 0 4px var(--accent-idea);
+
+  /* --- Motion Tokens --- */
+  --ease-nexus: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --duration-150: 150ms;
+  --duration-250: 250ms;
+  --duration-400: 400ms;
+
+  --transition-fast: 150ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --transition-base: 250ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --transition-slow: 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ==============================================================================
+   GLOBAL RESET & FONT ENFORCEMENT
+   Apply Montserrat to html/body and all form controls.
+   Purge every other font-family, including monospace.
+   ============================================================================== */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--surface-bg);
+  color: var(--text-primary);
+  font-family: var(--font-family-base) !important;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  font-weight: var(--type-body-weight);
+  letter-spacing: var(--type-body-tracking);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Form controls & code elements: Force Montserrat */
+button,
+input,
+textarea,
+select,
+optgroup,
+label,
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-family-base) !important;
+}
+
+/* Base Headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-base) !important;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+/* Focus Visible Utility */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+/* =========================================================
+   NEXUS LIGHT / DARK THEME TOKENS
+   ========================================================= */
+
+[data-theme="light"] {
+  --surface-bg: #faf9f5;
+  --surface: #ffffff;
+  --surface-2: #f5f3ed;
+
+  --surface-border: rgba(0, 0, 0, 0.08);
+  --surface-border-strong: rgba(0, 0, 0, 0.14);
+
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-tertiary: #71717a;
+
+  --bg: #faf9f5;
+  --card: #ffffff;
+  --card-light: #f5f3ed;
+  --card-hover: #eeeae0;
+
+  --gold: #d97706;
+  --gold-light: #f59e0b;
+  --gold-dark: #b45309;
+
+  --orange: #ea580c;
+  --orange-light: #f97316;
+
+  --coral: #ef4444;
+  --coral-light: #f87171;
+  --crimson: #dc2626;
+
+  --text: #18181b;
+  --secondary: #52525b;
+  --muted: #71717a;
+
+  --border: #e4e4e7;
+  --border-light: #d4d4d8;
+
+  --success: #16a34a;
+  --danger: #dc2626;
+
+  --elevation-1:
+    0 1px 2px rgba(0, 0, 0, 0.08),
+    0 0 0 1px var(--surface-border);
+
+  --elevation-2:
+    0 4px 12px rgba(0, 0, 0, 0.10),
+    0 0 0 1px var(--surface-border);
+
+  --elevation-3:
+    0 12px 32px rgba(0, 0, 0, 0.14),
+    0 0 0 1px var(--surface-border-strong);
+
+  --focus-ring:
+    0 0 0 2px #ffffff,
+    0 0 0 4px var(--accent-idea);
+}
+
+[data-theme="dark"] {
+  --surface-bg: #0B0B0E;
+  --surface: #121217;
+  --surface-2: #17171E;
+
+  --surface-border: rgba(255, 255, 255, 0.07);
+  --surface-border-strong: rgba(255, 255, 255, 0.12);
+
+  --text-primary: #F5F5F7;
+  --text-secondary: #A1A1AA;
+  --text-tertiary: #8E8E98;
+
+  --bg: #09090b;
+  --card: #121214;
+  --card-light: #18181b;
+  --card-hover: #202024;
+
+  --gold: #f59e0b;
+  --gold-light: #fbbf24;
+  --gold-dark: #d97706;
+
+  --orange: #ea580c;
+  --orange-light: #f97316;
+
+  --coral: #ef4444;
+  --coral-light: #f87171;
+  --crimson: #dc2626;
+
+  --text: #fafafa;
+  --secondary: #a1a1aa;
+  --muted: #71717a;
+
+  --border: #27272a;
+  --border-light: #3f3f46;
+
+  --success: #22c55e;
+  --danger: #ef4444;
+}
