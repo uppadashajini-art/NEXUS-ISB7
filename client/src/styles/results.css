@@ -7,7 +7,6 @@
 
    Main Navbar = 64px
    Result Navigation = sticky below main navbar
-
    ============================================================================== */
 
 
@@ -23,61 +22,67 @@
   max-width: 1280px;
 
   margin: 0 auto;
-
   gap: 32px;
 
   position: relative;
 
   box-sizing: border-box;
+
+  /* Important for sticky children */
+  overflow: visible;
 }
 
 @media (max-width: 900px) {
   .results-master-container {
     gap: var(--space-5);
-
     padding: 0 12px;
+    overflow: visible;
   }
 }
 
 
 /* ==============================================================================
    RESULTS NAVIGATION / LEFT RAIL
-   ==============================================================================
 
-   Desktop:
-   Small vertical navigation rail.
-
-   Mobile:
-   Horizontal sticky navigation.
-
+   IMPORTANT:
+   This is the actual navigation containing:
+   Overview
+   Research
+   Analysis
+   Strategy
+   Report
    ============================================================================== */
 
 .results-sidebar-rail {
-  position: sticky;
+  position: sticky !important;
 
-  top: 80px;
+  /* Main NEXUS navbar = 64px */
+  top: 64px !important;
 
   width: 220px;
   min-width: 220px;
 
+  align-self: flex-start;
+
   background: var(--surface);
 
   border: 1px solid var(--surface-border);
-
   border-radius: var(--radius-md);
 
   padding: 8px;
 
   display: flex;
   flex-direction: column;
-
   gap: 4px;
 
-  z-index: 50;
+  z-index: 950;
 
   box-shadow: var(--elevation-1);
 
   box-sizing: border-box;
+
+  /* Important */
+  overflow: visible;
 }
 
 
@@ -91,25 +96,44 @@
 
 
 /* ==============================================================================
+   RESULT CONTENT
+   ============================================================================== */
+
+.results-content-area {
+  flex: 1;
+
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 24px;
+
+  overflow: visible;
+}
+
+
+/* ==============================================================================
    MOBILE RESULT NAVIGATION
    ============================================================================== */
 
 @media (max-width: 900px) {
-  .results-sidebar-rail {
-    position: sticky;
 
-    /*
-      Main NEXUS navbar is 64px.
-      Keep result navigation directly below it.
-    */
-    top: 64px;
+  .results-sidebar-rail {
+    position: sticky !important;
+
+    /* Stay directly below main navbar */
+    top: 64px !important;
 
     width: 100%;
     min-width: 100%;
 
+    align-self: stretch;
+
     flex-direction: row;
 
     overflow-x: auto;
+    overflow-y: hidden;
 
     scrollbar-width: none;
 
@@ -122,10 +146,11 @@
     background: rgba(18, 18, 23, 0.95);
 
     backdrop-filter: blur(16px);
-
     -webkit-backdrop-filter: blur(16px);
 
     border-radius: var(--radius-md);
+
+    z-index: 950;
   }
 
   .results-sidebar-rail::-webkit-scrollbar {
@@ -134,13 +159,16 @@
 }
 
 
-/* Light theme */
+/* ==============================================================================
+   LIGHT THEME
+   ============================================================================== */
 
 [data-theme="light"] .results-sidebar-rail {
   background: var(--surface);
 }
 
 @media (max-width: 900px) {
+
   [data-theme="light"] .results-sidebar-rail {
     background: rgba(255, 255, 255, 0.95);
   }
@@ -172,7 +200,6 @@
   font-family: var(--font-family-base) !important;
 
   font-size: 13px;
-
   font-weight: 500;
 
   cursor: pointer;
@@ -192,9 +219,10 @@
 }
 
 
-/* Mobile items should not stretch */
+/* Mobile items */
 
 @media (max-width: 900px) {
+
   .results-rail-item {
     width: auto;
 
@@ -225,7 +253,7 @@
 }
 
 
-/* Active state */
+/* Active */
 
 .results-rail-item.active {
   color: var(--rail-accent);
@@ -253,23 +281,6 @@
 
 
 /* ==============================================================================
-   MAIN CONTENT AREA
-   ============================================================================== */
-
-.results-content-area {
-  flex: 1;
-
-  min-width: 0;
-
-  display: flex;
-
-  flex-direction: column;
-
-  gap: 24px;
-}
-
-
-/* ==============================================================================
    RESULT SECTION CARD
    ============================================================================== */
 
@@ -283,7 +294,6 @@
   padding: 28px;
 
   display: flex;
-
   flex-direction: column;
 
   gap: 20px;
@@ -296,6 +306,7 @@
 }
 
 @media (max-width: 640px) {
+
   .results-section-card {
     padding: 20px;
   }
@@ -373,7 +384,6 @@
 
 /* ==============================================================================
    OVERVIEW
-   SCORE RING + KPI CARDS + EXECUTIVE SUMMARY
    ============================================================================== */
 
 .overview-top-row {
@@ -387,6 +397,7 @@
 }
 
 @media (max-width: 800px) {
+
   .overview-top-row {
     grid-template-columns: 1fr;
   }
@@ -423,7 +434,6 @@
   transform: rotate(-90deg);
 
   width: 140px;
-
   height: 140px;
 }
 
@@ -516,6 +526,7 @@
 }
 
 @media (max-width: 500px) {
+
   .kpi-cards-grid {
     grid-template-columns: 1fr;
   }
@@ -624,6 +635,7 @@
 
 .exec-bullet {
   width: 6px;
+
   height: 6px;
 
   border-radius: 50%;
@@ -740,6 +752,7 @@
 }
 
 @media (max-width: 800px) {
+
   .market-layout-grid {
     grid-template-columns: 1fr;
   }
@@ -853,6 +866,7 @@
 }
 
 @media (max-width: 700px) {
+
   .personas-grid {
     grid-template-columns: 1fr;
   }
@@ -1030,6 +1044,7 @@
 }
 
 @media (max-width: 800px) {
+
   .mvp-three-columns {
     grid-template-columns: 1fr;
   }
@@ -1145,6 +1160,7 @@
 }
 
 @media (max-width: 800px) {
+
   .gtm-timeline-container {
     grid-template-columns: 1fr;
   }
@@ -1336,7 +1352,7 @@
 }
 
 
-/* FIXED: escaped class selector */
+/* FIXED */
 
 .streaming-step-row.completed {
   color: var(--text-secondary);
@@ -1354,6 +1370,7 @@
    ============================================================================== */
 
 @keyframes resultsShimmer {
+
   0% {
     background-position: -200% 0;
   }
@@ -1361,6 +1378,7 @@
   100% {
     background-position: 200% 0;
   }
+
 }
 
 .results-skeleton {
@@ -1396,6 +1414,7 @@
    ============================================================================== */
 
 @media (max-width: 640px) {
+
   .results-master-container {
     gap: 16px;
   }
@@ -1424,6 +1443,7 @@
 
 
 @media (prefers-reduced-motion: reduce) {
+
   .score-ring-fill,
   .feasibility-fill,
   .market-tier-fill,
@@ -1432,19 +1452,5 @@
     animation: none;
     transition: none;
   }
-}
-/* ============================================================
-   RESULTS SUB-NAV — STICKY WHILE SCROLLING
-   ============================================================ */
 
-.results-subnav {
-  position: sticky;
-  top: 64px; /* height of main NEXUS navbar */
-  z-index: 900;
-
-  background: var(--surface-bg);
-  border-bottom: 1px solid var(--surface-border);
-
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
 }
