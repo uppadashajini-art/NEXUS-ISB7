@@ -1433,3 +1433,18 @@
     transition: none;
   }
 }
+/* ============================================================
+   RESULTS SUB-NAV — STICKY WHILE SCROLLING
+   ============================================================ */
+
+.results-subnav {
+  position: sticky;
+  top: 64px; /* height of main NEXUS navbar */
+  z-index: 900;
+
+  background: var(--surface-bg);
+  border-bottom: 1px solid var(--surface-border);
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
