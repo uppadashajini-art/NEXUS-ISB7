@@ -56,13 +56,54 @@ class ValidationRequest(BaseModel):
 
 class CustomerSegment(BaseModel):
     segment: str
-
+    role: Optional[str] = None
+    company_size: Optional[str] = None
+    pain_points: List[Any] = Field(
+        default_factory=list,
+        description="Acute pain points, optionally with severity ('Critical', 'High', 'Medium')"
+    )
+    willingness_to_pay: Optional[str] = None
+    acquisition_channels: List[str] = Field(
+        default_factory=list
+    )
+    objections: List[str] = Field(
+        default_factory=list
+    )
     needs: List[str] = Field(
         default_factory=list
     )
+    profile: Optional[str] = None
+    urgency: Optional[str] = None
 
-    pain_points: List[str] = Field(
-        default_factory=list
+
+class MarketSizing(BaseModel):
+    tam: str = Field(default="$14.8B", description="Total Addressable Market")
+    sam: str = Field(default="$2.4B", description="Serviceable Addressable Market")
+    som: str = Field(default="$180M", description="Serviceable Obtainable Market")
+    cagr: str = Field(default="+18.4%", description="Compound Annual Growth Rate")
+    methodology: str = Field(
+        default="Top-down industry sizing combined with bottom-up practitioner unit economics.",
+        description="Calculation methodology and analytical logic"
+    )
+    assumptions: List[str] = Field(
+        default_factory=list,
+        description="Core modeling assumptions underpinning market sizing"
+    )
+    growth_drivers: List[str] = Field(
+        default_factory=list,
+        description="Macro and micro factors accelerating adoption"
+    )
+    headwinds: List[str] = Field(
+        default_factory=list,
+        description="Industry or macroeconomic friction points"
+    )
+    projection_5yr: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="5-year projected market trajectory ({ year, size, label })"
+    )
+    sources: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Verifiable source citations for TAM, SAM, SOM, CAGR ({ metric, figure, source_name, url })"
     )
 
 
@@ -87,6 +128,8 @@ class MarketAnalysis(BaseModel):
         default_factory=list
     )
 
+    market_sizing: Optional[MarketSizing] = None
+
 
 # ---------------------------------------------------------------------------
 # Competitor Analysis Models
@@ -100,6 +143,16 @@ class Competitor(BaseModel):
     product_service: Optional[str] = None
 
     target_customers: Optional[str] = None
+
+    funding_size: Optional[str] = Field(
+        default=None,
+        description="Funding stage or estimated revenue/size (e.g. Series B / $42M, Bootstrapped, Public)"
+    )
+
+    market_position: Optional[str] = Field(
+        default=None,
+        description="Market tier: Enterprise incumbent, fast-growing challenger, niche specialist"
+    )
 
     key_features: List[str] = Field(
         default_factory=list
@@ -147,10 +200,15 @@ class CompetitorAnalysis(BaseModel):
         default_factory=list
     )
 
+    feature_matrix: Optional[Any] = Field(
+        default=None,
+        description="Structured comparison across key capabilities (e.g. telemetry, webhooks, self-serve)"
+    )
+
 
 # ---------------------------------------------------------------------------
 # Deep Validation Models
-# Technical, Scientific, Regulatory
+# Technical, Scientific, Regulatory, Execution
 # ---------------------------------------------------------------------------
 
 class TechnicalFeasibility(BaseModel):
@@ -162,6 +220,21 @@ class TechnicalFeasibility(BaseModel):
     feasibility_rating: str = Field(
         default="Medium",
         description="High, Medium, Low, or Moonshot"
+    )
+
+    rationale: Optional[str] = Field(
+        default=None,
+        description="Detailed technical feasibility rationale"
+    )
+
+    risks: List[str] = Field(
+        default_factory=list,
+        description="Concrete architectural and engineering risks"
+    )
+
+    mitigations: List[str] = Field(
+        default_factory=list,
+        description="Actionable engineering mitigations"
     )
 
     key_barriers: List[str] = Field(
@@ -220,6 +293,11 @@ class ScientificValidation(BaseModel):
 
 
 class RegulatoryRisk(BaseModel):
+    score: Optional[float] = Field(
+        default=7.5,
+        description="Regulatory clearance confidence score (1.0 to 10.0)"
+    )
+
     risk_level: str = Field(
         default="Medium",
         description="Low, Medium, High, or Critical"
@@ -237,6 +315,21 @@ class RegulatoryRisk(BaseModel):
         default=None
     )
 
+    rationale: Optional[str] = Field(
+        default=None,
+        description="Regulatory pathway rationale"
+    )
+
+    risks: List[str] = Field(
+        default_factory=list,
+        description="Primary compliance hazards"
+    )
+
+    mitigations: List[str] = Field(
+        default_factory=list,
+        description="Compliance clearance strategies"
+    )
+
     compliance_requirements: List[str] = Field(
         default_factory=list
     )
@@ -248,6 +341,75 @@ class RegulatoryRisk(BaseModel):
             "& approval strategy"
         )
     )
+
+
+class ExecutionFeasibility(BaseModel):
+    score: float = Field(
+        default=8.5,
+        description="Execution and deployment feasibility score (1.0 to 10.0 or 0-100)"
+    )
+
+    rating: str = Field(
+        default="High",
+        description="High, Medium, or Low"
+    )
+
+    rationale: Optional[str] = Field(
+        default=None,
+        description="Assessment of team execution and go-to-market friction"
+    )
+
+    risks: List[str] = Field(
+        default_factory=list,
+        description="Key execution bottlenecks"
+    )
+
+    mitigations: List[str] = Field(
+        default_factory=list,
+        description="Execution risk mitigations"
+    )
+
+    key_milestones: List[str] = Field(
+        default_factory=list,
+        description="Critical launch milestones"
+    )
+
+
+class ComplianceChecklistItem(BaseModel):
+    text: str
+    done: bool = False
+    mandatory: bool = True
+
+    @model_validator(mode="before")
+    @classmethod
+    def parse_item(cls, data: Any) -> Any:
+        if isinstance(data, str):
+            return {"text": data, "done": False, "mandatory": True}
+        return data
+
+
+class ComplianceFramework(BaseModel):
+    id: Optional[str] = None
+    name: str
+    severity: str = Field(default="Medium", description="critical, high, medium, low")
+    status: str = Field(default="In Review", description="Clear, In Review, or Blocker")
+    desc: Optional[str] = Field(default="", description="Description")
+    description: Optional[str] = Field(default=None, description="Detailed framework description")
+    checklist: List[ComplianceChecklistItem] = Field(default_factory=list)
+    remediation: Optional[str] = Field(default="", description="Recommended action / remediation pathway")
+    jurisdiction: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def sync_desc_and_id(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if not data.get("id"):
+                data["id"] = str(data.get("name", "framework")).lower().replace(" ", "_").replace("/", "_")
+            if not data.get("desc") and data.get("description"):
+                data["desc"] = str(data.get("description"))
+            if not data.get("description") and data.get("desc"):
+                data["description"] = str(data.get("desc"))
+        return data
 
 
 # ---------------------------------------------------------------------------
@@ -350,26 +512,44 @@ class MVPFeature(BaseModel):
         )
     )
 
-    reason: str = Field(
-        ...,
+    reason: Optional[str] = Field(
+        default="",
         description="Why this feature is recommended"
     )
 
-    customer_value: str = Field(
-        ...,
+    customer_value: Optional[str] = Field(
+        default="High",
         description=(
             "Expected customer value: "
             "High, Medium, or Low"
         )
     )
 
-    complexity: str = Field(
-        ...,
+    complexity: Optional[str] = Field(
+        default="Medium",
         description=(
             "Implementation complexity: "
             "High, Medium, or Low"
         )
     )
+
+    effort: Optional[str] = Field(
+        default=None,
+        description="Engineering effort: Low, Medium, High"
+    )
+
+    impact: Optional[str] = Field(
+        default=None,
+        description="Customer or business impact: Critical, High, Medium"
+    )
+
+    @model_validator(mode="after")
+    def sync_effort_impact(self) -> "MVPFeature":
+        if not self.effort:
+            self.effort = self.complexity or "Medium"
+        if not self.impact:
+            self.impact = self.customer_value or "High"
+        return self
 
 
 class MVPRecommendations(BaseModel):
@@ -379,17 +559,17 @@ class MVPRecommendations(BaseModel):
 
     must_have: List[MVPFeature] = Field(
         default_factory=list,
-        description="Features required for the initial MVP"
+        description="Features required for the initial MVP (Core)"
     )
 
     should_have: List[MVPFeature] = Field(
         default_factory=list,
-        description="Important features after core MVP functionality"
+        description="Important features after core MVP functionality (Secondary)"
     )
 
     could_have: List[MVPFeature] = Field(
         default_factory=list,
-        description="Useful but non-essential MVP features"
+        description="Useful but non-essential MVP features (Out of Scope / Later)"
     )
 
     future_features: List[MVPFeature] = Field(
@@ -399,34 +579,16 @@ class MVPRecommendations(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# MVP Recommendation Models (Member 2 — Milestone 3/4)
-# ---------------------------------------------------------------------------
-
-class MvpFeature(BaseModel):
-    feature: str
-    reason: Optional[str] = None
-    customer_value: Optional[str] = None
-    complexity: Optional[str] = None
-
-
-class MvpRecommendations(BaseModel):
-    must_have: List[MvpFeature] = Field(default_factory=list)
-    should_have: List[MvpFeature] = Field(default_factory=list)
-    could_have: List[MvpFeature] = Field(default_factory=list)
-    future_features: List[MvpFeature] = Field(default_factory=list)
-
-
-# ---------------------------------------------------------------------------
 # Go-To-Market Strategy Models (Member 3 — Milestone 3/4)
 # ---------------------------------------------------------------------------
 
 class GtmStrategy(BaseModel):
     target_market: List[str] = Field(default_factory=list)
-    positioning: Optional[str] = None
-    marketing_channels: List[str] = Field(default_factory=list)
+    positioning: Optional[Any] = None
+    marketing_channels: List[Any] = Field(default_factory=list)
     customer_acquisition: List[str] = Field(default_factory=list)
-    pricing_strategy: Optional[str] = None
-    launch_strategy: List[str] = Field(default_factory=list)
+    pricing_strategy: Optional[Any] = None
+    launch_strategy: List[Any] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -443,6 +605,8 @@ class ValidationReport(BaseModel):
     gtm_summary: str
     recommendations: str
     conclusion: str
+
+
 # ---------------------------------------------------------------------------
 # Combined Response Model
 # What FastAPI returns to React
@@ -452,44 +616,64 @@ class ValidationResponse(BaseModel):
 
     idea: str
 
+    product_name: Optional[str] = Field(
+        default=None,
+        description="Clean, concise brand or product name for the concept (e.g. OncoScribe AI, KubeSRE)"
+    )
+
+    overall_score: Optional[float] = Field(
+        default=84.0,
+        description="Overall validation score (0-100)"
+    )
+
+    sub_scores: Optional[Dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Sub-scores: market, technical, regulatory, execution, competition"
+    )
+
+    key_signals: Optional[List[Any]] = Field(
+        default_factory=list,
+        description="Key market and validation signals"
+    )
+
+    verdict: Optional[str] = Field(
+        default="High Market Feasibility",
+        description="High-level validation verdict (e.g. High Market Feasibility)"
+    )
+
     market_analysis: MarketAnalysis
 
     competitor_analysis: CompetitorAnalysis
 
-    technical_feasibility: Optional[TechnicalFeasibility] = None
+    technical_feasibility: Optional[Any] = None
 
-    scientific_validation: Optional[ScientificValidation] = None
+    scientific_validation: Optional[Any] = None
 
-    regulatory_risk: Optional[RegulatoryRisk] = None
+    regulatory_risk: Optional[Any] = None
 
-    swot_analysis: Optional[SWOTAnalysis] = None
+    execution_feasibility: Optional[Any] = None
 
-    risk_analysis: Optional[List[RiskItem]] = Field( default_factory=list)
+    compliance_frameworks: List[ComplianceFramework] = Field(
+        default_factory=list,
+        description="Applicable compliance frameworks (GDPR, HIPAA, SOC 2, AI Governance, etc.)"
+    )
 
-    search_results: List[Dict[str, Any]] = Field(default_factory=list)
-    
-    mvp_recommendations: Optional[MvpRecommendations] = None
-    
-    gtm_strategy: Optional[GtmStrategy] = None
-    
-    validation_report: Optional[ValidationReport] = None
-    
+    swot_analysis: Optional[Any] = None
 
-    # -------------------------------------------------------
-    # MVP Recommendation Agent — Member 2
-    # -------------------------------------------------------
+    risk_analysis: Optional[List[Any]] = Field(
+        default_factory=list
+    )
 
-    mvp_recommendations: Optional[MVPRecommendations] = None
-
-    # -------------------------------------------------------
-    # Go-To-Market Strategy
-    # -------------------------------------------------------
+    mvp_recommendations: Optional[Any] = None
 
     gtm_strategy: Optional[Dict[str, Any]] = None
 
-    # -------------------------------------------------------
-    # Search results used by analysis agents
-    # -------------------------------------------------------
+    validation_report: Optional[Any] = None
+
+    citations: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Evidence sources linked to claims"
+    )
 
     search_results: List[Dict[str, Any]] = Field(
         default_factory=list

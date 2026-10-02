@@ -1,30 +1,34 @@
 :root {
-  --bg: #11100e;
+  --bg: #09090b;
 
-  --card: #1c1a17;
-  --card-light: #211e1a;
-  --card-hover: #231f1b;
+  --card: #121214;
+  --card-light: #18181b;
+  --card-hover: #202024;
 
-  --gold: #e8c77b;
-  --gold-light: #f3d995;
-  --gold-dark: #cfae5d;
+  --gold: #f59e0b;
+  --gold-light: #fbbf24;
+  --gold-dark: #d97706;
 
-  --coral: #ff7657;
-  --coral-light: #ff856a;
+  --orange: #ea580c;
+  --orange-light: #f97316;
 
-  --text: #f5f1e8;
-  --secondary: #a9a39a;
-  --muted: #777169;
+  --coral: #ef4444;
+  --coral-light: #f87171;
+  --crimson: #dc2626;
 
-  --border: #38342e;
-  --border-light: #514b42;
+  --text: #fafafa;
+  --secondary: #a1a1aa;
+  --muted: #71717a;
 
-  --success: #9fd6a4;
-  --danger: #ffb4a7;
+  --border: #27272a;
+  --border-light: #3f3f46;
 
-  --radius-lg: 20px;
-  --radius-md: 15px;
-  --radius-sm: 10px;
+  --success: #22c55e;
+  --danger: #ef4444;
+
+  --radius-lg: 8px;
+  --radius-md: 6px;
+  --radius-sm: 4px;
 }
 
 
@@ -98,61 +102,15 @@ button:disabled {
 
 .startup-validator {
   position: relative;
-
-  width: min(1050px, 92%);
+  width: min(1280px, 94%);
   min-height: 100vh;
-
   margin: 0 auto;
-  padding: 75px 0 100px;
-
-  overflow: hidden;
-
-  animation: containerReveal 0.8s ease-out;
+  padding: 16px 0 60px;
 }
-
-
-/* =========================================================
-   BACKGROUND GLOWS
-========================================================= */
 
 .startup-validator::before,
 .startup-validator::after {
-  content: "";
-
-  position: fixed;
-
-  width: 420px;
-  height: 420px;
-
-  border-radius: 50%;
-
-  filter: blur(120px);
-
-  opacity: 0.07;
-
-  pointer-events: none;
-
-  z-index: -1;
-}
-
-.startup-validator::before {
-  top: -150px;
-  left: -180px;
-
-  background: var(--gold);
-
-  animation:
-    floatGlowGold 12s ease-in-out infinite;
-}
-
-.startup-validator::after {
-  right: -180px;
-  bottom: -120px;
-
-  background: var(--coral);
-
-  animation:
-    floatGlowCoral 15s ease-in-out infinite reverse;
+  display: none !important;
 }
 
 

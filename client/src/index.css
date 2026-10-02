@@ -1,34 +1,39 @@
-* {
+@import "./styles/tokens.css";
+
+*, *::before, *::after {
   box-sizing: border-box;
+  font-family: var(--font-family-base) !important;
 }
 
 html {
   scroll-behavior: smooth;
+  background-color: var(--surface-bg);
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-
-  font-family:
-    "Plus Jakarta Sans",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
-
+  font-family: var(--font-family-base) !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-
-  background: #11100e;
-  color: #f5f1e8;
-
+  background: var(--surface-bg);
+  color: var(--text-primary);
   overflow-x: hidden;
+}
 
-  animation: pageFadeIn 0.8s ease-out;
+button,
+input,
+textarea,
+select,
+optgroup,
+label,
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-family-base) !important;
 }
 
 h1,
@@ -37,10 +42,11 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: "Outfit", sans-serif;
-  letter-spacing: -0.02em;
+  font-family: var(--font-family-base) !important;
+  color: var(--text-primary);
 }
 
 #root {
   min-height: 100vh;
+  background: var(--surface-bg);
 }

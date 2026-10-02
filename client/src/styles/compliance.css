@@ -1,0 +1,269 @@
+/* ==============================================================================
+   COMPLIANCE SCREEN STYLESHEET
+   GDPR • HIPAA • Financial (SOC 2 / PCI) • AI Governance (EU AI Act)
+   Severity Badges • Risk Checklist • Actionable Founder Remediation
+   ============================================================================== */
+
+.compliance-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .compliance-container {
+    padding: 20px;
+  }
+}
+
+.compliance-header-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.compliance-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-family-base) !important;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-feasibility);
+}
+
+.compliance-eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-feasibility);
+}
+
+.compliance-title {
+  margin: 0;
+  font-family: var(--font-family-base) !important;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 28px;
+}
+
+.compliance-subcopy {
+  margin: 0;
+  font-family: var(--font-family-base) !important;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 20px;
+  max-width: 680px;
+}
+
+/* Compliance Chips Filter / Quick Summary Strip */
+.compliance-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+}
+
+@media (max-width: 768px) {
+  .compliance-summary-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 440px) {
+  .compliance-summary-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+.compliance-metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.compliance-metric-label {
+  font-family: var(--font-family-base) !important;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+}
+
+.compliance-metric-val {
+  font-family: var(--font-family-base) !important;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* 4 Core Framework Grid */
+.compliance-frameworks-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 860px) {
+  .compliance-frameworks-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.compliance-chip-card {
+  background: var(--surface-2);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.compliance-chip-card:hover {
+  border-color: var(--surface-border-strong);
+  transform: translateY(-1px);
+}
+
+.compliance-chip-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.compliance-chip-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.compliance-chip-icon-box {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.compliance-chip-title {
+  font-family: var(--font-family-base) !important;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 20px;
+}
+
+/* Severity Badges */
+.compliance-severity-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-family-base) !important;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.compliance-severity-badge.critical {
+  color: var(--accent-competitor);
+  background: rgba(242, 61, 92, 0.12);
+  border: 1px solid rgba(242, 61, 92, 0.35);
+}
+
+.compliance-severity-badge.high {
+  color: var(--accent-market);
+  background: rgba(255, 138, 31, 0.12);
+  border: 1px solid rgba(255, 138, 31, 0.35);
+}
+
+.compliance-severity-badge.medium {
+  color: var(--accent-idea);
+  background: rgba(255, 199, 44, 0.12);
+  border: 1px solid rgba(255, 199, 44, 0.35);
+}
+
+.compliance-severity-badge.low {
+  color: var(--accent-feasibility);
+  background: rgba(45, 212, 191, 0.12);
+  border: 1px solid rgba(45, 212, 191, 0.35);
+}
+
+.compliance-chip-desc {
+  font-family: var(--font-family-base) !important;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 18px;
+}
+
+/* Requirement Checklist */
+.compliance-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 0;
+  list-style: none;
+  margin: 0;
+}
+
+.compliance-check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-family: var(--font-family-base) !important;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 16px;
+}
+
+.compliance-check-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.compliance-remediation-box {
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.compliance-remediation-label {
+  font-family: var(--font-family-base) !important;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+}
+
+.compliance-remediation-text {
+  font-family: var(--font-family-base) !important;
+  font-size: 12px;
+  color: var(--text-primary);
+  line-height: 16px;
+}

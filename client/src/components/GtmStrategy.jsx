@@ -1,5 +1,40 @@
 import React, { useState } from "react";
 
+function renderSafe(val, fallback = "") {
+  if (val === null || val === undefined) return fallback;
+  if (typeof val === "string") return val;
+  if (typeof val === "number" || typeof val === "boolean") return String(val);
+  if (Array.isArray(val)) return val.map((v) => renderSafe(v)).filter(Boolean).join(", ");
+  if (typeof val === "object") {
+    return (
+      val.pain ||
+      val.pain_point ||
+      val.text ||
+      val.description ||
+      val.desc ||
+      val.why ||
+      val.reason ||
+      val.action ||
+      val.channel ||
+      val.tactic ||
+      val.tactics ||
+      val.metric ||
+      val.name ||
+      val.title ||
+      val.point ||
+      val.tier ||
+      val.price ||
+      val.segment ||
+      val.persona ||
+      val.why_they_care ||
+      val.core_problem ||
+      val.buying_behavior ||
+      JSON.stringify(val)
+    );
+  }
+  return String(val);
+}
+
 /**
  * GtmStrategy Component
  * Member 3 — NEXUS AI Startup Idea Validator
@@ -699,20 +734,20 @@ export default function GtmStrategy({ gtmStrategy }) {
           {(customer_segments.length > 0 ? customer_segments : target_market).map((seg, idx) => (
             <div key={idx} className="segment-card">
               <div className="segment-title">
-                {seg.type && <span style={{ color: "#e28743", marginRight: "6px" }}>[{seg.type}]</span>}
-                {seg.segment}
+                {seg.type && <span style={{ color: "#e28743", marginRight: "6px" }}>[{renderSafe(seg.type)}]</span>}
+                {renderSafe(seg.segment || seg.persona || seg.name || `Persona ${idx + 1}`)}
               </div>
               {seg.why_they_care && (
-                <p className="segment-detail"><strong>Why They Care:</strong> {seg.why_they_care}</p>
+                <p className="segment-detail"><strong>Why They Care:</strong> {renderSafe(seg.why_they_care)}</p>
               )}
               {seg.core_problem && (
-                <p className="segment-detail"><strong>Core Problem:</strong> {seg.core_problem}</p>
+                <p className="segment-detail"><strong>Core Problem:</strong> {renderSafe(seg.core_problem)}</p>
               )}
               {seg.buying_behavior && (
-                <p className="segment-detail"><strong>Buying Behavior:</strong> {seg.buying_behavior}</p>
+                <p className="segment-detail"><strong>Buying Behavior:</strong> {renderSafe(seg.buying_behavior)}</p>
               )}
               {seg.profile && !seg.why_they_care && (
-                <p className="segment-detail">{seg.profile}</p>
+                <p className="segment-detail">{renderSafe(seg.profile)}</p>
               )}
             </div>
           ))}
@@ -728,21 +763,21 @@ export default function GtmStrategy({ gtmStrategy }) {
             pain_points.map((pt, idx) => (
               <div key={idx} className="pain-item">
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <span className="pain-source-tag">{pt.evidence_source || "inference"}</span>
-                  <span style={{ fontSize: "0.74rem", color: "#a8a29e" }}>Affected: {pt.affected_segment}</span>
+                  <span className="pain-source-tag">{renderSafe(pt.evidence_source, "inference")}</span>
+                  <span style={{ fontSize: "0.74rem", color: "#a8a29e" }}>Affected: {renderSafe(pt.affected_segment || pt.persona || pt.segment, "Target Users")}</span>
                 </div>
-                <p className="pain-desc">{pt.pain_point}</p>
+                <p className="pain-desc">{renderSafe(pt.pain_point || pt.pain || pt.description || pt.text || pt)}</p>
               </div>
             ))
           ) : (
             <div>
               <div className="pain-item">
                 <span className="pain-source-tag">Problem Solved</span>
-                <p className="pain-desc">{positioning.problem_solved || "Core friction addressed by the solution."}</p>
+                <p className="pain-desc">{renderSafe(positioning?.problem_solved, "Core friction addressed by the solution.")}</p>
               </div>
               <div className="pain-item">
                 <span className="pain-source-tag">Target Beneficiary</span>
-                <p className="pain-desc">{positioning.target_user || "Target users needing automated workflows."}</p>
+                <p className="pain-desc">{renderSafe(positioning?.target_user, "Target users needing automated workflows.")}</p>
               </div>
             </div>
           )}
@@ -761,15 +796,15 @@ export default function GtmStrategy({ gtmStrategy }) {
             competitors.map((comp, idx) => (
               <div key={idx} className="comp-item">
                 <div>
-                  <div className="comp-name">{comp.name}</div>
+                  <div className="comp-name">{renderSafe(comp.name)}</div>
                   <div style={{ fontSize: "0.8rem", color: "#b8b2a7", marginTop: "2px" }}>
-                    {comp.product}
+                    {renderSafe(comp.product || comp.what_they_offer || comp.description)}
                   </div>
                 </div>
                 <div>
                   {comp.pricing ? (
                     <span className="comp-badge-verified">
-                      Verified: {comp.pricing}
+                      Verified: {renderSafe(comp.pricing)}
                     </span>
                   ) : (
                     <span className="comp-badge-unverified">
@@ -797,8 +832,8 @@ export default function GtmStrategy({ gtmStrategy }) {
               <div className="metrics-grid">
                 {Object.entries(unit_economics.metrics).map(([key, val], idx) => (
                   <div key={idx} className="metric-cell">
-                    <span className="metric-label">{key.replace(/_/g, " ")}</span>
-                    <div className="metric-val">{String(val)}</div>
+                    <span className="metric-label">{renderSafe(key).replace(/_/g, " ")}</span>
+                    <div className="metric-val">{renderSafe(val)}</div>
                   </div>
                 ))}
               </div>
@@ -807,7 +842,7 @@ export default function GtmStrategy({ gtmStrategy }) {
                   <strong>Key Assumptions:</strong>
                   <ul style={{ margin: "4px 0 0 0", paddingLeft: "18px" }}>
                     {unit_economics.assumptions.map((asm, aIdx) => (
-                      <li key={aIdx}>{asm}</li>
+                      <li key={aIdx}>{renderSafe(asm)}</li>
                     ))}
                   </ul>
                 </div>
@@ -833,10 +868,10 @@ export default function GtmStrategy({ gtmStrategy }) {
             {marketing_channels.map((ch, idx) => (
               <div key={idx} style={{ background: "rgba(0,0,0,0.25)", padding: "12px 14px", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.05)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                  <span style={{ fontWeight: 700, fontSize: "0.92rem", color: "#f5f1e8" }}>{ch.channel}</span>
-                  <span style={{ fontSize: "0.72rem", background: "rgba(255,255,255,0.06)", padding: "2px 7px", borderRadius: "4px", color: "#d1c7b7" }}>{ch.category}</span>
+                  <span style={{ fontWeight: 700, fontSize: "0.92rem", color: "#f5f1e8" }}>{renderSafe(ch.channel || ch.name)}</span>
+                  <span style={{ fontSize: "0.72rem", background: "rgba(255,255,255,0.06)", padding: "2px 7px", borderRadius: "4px", color: "#d1c7b7" }}>{renderSafe(ch.category || ch.type, "Outbound")}</span>
                 </div>
-                <p style={{ margin: 0, fontSize: "0.84rem", color: "#b8b2a7", lineHeight: 1.4 }}>{ch.tactics}</p>
+                <p style={{ margin: 0, fontSize: "0.84rem", color: "#b8b2a7", lineHeight: 1.4 }}>{renderSafe(ch.tactics || ch.tactic || ch.description)}</p>
               </div>
             ))}
           </div>
@@ -849,21 +884,21 @@ export default function GtmStrategy({ gtmStrategy }) {
             <h3 className="gtm-card-title">Monetization & Pricing Tiers</h3>
           </div>
           <div style={{ marginBottom: "12px", fontSize: "0.92rem", fontWeight: 700, color: "#e28743" }}>
-            {pricingModel}
+            {renderSafe(pricingModel)}
           </div>
           {priceTiers.length > 0 ? (
             priceTiers.map((tier, idx) => (
               <div key={idx} className="tier-card">
                 <div className="tier-head">
-                  <span>{tier.tier}</span>
-                  <span className="tier-price">{tier.price}</span>
+                  <span>{renderSafe(tier.tier || tier.name)}</span>
+                  <span className="tier-price">{renderSafe(tier.price)}</span>
                 </div>
-                <div style={{ fontSize: "0.82rem", color: "#b8b2a7" }}>{tier.description}</div>
+                <div style={{ fontSize: "0.82rem", color: "#b8b2a7" }}>{renderSafe(tier.description || tier.details)}</div>
               </div>
             ))
           ) : (
             <div style={{ background: "rgba(0,0,0,0.25)", padding: "14px", borderRadius: "8px", fontSize: "0.88rem", lineHeight: 1.5, color: "#d1c7b7" }}>
-              {pricingRationale}
+              {renderSafe(pricingRationale)}
             </div>
           )}
         </div>
@@ -880,15 +915,17 @@ export default function GtmStrategy({ gtmStrategy }) {
             {risks.map((rk, idx) => (
               <div key={idx} className="risk-item">
                 <div className="risk-top">
-                  <span style={{ fontWeight: 700, fontSize: "0.92rem", color: "#f5f1e8" }}>{rk.risk}</span>
-                  <span className={`risk-severity ${rk.severity === "high" ? "risk-high" : rk.severity === "medium" ? "risk-medium" : "risk-low"}`}>
-                    {rk.severity}
+                  <span style={{ fontWeight: 700, fontSize: "0.92rem", color: "#f5f1e8" }}>{renderSafe(rk.risk || rk.title)}</span>
+                  <span className={`risk-severity ${String(renderSafe(rk.severity)).toLowerCase() === "high" ? "risk-high" : String(renderSafe(rk.severity)).toLowerCase() === "medium" ? "risk-medium" : "risk-low"}`}>
+                    {renderSafe(rk.severity, "medium")}
                   </span>
                 </div>
-                <p style={{ margin: "4px 0 8px 0", fontSize: "0.82rem", color: "#b8b2a7", lineHeight: 1.4 }}>{rk.why}</p>
+                {rk.why && (
+                  <p style={{ margin: "4px 0 8px 0", fontSize: "0.82rem", color: "#b8b2a7", lineHeight: 1.4 }}>{renderSafe(rk.why)}</p>
+                )}
                 <div style={{ fontSize: "0.8rem", background: "rgba(255,255,255,0.02)", padding: "8px 10px", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.04)" }}>
-                  <div><strong style={{ color: "#e28743" }}>Cheap Test:</strong> <span style={{ color: "#e6e0d4" }}>{rk.cheap_test}</span></div>
-                  <div style={{ marginTop: "4px" }}><strong style={{ color: "#10b981" }}>Success Metric:</strong> <span style={{ color: "#d1c7b7" }}>{rk.success_metric}</span></div>
+                  <div><strong style={{ color: "#e28743" }}>Cheap Test:</strong> <span style={{ color: "#e6e0d4" }}>{renderSafe(rk.cheap_test || rk.test)}</span></div>
+                  <div style={{ marginTop: "4px" }}><strong style={{ color: "#10b981" }}>Success Metric:</strong> <span style={{ color: "#d1c7b7" }}>{renderSafe(rk.success_metric || rk.metric)}</span></div>
                 </div>
               </div>
             ))}
@@ -912,7 +949,7 @@ export default function GtmStrategy({ gtmStrategy }) {
                 className={`phase-tab ${activePhaseIndex === idx ? "active" : ""}`}
                 onClick={() => setActivePhaseIndex(idx)}
               >
-                {phase.phase}
+                {renderSafe(phase.phase || `Phase ${idx + 1}`)}
               </button>
             ))}
           </div>
@@ -920,16 +957,21 @@ export default function GtmStrategy({ gtmStrategy }) {
           {roadmapPhases[activePhaseIndex] && (
             <div className="phase-content">
               <div className="phase-obj">
-                Objective: {roadmapPhases[activePhaseIndex].objective}
+                Objective: {renderSafe(roadmapPhases[activePhaseIndex].objective || roadmapPhases[activePhaseIndex].title)}
               </div>
               <ul className="phase-actions-list">
-                {roadmapPhases[activePhaseIndex].key_actions?.map((action, aIdx) => (
+                {(roadmapPhases[activePhaseIndex].key_actions || roadmapPhases[activePhaseIndex].actions || []).map((action, aIdx) => (
                   <li key={aIdx} className="phase-action-item">
                     <span className="action-check">✓</span>
-                    <span>{action}</span>
+                    <span>{renderSafe(action)}</span>
                   </li>
                 ))}
               </ul>
+              {roadmapPhases[activePhaseIndex].success_metric && (
+                <div style={{ marginTop: "12px", fontSize: "0.82rem", color: "#34d399", fontWeight: 600 }}>
+                  Target Metric: {renderSafe(roadmapPhases[activePhaseIndex].success_metric)}
+                </div>
+              )}
             </div>
           )}
         </div>
