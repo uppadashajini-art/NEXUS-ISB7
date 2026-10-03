@@ -658,6 +658,17 @@ function StartupValidator({
 
       setSearchCompleted(true);
 
+      // Smoothly navigate founder to the top of the validation results dashboard
+      setTimeout(() => {
+        const dashboardEl = document.getElementById("results-dashboard");
+        if (dashboardEl) {
+          dashboardEl.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      }, 100);
+
       // -----------------------------------------
       // AUTO SAVE TO SUPABASE
       // -----------------------------------------

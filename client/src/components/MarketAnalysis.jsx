@@ -23,12 +23,12 @@ export default function MarketAnalysis({ data }) {
   } = data;
 
   return (
-    <section className="analysis-card market-analysis-card" style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid rgba(255, 255, 255, 0.06)", borderRadius: "14px", padding: "24px" }}>
+    <section className="analysis-card market-analysis-card">
       <div className="section-title-wrap" style={{ marginBottom: "20px" }}>
         <span className="card-mini-badge" style={{ background: "linear-gradient(135deg, rgba(255,199,44,0.15), rgba(255,138,31,0.15))", color: "#FFC72C", border: "1px solid rgba(255,199,44,0.3)" }}>
           MARKET INTELLIGENCE
         </span>
-        <h2 style={{ fontSize: "1.4rem", fontWeight: 700, margin: "6px 0 0 0", color: "#f5f1e8" }}>Market Analysis</h2>
+        <h2 className="analysis-card-title">Market Analysis</h2>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
@@ -37,7 +37,7 @@ export default function MarketAnalysis({ data }) {
             <h3 style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#FFC72C", marginBottom: "6px" }}>
               Industry
             </h3>
-            <p style={{ margin: 0, fontSize: "0.95rem", color: "#e6e0d4", lineHeight: 1.5 }}>{renderSafe(industry)}</p>
+            <p className="analysis-body-text">{renderSafe(industry)}</p>
           </div>
         )}
 
@@ -46,7 +46,7 @@ export default function MarketAnalysis({ data }) {
             <h3 style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#FFC72C", marginBottom: "6px" }}>
               Market Opportunity
             </h3>
-            <p style={{ margin: 0, fontSize: "0.92rem", color: "#d1c7b7", lineHeight: 1.6 }}>{renderSafe(market_opportunity)}</p>
+            <p className="analysis-body-text">{renderSafe(market_opportunity)}</p>
           </div>
         )}
 
@@ -55,7 +55,7 @@ export default function MarketAnalysis({ data }) {
             <h3 style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#FFC72C", marginBottom: "6px" }}>
               Market Trends
             </h3>
-            <ul style={{ margin: 0, paddingLeft: "18px", color: "#d1c7b7", fontSize: "0.88rem", lineHeight: 1.6 }}>
+            <ul className="analysis-list">
               {market_trends.map((trend, i) => (
                 <li key={i} style={{ marginBottom: "6px" }}>{renderSafe(trend)}</li>
               ))}
@@ -68,7 +68,7 @@ export default function MarketAnalysis({ data }) {
             <h3 style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#34d399", marginBottom: "6px" }}>
               Growth Drivers
             </h3>
-            <ul style={{ margin: 0, paddingLeft: "18px", color: "#d1c7b7", fontSize: "0.88rem", lineHeight: 1.6 }}>
+            <ul className="analysis-list">
               {growth_drivers.map((driver, i) => (
                 <li key={i} style={{ marginBottom: "6px" }}>{renderSafe(driver)}</li>
               ))}
@@ -81,7 +81,7 @@ export default function MarketAnalysis({ data }) {
             <h3 style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#f87171", marginBottom: "6px" }}>
               Market Challenges
             </h3>
-            <ul style={{ margin: 0, paddingLeft: "18px", color: "#d1c7b7", fontSize: "0.88rem", lineHeight: 1.6 }}>
+            <ul className="analysis-list">
               {market_challenges.map((challenge, i) => (
                 <li key={i} style={{ marginBottom: "6px" }}>{renderSafe(challenge)}</li>
               ))}
@@ -89,6 +89,52 @@ export default function MarketAnalysis({ data }) {
           </div>
         )}
       </div>
+
+      <style>{`
+        .market-analysis-card {
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 14px;
+          padding: 24px;
+        }
+        .analysis-card-title {
+          font-size: 1.4rem;
+          font-weight: 700;
+          margin: 6px 0 0 0;
+          color: #f5f1e8;
+        }
+        .analysis-body-text {
+          margin: 0;
+          font-size: 0.94rem;
+          color: #e6e0d4;
+          line-height: 1.6;
+        }
+        .analysis-list {
+          margin: 0;
+          padding-left: 18px;
+          color: #d1c7b7;
+          font-size: 0.88rem;
+          line-height: 1.6;
+        }
+
+        [data-theme="light"] .market-analysis-card {
+          background: #ffffff !important;
+          border-color: rgba(0, 0, 0, 0.08) !important;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04) !important;
+        }
+        [data-theme="light"] .analysis-card-title {
+          color: #18181b !important;
+        }
+        [data-theme="light"] .analysis-body-text {
+          color: #27272a !important;
+        }
+        [data-theme="light"] .analysis-list {
+          color: #3f3f46 !important;
+        }
+        [data-theme="light"] .analysis-list li {
+          color: #3f3f46 !important;
+        }
+      `}</style>
     </section>
   );
 }

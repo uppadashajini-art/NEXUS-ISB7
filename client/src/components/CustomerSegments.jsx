@@ -30,12 +30,12 @@ export default function CustomerSegments({ segments }) {
           const painPoints = Array.isArray(seg.pain_points) ? seg.pain_points : [];
 
           return (
-            <div className="segment-block gtm-card" key={i} style={{ background: "rgba(255, 255, 255, 0.025)", border: "1px solid rgba(255, 255, 255, 0.07)", borderRadius: "12px", padding: "20px", transition: "all 0.2s ease" }}>
+            <div className="segment-block customer-segment-item" key={i}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
                 <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "linear-gradient(135deg, rgba(255,199,44,0.2), rgba(255,138,31,0.2))", color: "#FFC72C", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>
                   👥
                 </div>
-                <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#f5f1e8" }}>{segTitle}</h3>
+                <h3 className="segment-title">{segTitle}</h3>
               </div>
 
               {needs.length > 0 && (
@@ -43,7 +43,7 @@ export default function CustomerSegments({ segments }) {
                   <h4 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#FFC72C", margin: "0 0 6px 0" }}>
                     Needs
                   </h4>
-                  <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "0.85rem", color: "#d1c7b7", lineHeight: "1.5" }}>
+                  <ul className="segment-list">
                     {needs.map((need, j) => (
                       <li key={j} style={{ marginBottom: "4px" }}>{renderSafe(need)}</li>
                     ))}
@@ -56,7 +56,7 @@ export default function CustomerSegments({ segments }) {
                   <h4 style={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#f87171", margin: "0 0 6px 0" }}>
                     Pain Points
                   </h4>
-                  <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "0.85rem", color: "#d1c7b7", lineHeight: "1.5" }}>
+                  <ul className="segment-list">
                     {painPoints.map((point, j) => {
                       const text = renderSafe(point);
                       const severity = typeof point === "object" && point.severity ? point.severity : null;
@@ -78,6 +78,51 @@ export default function CustomerSegments({ segments }) {
           );
         })}
       </div>
+
+      <style>{`
+        .segment-block {
+          background: rgba(255, 255, 255, 0.025);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          border-radius: 12px;
+          padding: 20px;
+          transition: all 0.2s ease;
+        }
+        .segment-title {
+          margin: 0;
+          font-size: 1.05rem;
+          font-weight: 700;
+          color: #f5f1e8;
+        }
+        .segment-list {
+          margin: 0;
+          padding-left: 18px;
+          font-size: 0.85rem;
+          color: #d1c7b7;
+          line-height: 1.5;
+        }
+
+        [data-theme="light"] .customer-segments-card {
+          background: #ffffff !important;
+          border-color: rgba(0, 0, 0, 0.08) !important;
+        }
+        [data-theme="light"] .customer-segments-card h2 {
+          color: #18181b !important;
+        }
+        [data-theme="light"] .segment-block {
+          background: #f8f9fb !important;
+          border-color: rgba(0, 0, 0, 0.08) !important;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+        }
+        [data-theme="light"] .segment-title {
+          color: #18181b !important;
+        }
+        [data-theme="light"] .segment-list {
+          color: #3f3f46 !important;
+        }
+        [data-theme="light"] .segment-list li {
+          color: #3f3f46 !important;
+        }
+      `}</style>
     </section>
   );
 }

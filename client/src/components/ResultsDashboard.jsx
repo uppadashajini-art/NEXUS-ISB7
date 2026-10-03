@@ -145,7 +145,7 @@ function SubScoreBar({
             background: accent,
             height: "100%",
             borderRadius: "3px",
-            transition: "width 0.8s ease",
+            transition: "width 0.9s cubic-bezier(0.16, 1, 0.3, 1)",
           }}
         />
       </div>
@@ -1542,9 +1542,9 @@ export default function ResultsDashboard({
         margin: "0 auto",
         minHeight: "100vh",
         background:
-          "var(--page-bg, #0c0b0a)",
+          "var(--r-bg, var(--surface-bg, #faf9f5))",
         color:
-          "var(--text-primary, #f5f1e8)",
+          "var(--r-text, var(--text-primary, #171a1f))",
         fontFamily:
           "var(--font-family-base, Inter, -apple-system, BlinkMacSystemFont, sans-serif)",
       }}
@@ -1693,6 +1693,7 @@ export default function ResultsDashboard({
             {onNewAnalysis && (
               <button
                 type="button"
+                className="results-new-idea-btn"
                 onClick={
                   onNewAnalysis
                 }
@@ -1702,11 +1703,6 @@ export default function ResultsDashboard({
                   alignItems:
                     "center",
                   gap: "6px",
-                  background:
-                    "rgba(255,255,255,0.05)",
-                  border:
-                    "1px solid rgba(255,255,255,0.12)",
-                  color: "#f5f1e8",
                   padding:
                     "8px 16px",
                   borderRadius: "30px",
@@ -1732,18 +1728,13 @@ export default function ResultsDashboard({
         {/* ANALYZED IDEA */}
 
         <div
+          className="results-analyzed-idea-card"
           style={{
-            background:
-              "linear-gradient(180deg, rgba(255,199,44,0.05) 0%, rgba(24,22,19,0.95) 100%)",
-            border:
-              "1px solid rgba(255,199,44,0.35)",
             borderRadius: "16px",
             padding:
               "24px 28px",
             marginBottom:
               "24px",
-            boxShadow:
-              "0 10px 30px rgba(0,0,0,0.4)",
             position: "relative",
             overflow: "hidden",
           }}
@@ -2096,6 +2087,7 @@ export default function ResultsDashboard({
           {/* SCORE */}
 
           <div
+            className="results-score-breakdown-card"
             style={{
               display: "grid",
               gridTemplateColumns:
@@ -2143,7 +2135,7 @@ export default function ResultsDashboard({
                   cx="70"
                   cy="70"
                   r="56"
-                  stroke="rgba(255,255,255,0.08)"
+                  stroke="var(--surface-border-strong, rgba(255,255,255,0.12))"
                   strokeWidth="8"
                   fill="transparent"
                 />
@@ -2169,6 +2161,10 @@ export default function ResultsDashboard({
                   }
                   strokeLinecap="round"
                   fill="transparent"
+                  style={{
+                    transition:
+                      "stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                  }}
                 />
 
                 <defs>
@@ -2371,6 +2367,7 @@ export default function ResultsDashboard({
                 (signal, index) => (
                   <div
                     key={index}
+                    className="results-signal-card"
                     style={{
                       background:
                         "rgba(0,0,0,0.25)",
@@ -2947,6 +2944,107 @@ export default function ResultsDashboard({
             rgba(180,130,20,0.25);
         }
 
+        [data-theme="light"] #overview.results-section-card {
+          background: #ffffff !important;
+          border-color: rgba(217, 119, 6, 0.25) !important;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05) !important;
+        }
+
+        [data-theme="light"] .results-score-breakdown-card {
+          background: #f8f9fb !important;
+          border-color: rgba(217, 119, 6, 0.22) !important;
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="light"] .feasibility-bar-title {
+          color: #18181b !important;
+        }
+
+        [data-theme="light"] .feasibility-track {
+          background: rgba(0, 0, 0, 0.08) !important;
+        }
+
+        [data-theme="light"] .results-kpi-card {
+          background: #ffffff !important;
+          border-color: rgba(0, 0, 0, 0.08) !important;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="light"] .results-kpi-card div:first-child {
+          color: #71717a !important;
+        }
+
+        [data-theme="light"] .results-kpi-card div:last-child {
+          color: #52525b !important;
+        }
+
+        [data-theme="light"] .results-signal-card {
+          background: #ffffff !important;
+          border-color: rgba(0, 0, 0, 0.08) !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="light"] .results-signal-card span:first-child {
+          color: #18181b !important;
+        }
+
+        [data-theme="light"] .results-signal-card p {
+          color: #52525b !important;
+        }
+
+        .results-quick-stat {
+          background: rgba(255,255,255,0.025);
+          border: 1px solid rgba(255,199,44,0.2);
+        }
+
+        .results-analyzed-idea-card {
+          background: linear-gradient(180deg, rgba(255,199,44,0.05) 0%, rgba(24,22,19,0.95) 100%);
+          border: 1px solid rgba(255,199,44,0.35);
+          box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        }
+
+        .results-new-idea-btn {
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.12);
+          color: #f5f1e8;
+        }
+
+        [data-theme="light"] .results-analyzed-idea-card {
+          background: #ffffff !important;
+          border: 1px solid rgba(217, 119, 6, 0.28) !important;
+          box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04) !important;
+        }
+
+        [data-theme="light"] .results-analyzed-idea-card p {
+          color: #18181b !important;
+        }
+
+        [data-theme="light"] .results-new-idea-btn {
+          background: #ffffff !important;
+          border: 1px solid #e0e4e9 !important;
+          color: #18181b !important;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+        }
+
+        [data-theme="light"] .results-new-idea-btn:hover {
+          background: #f4f4f5 !important;
+          border-color: #d4d4d8 !important;
+        }
+
+        [data-theme="light"] .results-quick-stat {
+          background: #ffffff !important;
+          border-color: rgba(217, 119, 6, 0.25) !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="light"] .results-quick-stat div:nth-child(2) {
+          color: #18181b !important;
+        }
+
+        [data-theme="light"] .results-quick-stat div:last-child {
+          color: #52525b !important;
+        }
+
       `}</style>
 
     </div>
@@ -2966,61 +3064,36 @@ function QuickStat({
 }) {
   return (
     <div
+      className="results-quick-stat"
       style={{
-        background:
-          "rgba(255,255,255,0.025)",
-
-        border:
-          "1px solid rgba(255,199,44,0.2)",
-
         borderRadius: "12px",
-
-        padding:
-          "14px 16px",
-
+        padding: "14px 16px",
         display: "flex",
         flexDirection: "column",
         gap: "4px",
       }}
     >
-
       <div
         style={{
-          display:
-            "flex",
-          alignItems:
-            "center",
+          display: "flex",
+          alignItems: "center",
           gap: "6px",
-
           color: accent,
-
           fontSize: "11px",
-
           fontWeight: 800,
-
-          textTransform:
-            "uppercase",
-
-          letterSpacing:
-            "0.06em",
+          textTransform: "uppercase",
+          letterSpacing: "0.06em",
         }}
       >
-        <span>
-          {icon}
-        </span>
-
-        <span>
-          {label}
-        </span>
+        <span>{icon}</span>
+        <span>{label}</span>
       </div>
 
       <div
         style={{
           fontSize: "16px",
           fontWeight: 800,
-
-          color:
-            "var(--text-primary,#ffffff)",
+          color: "inherit",
         }}
       >
         {value}
@@ -3029,14 +3102,11 @@ function QuickStat({
       <div
         style={{
           fontSize: "11px",
-
-          color:
-            "var(--text-secondary,#a8a29e)",
+          color: "var(--text-secondary,#a8a29e)",
         }}
       >
         {description}
       </div>
-
     </div>
   );
 }
@@ -3053,6 +3123,7 @@ function KpiCard({
 }) {
   return (
     <div
+      className="results-kpi-card"
       style={{
         background:
           "rgba(0,0,0,0.25)",
