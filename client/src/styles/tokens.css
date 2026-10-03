@@ -87,15 +87,19 @@
   /* Focus Ring */
   --focus-ring: 0 0 0 2px #0B0B0E, 0 0 0 4px var(--accent-idea);
 
-  /* --- Motion Tokens --- */
-  --ease-nexus: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --duration-150: 150ms;
-  --duration-250: 250ms;
-  --duration-400: 400ms;
+  /* --- Apple macOS / iOS Motion Tokens --- */
+  --ease-nexus: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-apple-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-apple-fluid: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-apple-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-150: 160ms;
+  --duration-250: 280ms;
+  --duration-400: 420ms;
 
-  --transition-fast: 150ms cubic-bezier(0.2, 0.8, 0.2, 1);
-  --transition-base: 250ms cubic-bezier(0.2, 0.8, 0.2, 1);
-  --transition-slow: 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --transition-fast: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-base: 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-slow: 480ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-spring: 400ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ==============================================================================
@@ -108,7 +112,10 @@
   box-sizing: border-box;
 }
 
-html,
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -122,6 +129,9 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  transition:
+    background-color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Form controls & code elements: Force Montserrat */

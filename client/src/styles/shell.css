@@ -24,7 +24,7 @@
 
 .page-shell-transition {
   animation:
-    pageShellTransition 250ms cubic-bezier(0.2, 0.8, 0.2, 1)
+    pageShellTransition 350ms cubic-bezier(0.16, 1, 0.3, 1)
     forwards;
 }
 
@@ -327,9 +327,9 @@
   pointer-events: none;
 
   transition:
-    transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    width 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    opacity 150ms ease;
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    width 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 180ms ease;
 
   will-change: transform, width;
 }

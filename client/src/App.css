@@ -5787,4 +5787,83 @@ input:focus-visible {
   color: #d97706;
 }
 
+/* =========================================================
+   APPLE macOS / iOS TACTILE INTERACTIONS & FLUID MOTION
+   ========================================================= */
+
+/* Apple-style tactile click compression */
+button:active:not(:disabled),
+.primary-button:active:not(:disabled),
+.secondary-button:active:not(:disabled),
+.validate-button:active:not(:disabled),
+.clear-button:active:not(:disabled),
+.shell-tab-btn:active,
+.phase-tab:active,
+.quick-pill:active:not(:disabled),
+.followup-chip:active:not(:disabled),
+.advisory-prompt-chip:active,
+.advisory-send-btn:active:not(:disabled),
+.results-nav-item:active,
+.auth-btn:active:not(:disabled),
+.google-auth-btn:active:not(:disabled),
+.history-item-row:active {
+  transform: scale(0.975);
+  transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Fluid Apple spring hover and transitions */
+button,
+.primary-button,
+.secondary-button,
+.validate-button,
+.clear-button,
+.shell-tab-btn,
+.phase-tab,
+.quick-pill,
+.followup-chip,
+.advisory-prompt-chip,
+.advisory-send-btn,
+.results-nav-item,
+.auth-btn,
+.google-auth-btn {
+  transition:
+    transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Card fluid hover elevation */
+.gtm-card,
+.results-section-card,
+.results-score-breakdown-card,
+.market-chart-card,
+.tier-card,
+.risk-item,
+.pain-item,
+.comp-item {
+  transition:
+    transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Seamless macOS-style theme blend transitions */
+body,
+#root,
+.studio-navbar,
+.shell-nav,
+.advisory-panel,
+.advisory-header,
+.modal-overlay,
+.auth-modal-card {
+  transition:
+    background-color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+
 

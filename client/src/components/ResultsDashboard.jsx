@@ -145,7 +145,7 @@ function SubScoreBar({
             background: accent,
             height: "100%",
             borderRadius: "3px",
-            transition: "width 0.8s ease",
+            transition: "width 0.9s cubic-bezier(0.16, 1, 0.3, 1)",
           }}
         />
       </div>
@@ -2144,7 +2144,7 @@ export default function ResultsDashboard({
                   cx="70"
                   cy="70"
                   r="56"
-                  stroke="rgba(255,255,255,0.08)"
+                  stroke="var(--surface-border-strong, rgba(255,255,255,0.12))"
                   strokeWidth="8"
                   fill="transparent"
                 />
@@ -2170,6 +2170,10 @@ export default function ResultsDashboard({
                   }
                   strokeLinecap="round"
                   fill="transparent"
+                  style={{
+                    transition:
+                      "stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                  }}
                 />
 
                 <defs>
