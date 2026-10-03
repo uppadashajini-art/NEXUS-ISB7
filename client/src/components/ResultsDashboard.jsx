@@ -2096,6 +2096,7 @@ export default function ResultsDashboard({
           {/* SCORE */}
 
           <div
+            className="results-score-breakdown-card"
             style={{
               display: "grid",
               gridTemplateColumns:
@@ -2371,6 +2372,7 @@ export default function ResultsDashboard({
                 (signal, index) => (
                   <div
                     key={index}
+                    className="results-signal-card"
                     style={{
                       background:
                         "rgba(0,0,0,0.25)",
@@ -2947,6 +2949,64 @@ export default function ResultsDashboard({
             rgba(180,130,20,0.25);
         }
 
+        [data-theme="light"] #overview.results-section-card {
+          background: #ffffff !important;
+          border-color: rgba(217, 119, 6, 0.25) !important;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05) !important;
+        }
+
+        [data-theme="light"] .results-score-breakdown-card {
+          background: #f8f9fb !important;
+          border-color: rgba(217, 119, 6, 0.22) !important;
+          box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="light"] .feasibility-bar-title {
+          color: #18181b !important;
+        }
+
+        [data-theme="light"] .feasibility-track {
+          background: rgba(0, 0, 0, 0.08) !important;
+        }
+
+        [data-theme="light"] .results-kpi-card {
+          background: #ffffff !important;
+          border-color: rgba(0, 0, 0, 0.08) !important;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="light"] .results-kpi-card div:first-child {
+          color: #71717a !important;
+        }
+
+        [data-theme="light"] .results-kpi-card div:last-child {
+          color: #52525b !important;
+        }
+
+        [data-theme="light"] .results-signal-card {
+          background: #ffffff !important;
+          border-color: rgba(0, 0, 0, 0.08) !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="light"] .results-signal-card span:first-child {
+          color: #18181b !important;
+        }
+
+        [data-theme="light"] .results-signal-card p {
+          color: #52525b !important;
+        }
+
+        [data-theme="light"] .results-quick-stat {
+          background: #ffffff !important;
+          border-color: rgba(217, 119, 6, 0.25) !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="light"] .results-quick-stat div:last-child {
+          color: #52525b !important;
+        }
+
       `}</style>
 
     </div>
@@ -2966,6 +3026,7 @@ function QuickStat({
 }) {
   return (
     <div
+      className="results-quick-stat"
       style={{
         background:
           "rgba(255,255,255,0.025)",
@@ -3053,6 +3114,7 @@ function KpiCard({
 }) {
   return (
     <div
+      className="results-kpi-card"
       style={{
         background:
           "rgba(0,0,0,0.25)",

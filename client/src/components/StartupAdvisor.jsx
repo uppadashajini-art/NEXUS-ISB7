@@ -36,11 +36,16 @@ export default function StartupAdvisor({ validationContext }) {
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const chatEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
 
-  // Auto-scroll on new messages
+  // Auto-scroll inside chat container ONLY (never scroll the main window)
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesContainerRef.current && (messages.length > 1 || loading)) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: "smooth"
+      });
+    }
   }, [messages, loading]);
 
   // Reset/update initial greeting when a new startup idea validation report arrives
@@ -149,7 +154,7 @@ export default function StartupAdvisor({ validationContext }) {
       const parts = line.split(/(\*\*.*?\*\*|\[.*?\]\(.*?\))/g);
       const renderedParts = parts.map((part, pIdx) => {
         if (part.startsWith("**") && part.endsWith("**")) {
-          return <strong key={pIdx} style={{ color: "#f5f1e8" }}>{part.slice(2, -2)}</strong>;
+          return <strong key={pIdx} style={{ color: "var(--text-primary, #f5f1e8)" }}>{part.slice(2, -2)}</strong>;
         }
         const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
         if (linkMatch) {
@@ -450,6 +455,113 @@ export default function StartupAdvisor({ validationContext }) {
           font-size: 0.8rem;
           margin-top: 8px;
         }
+
+        /* -----------------------------------------------
+           LIGHT THEME OVERRIDES
+        ----------------------------------------------- */
+        [data-theme="light"] .startup-advisor-section {
+          background: #ffffff;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          color: #18181b;
+          box-shadow: 0 12px 32px -10px rgba(0, 0, 0, 0.08);
+        }
+
+        [data-theme="light"] .advisor-header {
+          border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+        }
+
+        [data-theme="light"] .advisor-title {
+          background: linear-gradient(135deg, #18181b 40%, #059669 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+
+        [data-theme="light"] .quick-label {
+          color: #71717a;
+        }
+
+        [data-theme="light"] .quick-pill {
+          background: #f4f4f5;
+          border: 1px solid #e4e4e7;
+          color: #3f3f46;
+        }
+
+        [data-theme="light"] .quick-pill:hover:not(:disabled) {
+          background: rgba(16, 185, 129, 0.12);
+          border-color: rgba(16, 185, 129, 0.4);
+          color: #047857;
+        }
+
+        [data-theme="light"] .messages-container {
+          background: #f8f9fb;
+          border: 1px solid #e4e4e7;
+        }
+
+        [data-theme="light"] .msg-advisor {
+          background: #ffffff;
+          border: 1px solid #e4e4e7;
+          color: #27272a;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="light"] .msg-advisor strong {
+          color: #18181b !important;
+        }
+
+        [data-theme="light"] .msg-user {
+          background: linear-gradient(135deg, #059669 0%, #047857 100%);
+          border: 1px solid #047857;
+          color: #ffffff;
+        }
+
+        [data-theme="light"] .author-user {
+          color: #d1fae5;
+        }
+
+        [data-theme="light"] .author-advisor {
+          color: #059669;
+        }
+
+        [data-theme="light"] .followup-chip {
+          background: rgba(16, 185, 129, 0.1);
+          border: 1px solid rgba(16, 185, 129, 0.3);
+          color: #047857;
+        }
+
+        [data-theme="light"] .followup-chip:hover:not(:disabled) {
+          background: rgba(16, 185, 129, 0.2);
+          border-color: #059669;
+          color: #065f46;
+        }
+
+        [data-theme="light"] .typing-box {
+          background: #ffffff;
+          border: 1px solid #e4e4e7;
+          color: #059669;
+        }
+
+        [data-theme="light"] .advisor-input {
+          background: #ffffff;
+          border: 1px solid #d4d4d8;
+          color: #18181b;
+        }
+
+        [data-theme="light"] .advisor-input::placeholder {
+          color: #a1a1aa;
+        }
+
+        [data-theme="light"] .advisor-input:focus {
+          border-color: #059669;
+        }
+
+        [data-theme="light"] .advisor-send-btn {
+          background: #059669;
+          color: #ffffff;
+        }
+
+        [data-theme="light"] .advisor-send-btn:hover:not(:disabled) {
+          background: #047857;
+        }
       `}</style>
 
       {/* Header */}
@@ -483,7 +595,7 @@ export default function StartupAdvisor({ validationContext }) {
       </div>
 
       {/* Messages Stream */}
-      <div className="messages-container">
+      <div className="messages-container" ref={messagesContainerRef}>
         {messages.map((m) => (
           <div
             key={m.id}
@@ -521,8 +633,6 @@ export default function StartupAdvisor({ validationContext }) {
             <span style={{ marginLeft: "4px" }}>Analyzing context & generating advice...</span>
           </div>
         )}
-
-        <div ref={chatEndRef} />
       </div>
 
       {/* Input Field */}

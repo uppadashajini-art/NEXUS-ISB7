@@ -5002,6 +5002,212 @@ input:focus-visible {
   color: #52525b;
   border-color: #d4d4d8;
 }
+
+/* ---------------------------------------------------------
+   NEXUS LIGHT MODE — RESULTS & CARDS OVERRIDES
+   --------------------------------------------------------- */
+
+/* Web Intelligence / Search Result Cards */
+[data-theme="light"] .search-result-card {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .search-result-card:hover {
+  background: #faf9f5;
+  border-color: rgba(217, 119, 6, 0.35);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .search-result-title {
+  color: #18181b;
+}
+
+[data-theme="light"] .search-result-summary {
+  color: #52525b;
+}
+
+[data-theme="light"] .source-type-pill {
+  background: #f4f4f5;
+  border-color: #e4e4e7;
+  color: #71717a;
+}
+
+[data-theme="light"] .target-customer-box {
+  background: rgba(234, 88, 12, 0.06);
+  border-color: rgba(234, 88, 12, 0.2);
+}
+
+[data-theme="light"] .target-customer-label {
+  color: #52525b;
+}
+
+[data-theme="light"] .target-customer-text {
+  color: #18181b;
+}
+
+[data-theme="light"] .search-card-meta {
+  border-color: #f0f0f2;
+}
+
+[data-theme="light"] .meta-engine {
+  color: #71717a;
+}
+
+[data-theme="light"] .source-link {
+  color: #b45309;
+}
+
+/* Deep Validation Matrix Card */
+[data-theme="light"] .deep-validation-card {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .deep-validation-header h2 {
+  color: #18181b;
+}
+
+[data-theme="light"] .deep-validation-header p {
+  color: #52525b;
+}
+
+[data-theme="light"] .validation-module {
+  background: #f8f9fb;
+  border-color: #e4e4e7;
+}
+
+[data-theme="light"] .validation-module:hover {
+  background: #ffffff;
+  border-color: rgba(217, 119, 6, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07);
+}
+
+[data-theme="light"] .module-title-wrap h3 {
+  color: #18181b;
+}
+
+[data-theme="light"] .module-tag {
+  color: #71717a;
+}
+
+[data-theme="light"] .module-icon {
+  background: #f4f4f5;
+  border-color: #e4e4e7;
+}
+
+[data-theme="light"] .metric-label {
+  color: #52525b;
+}
+
+[data-theme="light"] .rating-desc {
+  color: #52525b;
+}
+
+[data-theme="light"] .module-section h4 {
+  color: #18181b;
+}
+
+[data-theme="light"] .challenges-list li,
+[data-theme="light"] .trials-list li,
+[data-theme="light"] .compliance-list li {
+  color: #3f3f46;
+}
+
+[data-theme="light"] .pathway-box {
+  background: rgba(217, 119, 6, 0.06);
+  border-color: rgba(217, 119, 6, 0.2);
+}
+
+[data-theme="light"] .pathway-box p {
+  color: #18181b;
+}
+
+/* Competitor Analysis Cards */
+[data-theme="light"] .competitor-card {
+  background: #ffffff;
+  border-color: #e4e4e7;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .competitor-card:hover {
+  border-color: rgba(217, 119, 6, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .competitor-name {
+  color: #18181b;
+}
+
+[data-theme="light"] .competitor-info-row {
+  border-color: #f0f0f2;
+}
+
+[data-theme="light"] .competitor-info-label {
+  color: #71717a;
+}
+
+[data-theme="light"] .competitor-info-value {
+  color: #27272a;
+}
+
+[data-theme="light"] .competitor-pill {
+  background: #f4f4f5;
+  border-color: #e4e4e7;
+  color: #3f3f46;
+}
+
+[data-theme="light"] .factor-box.strength {
+  background: rgba(22, 163, 74, 0.06);
+  border-color: rgba(22, 163, 74, 0.2);
+}
+
+[data-theme="light"] .factor-box.weakness {
+  background: rgba(220, 38, 38, 0.05);
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+[data-theme="light"] .factor-title {
+  color: #18181b;
+}
+
+[data-theme="light"] .factor-list li {
+  color: #3f3f46;
+}
+
+/* Market Gaps Cards */
+[data-theme="light"] .gap-card {
+  background: #ffffff;
+  border-color: rgba(217, 119, 6, 0.25);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .gap-card:hover {
+  border-color: rgba(217, 119, 6, 0.45);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.07);
+}
+
+[data-theme="light"] .gap-text {
+  color: #27272a;
+}
+
+/* Analysis Cards Container */
+[data-theme="light"] .analysis-card {
+  background: #ffffff;
+  border-color: #e4e4e7;
+  color: #18181b;
+}
+
+[data-theme="light"] .analysis-card h2 {
+  color: #18181b;
+}
+
+[data-theme="light"] .analysis-card p {
+  color: #52525b;
+}
+
 /* =========================================================
    NEXUS AUTH MODAL
    DARK + LIGHT MODE

@@ -604,6 +604,191 @@ export default function GtmStrategy({ gtmStrategy }: GtmStrategyProps) {
           font-weight: 700;
           flex-shrink: 0;
         }
+
+        /* -----------------------------------------------
+           LIGHT THEME OVERRIDES
+        ----------------------------------------------- */
+        [data-theme="light"] .gtm-strategy-section {
+          background: #ffffff;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          color: #18181b;
+          box-shadow: 0 12px 32px -10px rgba(0, 0, 0, 0.08);
+        }
+
+        [data-theme="light"] .gtm-header {
+          border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        [data-theme="light"] .gtm-title {
+          background: linear-gradient(135deg, #18181b 35%, #b45309 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+
+        [data-theme="light"] .gtm-kicker {
+          color: #b45309;
+        }
+
+        [data-theme="light"] .archetype-banner {
+          background: linear-gradient(135deg, rgba(217, 119, 6, 0.08) 0%, #faf9f5 100%);
+          border: 1px solid rgba(217, 119, 6, 0.25);
+        }
+
+        [data-theme="light"] .archetype-pill {
+          background: rgba(217, 119, 6, 0.15);
+          border: 1px solid rgba(217, 119, 6, 0.35);
+          color: #92400e;
+        }
+
+        [data-theme="light"] .archetype-secondary-pill {
+          background: #f4f4f5;
+          border: 1px solid #e4e4e7;
+          color: #52525b;
+        }
+
+        [data-theme="light"] .archetype-reasoning {
+          color: #52525b;
+        }
+
+        [data-theme="light"] .viability-breakdown-card {
+          background: #f8f9fb;
+          border: 1px solid #e4e4e7;
+        }
+
+        [data-theme="light"] .breakdown-item {
+          background: #ffffff;
+          border: 1px solid #e4e4e7;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+        }
+
+        [data-theme="light"] .breakdown-label {
+          color: #71717a;
+        }
+
+        [data-theme="light"] .breakdown-val {
+          color: #18181b;
+        }
+
+        [data-theme="light"] .gtm-card {
+          background: #ffffff;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+        }
+
+        [data-theme="light"] .gtm-card:hover {
+          border-color: rgba(217, 119, 6, 0.35);
+          background: #faf9f5;
+        }
+
+        [data-theme="light"] .gtm-card-title {
+          color: #18181b;
+        }
+
+        [data-theme="light"] .segment-card {
+          background: #f8f9fb;
+          border: 1px solid #e4e4e7;
+        }
+
+        [data-theme="light"] .segment-title {
+          color: #18181b;
+        }
+
+        [data-theme="light"] .segment-detail {
+          color: #52525b;
+        }
+
+        [data-theme="light"] .segment-detail strong {
+          color: #18181b;
+        }
+
+        [data-theme="light"] .pain-item {
+          background: #f8f9fb;
+          border-color: rgba(0, 0, 0, 0.06);
+          border-left: 3px solid #e28743;
+        }
+
+        [data-theme="light"] .pain-desc {
+          color: #27272a;
+        }
+
+        [data-theme="light"] .pain-source-tag {
+          background: rgba(217, 119, 6, 0.1);
+          color: #b45309;
+        }
+
+        [data-theme="light"] .comp-item {
+          background: #f8f9fb;
+          border: 1px solid #e4e4e7;
+        }
+
+        [data-theme="light"] .comp-name {
+          color: #18181b;
+        }
+
+        [data-theme="light"] .metric-cell {
+          background: #f8f9fb;
+          border: 1px solid #e4e4e7;
+        }
+
+        [data-theme="light"] .metric-label {
+          color: #71717a;
+        }
+
+        [data-theme="light"] .metric-val {
+          color: #b45309;
+        }
+
+        [data-theme="light"] .risk-item {
+          background: #f8f9fb;
+          border: 1px solid #e4e4e7;
+        }
+
+        [data-theme="light"] .risk-top span:first-child {
+          color: #18181b;
+        }
+
+        [data-theme="light"] .tier-card {
+          background: #f8f9fb;
+          border: 1px solid rgba(217, 119, 6, 0.25);
+        }
+
+        [data-theme="light"] .tier-head {
+          color: #18181b;
+        }
+
+        [data-theme="light"] .tier-price {
+          color: #b45309;
+        }
+
+        [data-theme="light"] .phase-tab {
+          background: #f4f4f5;
+          border: 1px solid #e4e4e7;
+          color: #52525b;
+        }
+
+        [data-theme="light"] .phase-tab:hover {
+          background: #e4e4e7;
+          color: #18181b;
+        }
+
+        [data-theme="light"] .phase-tab.active {
+          background: rgba(217, 119, 6, 0.15);
+          border-color: #d97706;
+          color: #92400e;
+        }
+
+        [data-theme="light"] .phase-content {
+          background: #f8f9fb;
+          border: 1px solid #e4e4e7;
+        }
+
+        [data-theme="light"] .phase-obj {
+          color: #b45309;
+        }
+
+        [data-theme="light"] .phase-action-item {
+          color: #3f3f46;
+        }
       `}</style>
 
       {/* Header */}

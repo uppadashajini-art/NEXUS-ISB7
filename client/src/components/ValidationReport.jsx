@@ -147,6 +147,31 @@ export default function ValidationReport({ report }) {
           margin: 0;
           color: #f5f1e8;
         }
+
+        /* -----------------------------------------------
+           LIGHT THEME OVERRIDES
+        ----------------------------------------------- */
+        [data-theme="light"] .gtm-card {
+          background: #ffffff;
+          border-color: rgba(0, 0, 0, 0.08);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+        }
+        [data-theme="light"] .gtm-card:hover {
+          border-color: rgba(226, 135, 67, 0.35);
+          background: #faf9f5;
+        }
+        [data-theme="light"] .gtm-card-title {
+          color: #18181b;
+        }
+        [data-theme="light"] .report-body {
+          color: #27272a;
+        }
+        [data-theme="light"] .report-kicker {
+          color: #c25e1a;
+        }
+        [data-theme="light"] .report-label {
+          color: #059669;
+        }
       `}</style>
     </section>
   );
