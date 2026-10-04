@@ -14,6 +14,7 @@ import AdvisorySlideOver from "../components/AdvisorySlideOver";
 import { useAuth } from "../context/AuthContext";
 import { saveValidationActivity } from "../services/supabaseClient";
 import { validateIdea } from "../services/validationService";
+import Footer from "../components/Footer";
 
 import {
   SparklesIcon,
@@ -1896,6 +1897,7 @@ function StartupValidator({
 
             </section>
           )}
+        <Footer />
 
       </main>
 
