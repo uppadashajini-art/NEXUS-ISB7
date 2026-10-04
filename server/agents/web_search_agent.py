@@ -27,7 +27,7 @@ STOP_WORDS = {
 # Configuration
 # ============================================================
 
-MAX_TOTAL_RESULTS = 10
+MAX_TOTAL_RESULTS = 5
 SEARCH_RESULTS_PER_QUERY = 5
 SEARCH_TIMEOUT_SECONDS = 30
 

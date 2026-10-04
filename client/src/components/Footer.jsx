@@ -1,102 +1,129 @@
+// Place this file at: client/src/components/Footer.jsx
+//
+// Minimal single-bar footer matching the Navbar's pill-badge style
+// (brand mark, version badge, rounded pill, Montserrat / tokens.css).
+//
+// Add to StartupValidator.jsx right before the closing </main> tag:
+//   import Footer from "../components/Footer";
+//   ... <Footer />  (right before </main>)
+
 const CURRENT_YEAR = new Date().getFullYear();
 
 export default function Footer() {
   return (
-    <footer className="app-footer">
-      <div className="footer-inner">
-        <div className="footer-brand">
-          <span className="footer-logo">NEXUS AI</span>
-          <span className="footer-tagline">Startup Intelligence Platform</span>
+    <footer className="nexus-footer-minimal">
+      <div className="footer-minimal-inner">
+
+        <div className="footer-minimal-brand">
+          <span className="footer-mark">N</span>
+          <span className="footer-brand-name">NEXUS</span>
+          <span className="footer-version-badge">V2.5</span>
         </div>
 
-        <div className="footer-license">
-          <p>
+        <div className="footer-minimal-right">
+          <a
+            href="https://opensource.org/licenses/MIT"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="footer-pill"
+          >
+            <span className="footer-pill-dot" />
+            MIT License
+          </a>
+          <span className="footer-copy">
             © {CURRENT_YEAR} NEXUS AI. All rights reserved.
-          </p>
-          <p>
-            Licensed under the{" "}
-            <a
-              href="https://opensource.org/licenses/MIT"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              MIT License
-            </a>
-            .
-          </p>
-          <p className="footer-disclaimer">
-            AI-generated analysis is for informational purposes only and does not
-            constitute financial, legal, or business advice.
-          </p>
+          </span>
         </div>
+
       </div>
 
       <style>{`
-        .app-footer {
-          margin-top: 48px;
-          padding: 28px 24px;
-          border-top: 1px solid var(--border, #38342e);
-          background: var(--card, #1c1a17);
+        .nexus-footer-minimal {
+          font-family: var(--font-family-base) !important;
+          border-top: 1px solid var(--surface-border);
+          background: var(--surface);
+          padding: var(--space-4) var(--space-6);
         }
-        .footer-inner {
-          max-width: 1100px;
+        .footer-minimal-inner {
+          max-width: 1200px;
           margin: 0 auto;
           display: flex;
-          flex-wrap: wrap;
+          align-items: center;
           justify-content: space-between;
-          align-items: flex-start;
-          gap: 20px;
+          flex-wrap: wrap;
+          gap: var(--space-3);
         }
-        .footer-brand {
+        .footer-minimal-brand {
           display: flex;
-          flex-direction: column;
-          gap: 2px;
+          align-items: center;
+          gap: var(--space-2);
         }
-        .footer-logo {
-          font-family: "Outfit", sans-serif;
-          font-size: 1rem;
+        .footer-mark {
+          width: 22px;
+          height: 22px;
+          border-radius: 6px;
+          background: var(--brand-gradient);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
           font-weight: 700;
-          color: var(--gold, #e8c77b);
-          letter-spacing: 0.02em;
+          color: #0B0B0E;
         }
-        .footer-tagline {
-          font-family: "Outfit", sans-serif;
-          font-size: 0.78rem;
-          color: var(--secondary, #a9a39a);
+        .footer-brand-name {
+          font-size: 13px;
+          font-weight: 700;
+          letter-spacing: 0.01em;
+          color: var(--text-primary);
         }
-        .footer-license {
-          font-family: "Outfit", sans-serif;
-          text-align: right;
+        .footer-version-badge {
+          font-size: 10px;
+          font-weight: 600;
+          color: var(--text-tertiary);
+          background: var(--surface-2);
+          border: 1px solid var(--surface-border);
+          border-radius: var(--radius-sm);
+          padding: 2px 6px;
         }
-        .footer-license p {
-          margin: 0 0 4px 0;
-          font-size: 0.8rem;
-          color: var(--secondary, #a9a39a);
+        .footer-minimal-right {
+          display: flex;
+          align-items: center;
+          gap: var(--space-4);
+          flex-wrap: wrap;
         }
-        .footer-license a {
-          color: #e28743;
+        .footer-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 11px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          color: var(--accent-idea);
+          background: rgba(255, 199, 44, 0.08);
+          border: 1px solid rgba(255, 199, 44, 0.25);
+          border-radius: 999px;
+          padding: 5px 12px;
           text-decoration: none;
+          transition: background var(--transition-fast);
         }
-        .footer-license a:hover {
-          text-decoration: underline;
+        .footer-pill:hover {
+          background: rgba(255, 199, 44, 0.14);
         }
-        .footer-disclaimer {
-          margin-top: 8px !important;
-          font-size: 0.72rem !important;
-          color: var(--muted, #777169) !important;
-          max-width: 420px;
-          line-height: 1.4;
+        .footer-pill-dot {
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: var(--accent-idea);
         }
-        @media (max-width: 600px) {
-          .footer-inner {
+        .footer-copy {
+          font-size: 11.5px;
+          color: var(--text-tertiary);
+        }
+        @media (max-width: 560px) {
+          .footer-minimal-inner {
             flex-direction: column;
-            text-align: left;
-          }
-          .footer-license {
-            text-align: left;
-          }
-          .footer-disclaimer {
-            max-width: 100%;
+            align-items: flex-start;
           }
         }
       `}</style>
