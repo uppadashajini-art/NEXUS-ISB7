@@ -2742,6 +2742,8 @@ class ValidationResponse(BaseModel):
 
     pivot_plan: Optional[Union[PivotPlan, Dict[str, Any]]] = None
 
+    deep_validation: Optional[Dict[str, Any]] = None
+
     @field_validator("technical_feasibility", mode="before")
     @classmethod
     def parse_technical_feasibility(cls, v: Any) -> Any:
