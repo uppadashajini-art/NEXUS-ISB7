@@ -1,3 +1,6 @@
+import React from "react";
+import { Download } from "lucide-react";
+
 // Place this file at: client/src/components/ValidationReport.jsx
 //
 // Cards render one after another (stacked, full-width) instead of a grid.
@@ -52,7 +55,7 @@ function renderWithHighlightedLabels(text) {
   return nodes;
 }
 
-export default function ValidationReport({ report }) {
+export default function ValidationReport({ report, onDownload }) {
   if (!report) return null;
 
   const sections = SECTION_CONFIG.filter((s) => report[s.key] && String(report[s.key]).trim());
@@ -61,7 +64,33 @@ export default function ValidationReport({ report }) {
 
   return (
     <section className="analysis-card">
-      <h2>Startup Validation Report</h2>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+        <h2 style={{ margin: 0 }}>Startup Validation Report</h2>
+        {onDownload && (
+          <button
+            type="button"
+            onClick={onDownload}
+            className="report-download-btn"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 14px",
+              borderRadius: "20px",
+              background: "rgba(255, 199, 44, 0.12)",
+              border: "1px solid rgba(255, 199, 44, 0.35)",
+              color: "#e28743",
+              fontSize: "12px",
+              fontWeight: 700,
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+            }}
+          >
+            <Download size={14} />
+            <span>Download Dossier (.md)</span>
+          </button>
+        )}
+      </div>
 
       <div className="report-stack">
         {sections.map((s) => (
