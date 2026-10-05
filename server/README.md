@@ -1,365 +1,157 @@
-# 🚀 NEXUS — AI Startup Idea Validator
+# NEXUS Backend Intelligence Engine & Multi-Agent Architecture
 
-### Development of AI-Based Startup Idea Validator with Market Analysis Assistance
-
-NEXUS is an AI-powered platform designed to help entrepreneurs evaluate startup ideas using **real-time web data and AI-based analysis**.
-
-The system allows a founder to submit a startup idea and retrieves relevant market and competitor information through a Web Search Agent.
+The backend layer of NEXUS provides a high-performance, asynchronous REST API powered by FastAPI, Pydantic v2, and a coordinated fleet of autonomous AI agents utilizing Google Gemini and real-time web retrieval.
 
 ---
 
-## 🎯 Project Objective
+## Architecture Overview
 
-Entrepreneurs often find it difficult and time-consuming to validate startup ideas because they need to research:
+The backend is organized into three primary layers:
 
-* Market demand
-* Industry trends
-* Existing competitors
-* Customer needs
-* Business opportunities
-
-NEXUS aims to simplify this process by combining **AI agents and real-time web search** to provide data-backed startup validation.
+1. API Route Layer (`server/routes/`): FastAPI routers handling request validation, error boundaries, rate limiting, and serialization.
+2. Agent Intelligence Layer (`server/agents/`): Autonomous analytical engines executing domain-specific market analysis, competitor benchmarking, SWOT assessment, risk modeling, MVP planning, and advisory tasks.
+3. Integration & Utility Layer (`server/utils/`, `server/models/`): Pydantic data schemas, Google Gemini client abstractions, and external search connectors.
 
 ---
 
-# 🏗️ System Architecture
+## Agent Taxonomy & Responsibilities
 
-## Current Implementation — Milestone 1
+| Agent Module | Primary Responsibility | Data Output |
+| :--- | :--- | :--- |
+| `orchestrator.py` | Central coordination, parallel task dispatching, and response synthesis | Unified validation payload |
+| `web_search_agent.py` | Real-time web retrieval across Tavily and DuckDuckGo search engines | Factual web intelligence snippets |
+| `market_analysis_agent.py` | Market dynamics, customer segmentation, and quantitative TAM/SAM/SOM calculations | Market sizing and trend matrices |
+| `competitor_analysis_agent.py` | Incumbent identification, feature matrix benchmarking, and moat evaluation | Competitor landscape and defensibility analysis |
+| `swot_risk_agent.py` | 4-quadrant strategic matrix generation and multi-vector risk assessment | SWOT matrix and categorized risk mitigations |
+| `mvp_recommendation_agent.py` | Technical scope definition and Phase 1 vs. Phase 2 specification roadmaps | MVP feature prioritization |
+| `gtm_agent.py` | Customer acquisition channel evaluation, launch sequencing, and pricing models | Go-to-market strategy |
+| `report_generation_agent.py` | Cross-module reconciliation, executive verdict generation, and summary synthesis | Comprehensive validation dossier |
+| `startup_advisor_agent.py` | Conversational strategy copilot for founder inquiries and pivot evaluations | Advisory recommendations |
 
-The current implementation focuses on the **Startup Idea Submission Interface and Web Search Agent**.
+---
+
+## Orchestrator Execution Sequence
 
 ```text
-User
-  ↓
-React + Vite Frontend
-  ↓
-Startup Idea Submission
-  ↓
-FastAPI + Uvicorn Backend
-  ↓
-Web Search Agent
-  ↓
-Tavily API / DuckDuckGo
-  ↓
-Live Web Data
-  ↓
-Data Retrieval & Processing
-  ↓
-Structured JSON Response
-  ↓
-React Results Interface
-```
-
-### Current Flow
-
-**React/Vite → FastAPI → Web Search Agent → Tavily API → Web Data → Structured Results → React Interface**
-
----
-
-# 🤖 Web Search Agent
-
-The Web Search Agent is the main AI component implemented in the current milestone.
-
-### Responsibilities
-
-* Receive the startup idea from the backend
-* Generate relevant search queries
-* Search the web for startup-related information
-* Retrieve market and competitor data
-* Process search results
-* Return structured data to the frontend
-
-### Search Flow
-
-```text
-Startup Idea
-      ↓
-FastAPI Backend
-      ↓
-Web Search Agent
-      ↓
-Tavily API
-      ↓
-Live Web Search
-      ↓
-Search Results
-      ↓
-Data Processing
-      ↓
-JSON Response
-      ↓
-Frontend
-```
-
----
-
-# 🖥️ Frontend
-
-The frontend provides an interface where the user can submit the necessary startup information.
-
-### Frontend Responsibilities
-
-* Startup idea input
-* Submit validation request
-* Communicate with FastAPI backend
-* Display search results
-* Display retrieved web information
-
-### Technology
-
-**React + Vite**
-
----
-
-# ⚙️ Backend
-
-The backend handles API requests and communicates with the Web Search Agent.
-
-### Backend Responsibilities
-
-* Receive startup idea
-* Validate input
-* Trigger Web Search Agent
-* Communicate with Tavily API
-* Process search results
-* Return structured JSON data
-
-### Technology
-
-**Python + FastAPI + Uvicorn**
-
----
-
-# 🔎 Web Search & Data Retrieval
-
-The current system uses **Tavily API** for real-time web search and data retrieval.
-
-An alternative search provider such as **DuckDuckGo** can also be used.
-
-```text
-                ┌─────────────────┐
-                │  Startup Idea   │
-                └────────┬────────┘
-                         ↓
-                ┌─────────────────┐
-                │ Web Search Agent│
-                └────────┬────────┘
-                         ↓
-                ┌─────────────────┐
-                │   Tavily API    │
-                └────────┬────────┘
-                         ↓
-                ┌─────────────────┐
-                │  Web Results    │
-                └────────┬────────┘
-                         ↓
-                ┌─────────────────┐
-                │ Data Processing │
-                └────────┬────────┘
-                         ↓
-                ┌─────────────────┐
-                │ React Interface │
-                └─────────────────┘
-```
-
----
-
-# 🔮 Planned Multi-Agent Architecture
-
-The current milestone implements the Web Search Agent. The architecture is designed to support additional agents in the future.
-
-```text
-Web Search Agent
-        ↓
-Market Analysis Agent
-        ↓
-Competitor Analysis Agent
-        ↓
-SWOT & Risk Analysis Agent
-        ↓
-MVP Recommendation Agent
-        ↓
-Go-To-Market Agent
-        ↓
-Report Generation Agent
-        ↓
-Conversational Startup Advisor
-```
-
-These components are part of the **planned complete system architecture**.
-
-Detailed architecture documentation is available in:
-
-**`docs/architecture.md`**
-
----
-
-# 🛠️ Technology Stack
-
-| Component           | Technology       |
-| ------------------- | ---------------- |
-| Frontend            | React + Vite     |
-| Backend             | Python + FastAPI |
-| Server              | Uvicorn          |
-| Web Search          | Tavily API       |
-| Alternative Search  | DuckDuckGo       |
-| Version Control     | Git + GitHub     |
-| Frontend Deployment | Vercel           |
-| Backend Deployment  | Render           |
-
----
-
-# 📁 Project Structure
-
-```text
-NEXUS-ISB7/
-│
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── services/
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   │
-│   ├── package.json
-│   └── vite.config.js
-│
-├── backend/
-│   ├── agents/
-│   │   └── web_search_agent.py
-│   │
-│   ├── routes/
-│   │   └── search.py
-│   │
-│   ├── models/
-│   │   └── search.py
-│   │
-│   ├── main.py
-│   ├── requirements.txt
-│   └── .env
-│
-├── docs/
-│   ├── architecture.md
-│   └── sequence-diagram.md
-│
-├── README.md
-└── .gitignore
-```
-
----
-
-# 🔄 API Communication
-
-The frontend communicates with the FastAPI backend through REST APIs.
-
-```text
-React Frontend
-      │
-      │ HTTP Request
-      ↓
-FastAPI Backend
-      │
-      ↓
-Web Search Agent
-      │
-      ↓
-Tavily API
-      │
-      ↓
-Search Results
-      │
-      ↓
-FastAPI Backend
-      │
-      │ JSON Response
-      ↓
-React Frontend
-```
-
----
-
-# 🚀 Deployment
-
-The project uses separate **staging** and **main** branches.
-
-```text
-GitHub
+1. Client POST /api/validate
    │
-   ├── staging
-   │      ↓
-   │    Vercel
-   │    Frontend
-   │      ↓
-   │    Render
-   │    FastAPI Backend
+   ▼
+2. Validate Request Schema (ValidationRequest)
    │
-   └── main
-          ↓
-        Production
+   ▼
+3. Multi-Agent Orchestrator (run_orchestrator)
+   │
+   ├── Phase 1: Real-Time Web Intelligence
+   │   └── WebSearchAgent executes parallelized search queries
+   │
+   ├── Phase 2: Parallel Analytical Synthesis
+   │   ├── MarketAnalysisAgent (TAM, SAM, SOM, Trends)
+   │   └── CompetitorAnalysisAgent (Incumbents, Moats, Gaps)
+   │
+   ├── Phase 3: Strategic Risk & Execution Planning
+   │   ├── SwotRiskAgent (SWOT Matrix, Risk Assessment)
+   │   ├── MvpRecommendationAgent (Must-Have vs Nice-to-Have Features)
+   │   └── GtmAgent (Acquisition Channels, Pricing Architecture)
+   │
+   └── Phase 4: Executive Report Generation
+       └── ReportGenerationAgent synthesizes final dossier and score
+   │
+   ▼
+4. Serialize and return ValidationResponse (200 OK)
 ```
 
-### Deployment Stack
+---
 
-* **GitHub** — Source code and branch management
-* **Vercel** — Frontend deployment
-* **Render** — Backend deployment
+## API Endpoints
+
+### Core Validation Pipeline
+
+- `POST /api/validate`
+  - Accepts startup concept description, industry domain, and target customer profile.
+  - Returns complete multi-agent validation dossier with numerical score and qualitative models.
+
+- `POST /api/schedule-report-email`
+  - Schedules background transmission of generated report to founder's email address upon synthesis completion.
+
+- `POST /api/search`
+  - Standalone search endpoint querying market references for rapid concept discovery.
+
+- `POST /api/advisor/chat`
+  - Interactive multi-turn conversational endpoint providing strategic guidance on market positioning, pricing, and defensibility.
+
+- `GET /api/health`
+  - Health probe verifying backend process uptime and operational environment.
 
 ---
 
-# 📌 Milestone 1 Deliverables
+## Environment Configuration
 
-### Completed /
+Create a `.env` file inside the `server/` directory:
 
-* [x] System Architecture Design
-* [x] Agent Roles and Data Flow Design
-* [x] Startup Idea Submission Interface
-* [x] FastAPI Backend Setup
-* [x] Web Search Agent
-* [x] Tavily API Integration
-* [x] Web Data Retrieval
-* [x] Structured Search Results
-* [x] Frontend–Backend API Communication
-* [x] GitHub Repository
-* [x] Staging and Main Branch Setup
+```env
+# Required for Gemini LLM agents
+GEMINI_API_KEY=your_gemini_api_key_here
 
----
+# Optional: Enhanced search endpoint (falls back to DuckDuckGo if omitted)
+TAVILY_API_KEY=your_tavily_api_key_here
 
-# 🎯 Expected Milestone 1 Output
-
-The user submits a startup idea through the frontend.
-
-The system then:
-
-```text
-Startup Idea
-     ↓
-Web Search Agent
-     ↓
-Tavily API
-     ↓
-Live Web Data
-     ↓
-Processed Search Results
-     ↓
-Results Displayed in Frontend
+# Operational environment: development, staging, or production
+NODE_ENV=development
 ```
 
-This provides the foundation for the complete **AI Startup Idea Validation platform**.
+---
+
+## Local Setup & Development
+
+### 1. Initialize Virtual Environment
+```bash
+# Windows
+python -m venv venv
+.\venv\Scripts\activate
+
+# Linux / macOS
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 2. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Run Development Server
+```bash
+python -m uvicorn server.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+Interactive OpenAPI documentation is available at `http://127.0.0.1:8000/docs`.
 
 ---
 
-# 📚 Documentation
+## Testing & Quality Assurance
 
-For the detailed system architecture, agent roles, data flow, and sequence diagrams, see:
+All agents and route handlers are accompanied by automated tests using Pytest and Pytest-Asyncio.
 
-* `docs/architecture.md`
-* `docs/sequence-diagram.md`
+```bash
+# Run the complete test suite
+pytest tests/
+
+# Run specific agent verification tests
+pytest tests/test_market_analysis.py
+pytest tests/test_competitor_analysis.py
+pytest tests/test_swot_risk.py
+pytest tests/test_mvp_recommendation.py
+pytest tests/test_gtm_agent.py
+pytest tests/test_advisor_api.py
+
+# Run with test coverage reporting
+pytest --cov=server tests/
+```
 
 ---
 
-## 👥 Team NEXUS
+## Error Handling & Resiliency
 
-**Project:** AI-Based Startup Idea Validator with Market Analysis Assistance
-
-**Current Focus:** Web Search API + System Architecture + Startup Idea Submission Interface
+- Graceful Degradation: If external search APIs experience upstream failures, the pipeline degrades to structured deterministic heuristic models without terminating user execution.
+- Schema Validation: Pydantic v2 ensures strict data typing and catches missing or corrupted agent outputs before sending responses to the client.
+- Timeout Boundaries: Agent calls enforce isolated timeouts preventing stalled network requests from blocking the orchestration lifecycle.
