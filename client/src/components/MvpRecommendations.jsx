@@ -13,9 +13,9 @@ function FeatureGroup({ title, icon, features }) {
       {features.map((f, i) => (
         <div key={i} className="pain-item">
           <span className="pain-source-tag">{f.complexity || "Feature"}</span>
-          <p className="pain-desc" style={{ fontWeight: 700 }}>{f.feature}</p>
+          <p className="pain-desc pain-feature-title" style={{ fontWeight: 700 }}>{f.feature}</p>
           {f.reason && (
-            <p className="pain-desc" style={{ margin: "4px 0 0 0", color: "#b8b2a7" }}>
+            <p className="pain-desc pain-reason" style={{ margin: "4px 0 0 0", color: "#b8b2a7" }}>
               {f.reason}
             </p>
           )}
@@ -102,6 +102,40 @@ export default function MvpRecommendations({ data }) {
           color: #e6e0d4;
           margin: 6px 0 2px 0;
           line-height: 1.4;
+        }
+
+        /* -----------------------------------------------
+           LIGHT THEME OVERRIDES
+        ----------------------------------------------- */
+        [data-theme="light"] .gtm-card {
+          background: #ffffff;
+          border-color: rgba(0, 0, 0, 0.08);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+        }
+        [data-theme="light"] .gtm-card:hover {
+          border-color: rgba(226, 135, 67, 0.35);
+          background: #faf9f5;
+        }
+        [data-theme="light"] .gtm-card-title {
+          color: #18181b;
+        }
+        [data-theme="light"] .pain-item {
+          background: #f8f9fb;
+          border-color: rgba(0, 0, 0, 0.06);
+          border-left: 3px solid #e28743;
+        }
+        [data-theme="light"] .pain-feature-title {
+          color: #18181b !important;
+        }
+        [data-theme="light"] .pain-reason {
+          color: #52525b !important;
+        }
+        [data-theme="light"] .pain-desc {
+          color: #27272a;
+        }
+        [data-theme="light"] .pain-source-tag {
+          background: rgba(226, 135, 67, 0.1);
+          color: #c25e1a;
         }
       `}</style>
     </section>

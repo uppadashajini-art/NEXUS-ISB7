@@ -35,7 +35,7 @@ export default function RiskAnalysis({ risks }) {
           {risks.map((r, i) => (
             <div key={i} className="risk-item">
               <div className="risk-top">
-                <span style={{ fontWeight: 700, fontSize: "0.92rem", color: "#f5f1e8" }}>
+                <span className="risk-name" style={{ fontWeight: 700, fontSize: "0.92rem", color: "#f5f1e8" }}>
                   {r.risk}
                 </span>
                 <span className={`risk-severity ${severityClass(r.severity)}`}>
@@ -57,6 +57,7 @@ export default function RiskAnalysis({ risks }) {
 
               {r.mitigation && (
                 <div
+                  className="risk-mitigation-box"
                   style={{
                     fontSize: "0.8rem",
                     background: "rgba(255,255,255,0.02)",
@@ -66,7 +67,7 @@ export default function RiskAnalysis({ risks }) {
                   }}
                 >
                   <strong style={{ color: "#34d399" }}>Mitigation:</strong>{" "}
-                  <span style={{ color: "#e6e0d4" }}>{r.mitigation}</span>
+                  <span className="risk-mitigation-text" style={{ color: "#e6e0d4" }}>{r.mitigation}</span>
                 </div>
               )}
             </div>
@@ -133,6 +134,39 @@ export default function RiskAnalysis({ risks }) {
         .risk-high { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
         .risk-medium { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
         .risk-low { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+        /* -----------------------------------------------
+           LIGHT THEME OVERRIDES
+        ----------------------------------------------- */
+        [data-theme="light"] .gtm-card {
+          background: #ffffff;
+          border-color: rgba(0, 0, 0, 0.08);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+        }
+        [data-theme="light"] .gtm-card:hover {
+          border-color: rgba(226, 135, 67, 0.35);
+          background: #faf9f5;
+        }
+        [data-theme="light"] .gtm-card-title {
+          color: #18181b;
+        }
+        [data-theme="light"] .risk-item {
+          background: #f8f9fb;
+          border-color: rgba(0, 0, 0, 0.06);
+        }
+        [data-theme="light"] .risk-name {
+          color: #18181b !important;
+        }
+        [data-theme="light"] .risk-item p {
+          color: #52525b !important;
+        }
+        [data-theme="light"] .risk-mitigation-box {
+          background: rgba(16, 185, 129, 0.08) !important;
+          border-color: rgba(16, 185, 129, 0.25) !important;
+        }
+        [data-theme="light"] .risk-mitigation-text {
+          color: #18181b !important;
+        }
       `}</style>
     </section>
   );

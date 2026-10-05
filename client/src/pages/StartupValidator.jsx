@@ -14,6 +14,7 @@ import AdvisorySlideOver from "../components/AdvisorySlideOver";
 import { useAuth } from "../context/AuthContext";
 import { saveValidationActivity } from "../services/supabaseClient";
 import { validateIdea } from "../services/validationService";
+import Footer from "../components/Footer";
 
 import {
   SparklesIcon,
@@ -77,7 +78,7 @@ function StartupValidator({
   } = useAuth();
 
   // =========================================
-  // MODALS STATE
+  // MODALS / NAVIGATION STATE
   // =========================================
 
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -114,10 +115,10 @@ function StartupValidator({
     useState(false);
 
   // =========================================
-  // KEYBOARD SHORTCUT
-  // CMD / CTRL + J
+  // KEYBOARD SHORTCUTS
   // =========================================
 
+  // CMD / CTRL + J
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (
@@ -130,10 +131,44 @@ function StartupValidator({
       }
     };
 
-    window.addEventListener(
-      "keydown",
-      handleKeyDown
-    );
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+    };
+  }, []);
+
+  // CTRL / CMD + ENTER
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        e.key === "Enter"
+      ) {
+        e.preventDefault();
+
+        const formEl =
+          document.getElementById("validator-form");
+
+        if (formEl) {
+          if (formEl.requestSubmit) {
+            formEl.requestSubmit();
+          } else {
+            formEl.dispatchEvent(
+              new Event("submit", {
+                cancelable: true,
+                bubbles: true,
+              })
+            );
+          }
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
       window.removeEventListener(
@@ -144,7 +179,7 @@ function StartupValidator({
   }, []);
 
   // =========================================
-  // SEARCH STATE
+  // SEARCH / LOADING STATE
   // =========================================
 
   const [results, setResults] = useState([]);
@@ -237,22 +272,19 @@ function StartupValidator({
 
   const selectedValidation =
     validationOptions.find(
-      (option) =>
-        option.id === selectedOption
+      (option) => option.id === selectedOption
     ) || validationOptions[0];
 
   const isIdeaValid =
     idea.trim().length >= 40;
 
   // =========================================
-  // TEMPLATE STAGGER ANIMATION
+  // TEMPLATE SELECTION
   // =========================================
 
-  const handleSelectInspiration = (
-    item,
-    idx
-  ) => {
+  const handleSelectInspiration = (item, idx) => {
     setActiveTemplateIdx(idx);
+
     setError("");
     setValidationError("");
     setLoadedFromHistoryMeta(null);
@@ -274,9 +306,11 @@ function StartupValidator({
       setAnimatingField(null);
     }, 700);
 
-    document
-      .getElementById("startup-idea")
-      ?.focus();
+    setTimeout(() => {
+      document
+        .getElementById("startup-idea")
+        ?.focus();
+    }, 450);
   };
 
   // =========================================
@@ -285,9 +319,7 @@ function StartupValidator({
 
   const handleScrollToInput = () => {
     const el =
-      document.getElementById(
-        "startup-idea"
-      );
+      document.getElementById("startup-idea");
 
     if (el) {
       el.scrollIntoView({
@@ -300,14 +332,13 @@ function StartupValidator({
   };
 
   // =========================================
-  // LOAD IDEA FROM ACTIVITY LOG
+  // LOAD IDEA FROM HISTORY
   // =========================================
 
-  const handleLoadIdeaFromHistory = (
-    activity
-  ) => {
+  const handleLoadIdeaFromHistory = (activity) => {
     setIdea(activity.idea || "");
     setDomain(activity.domain || "");
+
     setTargetCustomers(
       activity.target_customer || ""
     );
@@ -316,13 +347,8 @@ function StartupValidator({
       activity.validation_type || "all"
     );
 
-    setSubmittedIdea(
-      activity.idea || ""
-    );
-
-    setSubmittedDomain(
-      activity.domain || ""
-    );
+    setSubmittedIdea(activity.idea || "");
+    setSubmittedDomain(activity.domain || "");
 
     setSubmittedCustomers(
       activity.target_customer || ""
@@ -332,8 +358,7 @@ function StartupValidator({
       activity.validation_type || "all"
     );
 
-    const full =
-      activity.full_result || {};
+    const full = activity.full_result || {};
 
     setValidationResult(full);
 
@@ -344,8 +369,10 @@ function StartupValidator({
     );
 
     setSearchCompleted(true);
+
     setLoading(false);
     setValidationLoading(false);
+
     setError("");
     setValidationError("");
 
@@ -353,8 +380,7 @@ function StartupValidator({
       id: activity.id,
       title: activity.idea_title,
       score: activity.viability_score,
-      overallScore:
-        activity.viability_score,
+      overallScore: activity.viability_score,
       domain: activity.domain,
       created_at: activity.created_at,
     });
@@ -363,16 +389,13 @@ function StartupValidator({
       `📂 Restored "${activity.idea_title}" from Activity Log!`
     );
 
-    setTimeout(
-      () => setToastMessage(""),
-      5000
-    );
+    setTimeout(() => {
+      setToastMessage("");
+    }, 5000);
 
     setTimeout(() => {
       document
-        .getElementById(
-          "results-dashboard"
-        )
+        .getElementById("results-dashboard")
         ?.scrollIntoView({
           behavior: "smooth",
         });
@@ -383,11 +406,10 @@ function StartupValidator({
   // DUPLICATE IDEA
   // =========================================
 
-  const handleDuplicateIdea = (
-    activity
-  ) => {
+  const handleDuplicateIdea = (activity) => {
     setIdea(activity.idea || "");
     setDomain(activity.domain || "");
+
     setTargetCustomers(
       activity.target_customer || ""
     );
@@ -398,15 +420,17 @@ function StartupValidator({
 
     setError("");
     setValidationError("");
+    setLoadedFromHistoryMeta(null);
 
     setToastMessage(
-      `📋 Cloned "${activity.idea_title || "idea"}" into form for iteration!`
+      `📋 Cloned "${
+        activity.idea_title || "idea"
+      }" into form for iteration!`
     );
 
-    setTimeout(
-      () => setToastMessage(""),
-      5000
-    );
+    setTimeout(() => {
+      setToastMessage("");
+    }, 5000);
 
     setTimeout(() => {
       handleScrollToInput();
@@ -417,208 +441,165 @@ function StartupValidator({
   // EXPORT MARKDOWN DOSSIER
   // =========================================
 
-  const handleExportActiveDossier = () => {
+  const handleExportActiveDossier = (format = "markdown") => {
     if (!validationResult) return;
 
-    const report =
-      validationResult.validation_report ||
-      {};
-
-    let content =
-      `# NEXUS Startup Validation Dossier\n\n`;
-
-    content += `**Startup Idea**: ${
-      submittedIdea || idea
-    }\n`;
-
-    content += `**Domain / Industry**: ${
+    const domainSlug = (
       submittedDomain ||
       domain ||
-      "Technology"
-    }\n`;
+      "startup"
+    ).replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
 
-    content += `**Target Customer**: ${
-      submittedCustomers ||
-      targetCustomers ||
-      "General Market"
-    }\n`;
+    const timestamp = new Date().toISOString().slice(0, 10);
 
+    if (format === "json") {
+      const jsonContent = JSON.stringify(validationResult, null, 2);
+      const blob = new Blob([jsonContent], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `nexus_validation_${domainSlug}_${timestamp}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      setToastMessage("📥 JSON validation data downloaded locally!");
+      setTimeout(() => setToastMessage(""), 4000);
+      return;
+    }
+
+    // Markdown export
+    const report = validationResult.validation_report || {};
+    const ideaTitle = submittedIdea || idea || "Proposed Startup Venture";
+
+    let content = `# NEXUS AI — Startup Validation Dossier\n\n`;
+    content += `**Startup Idea**: ${ideaTitle}\n\n`;
+    content += `**Domain / Industry**: ${submittedDomain || domain || "Technology"}\n\n`;
+    content += `**Target Customer**: ${submittedCustomers || targetCustomers || "General Market"}\n\n`;
     content += `**Generated Date**: ${new Date().toLocaleString()}\n\n`;
+    content += `---\n\n`;
 
-    content +=
-      `---\n\n## Executive Summary\n${
-        report.executive_summary ||
-        "Complete AI validation dossier."
-      }\n\n`;
+    // 1. Executive Summary
+    content += `## 1. Executive Summary\n\n`;
+    content += `${report.executive_summary || "Complete multi-agent autonomous validation dossier."}\n\n`;
 
-    if (
-      validationResult.market_analysis
-    ) {
-      content +=
-        `## Market Opportunity\n${
-          validationResult
-            .market_analysis
-            .market_opportunity ||
-          ""
-        }\n\n`;
-
-      if (
-        validationResult
-          .market_analysis
-          .market_trends
-      ) {
-        content +=
-          `### Market Trends\n`;
-
-        validationResult.market_analysis.market_trends.forEach(
-          (t) => {
-            content += `- ${t}\n`;
-          }
-        );
-
+    // 2. Market Analysis
+    if (validationResult.market_analysis) {
+      const ma = validationResult.market_analysis;
+      content += `## 2. Market Opportunity & Sizing\n\n`;
+      if (ma.market_opportunity) {
+        content += `${ma.market_opportunity}\n\n`;
+      }
+      if (ma.target_demographics) {
+        content += `**Target Demographics**: ${ma.target_demographics}\n\n`;
+      }
+      if (ma.market_size_tam_sam_som) {
+        content += `### Market Sizing (TAM / SAM / SOM)\n`;
+        content += `- **TAM**: ${ma.market_size_tam_sam_som.tam || "N/A"}\n`;
+        content += `- **SAM**: ${ma.market_size_tam_sam_som.sam || "N/A"}\n`;
+        content += `- **SOM**: ${ma.market_size_tam_sam_som.som || "N/A"}\n\n`;
+      }
+      if (ma.market_trends && Array.isArray(ma.market_trends)) {
+        content += `### Market Trends & Tailwinds\n`;
+        ma.market_trends.forEach((trend) => {
+          content += `- ${trend}\n`;
+        });
         content += `\n`;
       }
     }
 
-    if (
-      validationResult
-        .competitor_analysis
-        ?.direct_competitors
-    ) {
-      content +=
-        `## Competitor Landscape\n`;
-
-      validationResult.competitor_analysis.direct_competitors.forEach(
-        (c) => {
-          content += `### ${
-            c.name
-          }\n`;
-
-          if (c.strengths) {
-            content +=
-              `- Strengths: ${c.strengths.join(
-                ", "
-              )}\n`;
-          }
-
-          if (c.weaknesses) {
-            content +=
-              `- Weaknesses: ${c.weaknesses.join(
-                ", "
-              )}\n`;
-          }
-        }
-      );
-
-      content += `\n`;
-    }
-
-    if (
-      validationResult
-        .mvp_recommendations
-        ?.must_have
-    ) {
-      content +=
-        `## Must-Have MVP Features\n`;
-
-      validationResult.mvp_recommendations.must_have.forEach(
-        (f) => {
-          content +=
-            `- **${f.feature}**: ${
-              f.reason || ""
-            }\n`;
-        }
-      );
-
-      content += `\n`;
-    }
-
-    content +=
-      `---\n*Generated by NEXUS AI Intelligence Engine*\n`;
-
-    const blob = new Blob(
-      [content],
-      {
-        type: "text/markdown",
+    // 3. Competitor Analysis
+    if (validationResult.competitor_analysis) {
+      const ca = validationResult.competitor_analysis;
+      content += `## 3. Competitor Landscape & Feature Moats\n\n`;
+      if (ca.competitive_landscape) {
+        content += `${ca.competitive_landscape}\n\n`;
       }
-    );
+      if (ca.direct_competitors && Array.isArray(ca.direct_competitors)) {
+        content += `### Direct & Indirect Competitors\n`;
+        ca.direct_competitors.forEach((competitor) => {
+          content += `#### ${competitor.name}\n`;
+          if (competitor.strengths && Array.isArray(competitor.strengths)) {
+            content += `- **Strengths**: ${competitor.strengths.join(", ")}\n`;
+          }
+          if (competitor.weaknesses && Array.isArray(competitor.weaknesses)) {
+            content += `- **Weaknesses**: ${competitor.weaknesses.join(", ")}\n`;
+          }
+          if (competitor.differentiation) {
+            content += `- **NEXUS Differentiation**: ${competitor.differentiation}\n`;
+          }
+        });
+        content += `\n`;
+      }
+    }
 
-    const url =
-      URL.createObjectURL(blob);
+    // 4. SWOT Analysis
+    if (validationResult.swot_analysis) {
+      const swot = validationResult.swot_analysis;
+      content += `## 4. SWOT Strategic Matrix\n\n`;
+      if (swot.strengths?.length) content += `### Strengths\n` + swot.strengths.map(s => `- ${s}`).join("\n") + `\n\n`;
+      if (swot.weaknesses?.length) content += `### Weaknesses\n` + swot.weaknesses.map(w => `- ${w}`).join("\n") + `\n\n`;
+      if (swot.opportunities?.length) content += `### Opportunities\n` + swot.opportunities.map(o => `- ${o}`).join("\n") + `\n\n`;
+      if (swot.threats?.length) content += `### Threats\n` + swot.threats.map(t => `- ${t}`).join("\n") + `\n\n`;
+    }
 
-    const a =
-      document.createElement("a");
+    // 5. Risk Assessment
+    if (validationResult.risk_analysis) {
+      const ra = validationResult.risk_analysis;
+      content += `## 5. Risk Assessment & Mitigations\n\n`;
+      if (ra.market_risks?.length) {
+        content += `### Market Risks\n` + ra.market_risks.map(r => `- ${typeof r === "object" ? r.risk || JSON.stringify(r) : r}`).join("\n") + `\n\n`;
+      }
+      if (ra.technical_risks?.length) {
+        content += `### Technical & Execution Risks\n` + ra.technical_risks.map(r => `- ${typeof r === "object" ? r.risk || JSON.stringify(r) : r}`).join("\n") + `\n\n`;
+      }
+    }
 
+    // 6. MVP Recommendations
+    if (validationResult.mvp_recommendations) {
+      const mvp = validationResult.mvp_recommendations;
+      content += `## 6. MVP Roadmap & Feature Specifications\n\n`;
+      if (mvp.must_have?.length) {
+        content += `### Must-Have Core Features (Phase 1)\n`;
+        mvp.must_have.forEach((feature) => {
+          content += `- **${feature.feature || feature.name || "Core Feature"}**: ${feature.reason || feature.description || ""}\n`;
+        });
+        content += `\n`;
+      }
+      if (mvp.nice_to_have?.length) {
+        content += `### Nice-To-Have Features (Phase 2)\n`;
+        mvp.nice_to_have.forEach((feature) => {
+          content += `- **${feature.feature || feature.name || "Secondary Feature"}**: ${feature.reason || feature.description || ""}\n`;
+        });
+        content += `\n`;
+      }
+    }
+
+    // 7. Go-To-Market Strategy
+    if (validationResult.gtm_strategy) {
+      const gtm = validationResult.gtm_strategy;
+      content += `## 7. Go-To-Market (GTM) Strategy\n\n`;
+      if (gtm.target_launch_channels?.length) {
+        content += `### Customer Acquisition Channels\n` + gtm.target_launch_channels.map(c => `- ${c}`).join("\n") + `\n\n`;
+      }
+      if (gtm.pricing_model) {
+        content += `### Pricing Model\n${gtm.pricing_model}\n\n`;
+      }
+    }
+
+    content += `---\n`;
+    content += `*Generated automatically by NEXUS AI Multi-Agent Intelligence Engine*\n`;
+
+    const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
     a.href = url;
-
-    a.download = `nexus_validation_${(
-      submittedDomain || "startup"
-    ).replace(
-      /[^a-zA-Z0-9]/g,
-      "_"
-    )}.md`;
-
+    a.download = `nexus_validation_${domainSlug}_${timestamp}.md`;
     a.click();
-
     URL.revokeObjectURL(url);
 
-    setToastMessage(
-      "📄 Markdown dossier exported successfully!"
-    );
-
-    setTimeout(
-      () => setToastMessage(""),
-      4000
-    );
+    setToastMessage("📥 Markdown validation report downloaded locally!");
+    setTimeout(() => setToastMessage(""), 4000);
   };
-
-  // =========================================
-  // KEYBOARD SHORTCUT
-  // CTRL / CMD + ENTER
-  // =========================================
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        e.key === "Enter"
-      ) {
-        e.preventDefault();
-
-        const formEl =
-          document.getElementById(
-            "validator-form"
-          );
-
-        if (formEl) {
-          if (
-            formEl.requestSubmit
-          ) {
-            formEl.requestSubmit();
-          } else {
-            formEl.dispatchEvent(
-              new Event("submit", {
-                cancelable: true,
-                bubbles: true,
-              })
-            );
-          }
-        }
-      }
-    };
-
-    window.addEventListener(
-      "keydown",
-      handleKeyDown
-    );
-
-    return () => {
-      window.removeEventListener(
-        "keydown",
-        handleKeyDown
-      );
-    };
-  }, []);
 
   // =========================================
   // FORM SUBMIT
@@ -627,12 +608,8 @@ function StartupValidator({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const trimmedIdea =
-      idea.trim();
-
-    const trimmedDomain =
-      domain.trim();
-
+    const trimmedIdea = idea.trim();
+    const trimmedDomain = domain.trim();
     const trimmedCustomers =
       targetCustomers.trim();
 
@@ -647,9 +624,7 @@ function StartupValidator({
       return;
     }
 
-    if (
-      trimmedIdea.length < 40
-    ) {
+    if (trimmedIdea.length < 40) {
       setError(
         `Please provide at least 40 characters describing your concept (${trimmedIdea.length}/40).`
       );
@@ -676,25 +651,16 @@ function StartupValidator({
     // SAVE SUBMITTED VALUES
     // -----------------------------------------
 
-    setSubmittedIdea(
-      trimmedIdea
-    );
+    setSubmittedIdea(trimmedIdea);
+    setSubmittedDomain(trimmedDomain);
+    setSubmittedCustomers(trimmedCustomers);
+    setSubmittedValidation(selectedOption);
 
-    setSubmittedDomain(
-      trimmedDomain
-    );
-
-    setSubmittedCustomers(
-      trimmedCustomers
-    );
-
-    setSubmittedValidation(
-      selectedOption
-    );
-
-    // -----------------------------------------
-    // VALIDATE
-    // -----------------------------------------
+    // Scroll to top of analysis workspace
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
 
     try {
       const analysisData =
@@ -712,21 +678,26 @@ function StartupValidator({
           ? analysisData.search_results
           : [];
 
-      setResults(
-        searchResults
-      );
+      setResults(searchResults);
 
-      setValidationResult(
-        analysisData
-      );
+      setValidationResult(analysisData);
 
-      setSearchCompleted(
-        true
-      );
+      setSearchCompleted(true);
 
-      // ---------------------------------------
+      // Smoothly navigate founder to the top of the validation results dashboard
+      setTimeout(() => {
+        const dashboardEl = document.getElementById("results-dashboard");
+        if (dashboardEl) {
+          dashboardEl.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      }, 100);
+
+      // -----------------------------------------
       // AUTO SAVE TO SUPABASE
-      // ---------------------------------------
+      // -----------------------------------------
 
       try {
         const currentUserId =
@@ -740,34 +711,24 @@ function StartupValidator({
           "founder@nexus-intelligence.ai";
 
         const saveRes =
-          await saveValidationActivity(
-            {
-              userId:
-                currentUserId,
+          await saveValidationActivity({
+            userId: currentUserId,
+            userEmail: currentUserEmail,
+            idea: trimmedIdea,
+            domain: trimmedDomain,
+            targetCustomer:
+              trimmedCustomers,
+            validationType: selectedOption,
+            fullResult: analysisData,
+          });
 
-              userEmail:
-                currentUserEmail,
-
-              idea:
-                trimmedIdea,
-
-              domain:
-                trimmedDomain,
-
-              targetCustomer:
-                trimmedCustomers,
-
-              validationType:
-                selectedOption,
-
-              fullResult:
-                analysisData,
-            }
+        const scheduledEmail = sessionStorage.getItem("nexus_scheduled_report_email");
+        if (scheduledEmail) {
+          setToastMessage(
+            `✨ Idea validated! Full report dispatched to ${scheduledEmail}.`
           );
-
-        if (
-          saveRes?.savedToSupabase
-        ) {
+          sessionStorage.removeItem("nexus_scheduled_report_email");
+        } else if (saveRes?.savedToSupabase) {
           setToastMessage(
             "✨ Idea validated & saved to your Supabase Cloud Activity Log!"
           );
@@ -781,9 +742,9 @@ function StartupValidator({
           activityCount + 1
         );
 
-        // -------------------------------------
+        // -----------------------------------------
         // CONFETTI
-        // -------------------------------------
+        // -----------------------------------------
 
         try {
           confetti({
@@ -810,10 +771,9 @@ function StartupValidator({
         );
       }
 
-      setTimeout(
-        () => setToastMessage(""),
-        6000
-      );
+      setTimeout(() => {
+        setToastMessage("");
+      }, 6000);
     } catch (err) {
       console.error(
         "Validation error:",
@@ -829,21 +789,11 @@ function StartupValidator({
           .toLowerCase()
           .includes("analysis")
       ) {
-        setValidationError(
-          errorMessage
-        );
-
-        setValidationResult(
-          null
-        );
+        setValidationError(errorMessage);
+        setValidationResult(null);
       } else {
-        setError(
-          errorMessage
-        );
-
-        setSearchCompleted(
-          false
-        );
+        setError(errorMessage);
+        setSearchCompleted(false);
       }
     } finally {
       setLoading(false);
@@ -858,13 +808,8 @@ function StartupValidator({
   const handleRetry = () => {
     if (!submittedIdea) return;
 
-    setIdea(
-      submittedIdea
-    );
-
-    setDomain(
-      submittedDomain
-    );
+    setIdea(submittedIdea);
+    setDomain(submittedDomain);
 
     setTargetCustomers(
       submittedCustomers
@@ -876,9 +821,7 @@ function StartupValidator({
 
     setTimeout(() => {
       document
-        .getElementById(
-          "validator-form"
-        )
+        .getElementById("validator-form")
         ?.requestSubmit();
     }, 0);
   };
@@ -894,40 +837,27 @@ function StartupValidator({
 
     setResults([]);
 
-    setValidationResult(
-      null
-    );
+    setValidationResult(null);
 
-    setValidationLoading(
-      false
-    );
+    setLoading(false);
+    setValidationLoading(false);
 
     setValidationError("");
-
     setError("");
 
     setSubmittedIdea("");
     setSubmittedDomain("");
     setSubmittedCustomers("");
-    setSubmittedValidation(
-      "all"
-    );
 
-    setSearchCompleted(
-      false
-    );
+    setSubmittedValidation("all");
 
-    setSelectedOption(
-      "all"
-    );
+    setSearchCompleted(false);
 
-    setLoadedFromHistoryMeta(
-      null
-    );
+    setSelectedOption("all");
 
-    setActiveTemplateIdx(
-      null
-    );
+    setActiveTemplateIdx(null);
+
+    setLoadedFromHistoryMeta(null);
 
     window.scrollTo({
       top: 0,
@@ -940,18 +870,14 @@ function StartupValidator({
   // =========================================
 
   const handleIdeaChange = (e) => {
-    setIdea(
-      e.target.value
-    );
+    setIdea(e.target.value);
 
     if (error) {
       setError("");
     }
   };
 
-  const handleCustomerChange = (
-    e
-  ) => {
+  const handleCustomerChange = (e) => {
     setTargetCustomers(
       e.target.value
     );
@@ -976,28 +902,19 @@ function StartupValidator({
         onOpenAuth={() =>
           setAuthModalOpen(true)
         }
-
         onOpenHistory={() =>
           setHistoryModalOpen(true)
         }
-
         onOpenSupabase={() =>
           setSupabaseModalOpen(true)
         }
-
         activeTab={activeTab}
-        setActiveTab={
-          setActiveTab
-        }
-
+        setActiveTab={setActiveTab}
         onNavigateToStyleguide={
           onNavigateToStyleguide
         }
-
         theme={theme}
-        onToggleTheme={
-          onToggleTheme
-        }
+        onToggleTheme={onToggleTheme}
       />
 
       {/* =====================================
@@ -1021,18 +938,12 @@ function StartupValidator({
             type="button"
             className="toast-action-btn"
             onClick={() =>
-              setHistoryModalOpen(
-                true
-              )
+              setHistoryModalOpen(true)
             }
           >
-            <span>
-              View Log
-            </span>
+            <span>View Log</span>
 
-            <ArrowRightIcon
-              size={13}
-            />
+            <ArrowRightIcon size={13} />
           </button>
 
           <button
@@ -1041,6 +952,7 @@ function StartupValidator({
             onClick={() =>
               setToastMessage("")
             }
+            aria-label="Close notification"
           >
             <CloseIcon size={14} />
           </button>
@@ -1071,21 +983,22 @@ function StartupValidator({
                 </span>
 
                 <strong>
-                  {
-                    loadedFromHistoryMeta.domain ||
-                    "Startup Analysis"
-                  }
+                  {loadedFromHistoryMeta.domain ||
+                    "Startup Analysis"}
                 </strong>
 
-                {loadedFromHistoryMeta.overallScore && (
-                  <span className="banner-score-tag">
-                    Score:{" "}
-                    {
-                      loadedFromHistoryMeta.overallScore
-                    }
-                    /100
-                  </span>
-                )}
+                {loadedFromHistoryMeta.overallScore !==
+                  undefined &&
+                  loadedFromHistoryMeta.overallScore !==
+                    null && (
+                    <span className="banner-score-tag">
+                      Score:{" "}
+                      {
+                        loadedFromHistoryMeta.overallScore
+                      }
+                      /100
+                    </span>
+                  )}
 
               </div>
             </div>
@@ -1095,9 +1008,7 @@ function StartupValidator({
               <button
                 type="button"
                 className="banner-new-btn"
-                onClick={
-                  handleClear
-                }
+                onClick={handleClear}
               >
                 New Analysis
               </button>
@@ -1139,9 +1050,7 @@ function StartupValidator({
               intelligence.
             </p>
 
-            {/* =============================
-                TEMPLATES
-            ============================= */}
+            {/* TEMPLATES */}
 
             <div className="studio-templates-section">
 
@@ -1157,8 +1066,7 @@ function StartupValidator({
                       key={item.id}
                       type="button"
                       className={`studio-template-chip ${
-                        activeTemplateIdx ===
-                        idx
+                        activeTemplateIdx === idx
                           ? "active"
                           : ""
                       }`}
@@ -1170,7 +1078,6 @@ function StartupValidator({
                       }
                       aria-label={`Load template: ${item.title}`}
                     >
-
                       <span className="studio-template-chip-title">
                         {item.title}
                       </span>
@@ -1180,7 +1087,6 @@ function StartupValidator({
                       >
                         {item.badge}
                       </span>
-
                     </button>
                   )
                 )}
@@ -1200,24 +1106,19 @@ function StartupValidator({
 
             <form
               id="validator-form"
-              onSubmit={
-                handleSubmit
-              }
+              onSubmit={handleSubmit}
               noValidate
             >
 
               <div
                 style={{
                   display: "flex",
-                  flexDirection:
-                    "column",
+                  flexDirection: "column",
                   gap: "24px",
                 }}
               >
 
-                {/* =========================
-                    STARTUP IDEA
-                ========================= */}
+                {/* STARTUP IDEA */}
 
                 <div className="studio-field-group">
 
@@ -1234,8 +1135,7 @@ function StartupValidator({
                     <div className="studio-counter-row">
 
                       <span className="studio-char-count">
-                        {idea.length}{" "}
-                        characters
+                        {idea.length} characters
                       </span>
 
                       <span className="studio-optional-tag">
@@ -1244,15 +1144,12 @@ function StartupValidator({
 
                       <span
                         className={`studio-min-hint ${
-                          idea.trim()
-                            .length >=
-                          40
+                          idea.trim().length >= 40
                             ? "ready"
                             : "pending"
                         }`}
                       >
-                        {idea.trim()
-                          .length >=
+                        {idea.trim().length >=
                         40
                           ? "✓ Ready"
                           : `${
@@ -1268,19 +1165,14 @@ function StartupValidator({
                   <textarea
                     id="startup-idea"
                     value={idea}
-                    onChange={
-                      handleIdeaChange
-                    }
+                    onChange={handleIdeaChange}
                     placeholder="Describe the problem, target audience, and business model for live market benchmarking..."
                     rows={4}
                     disabled={loading}
                     aria-required="true"
-                    aria-invalid={
-                      Boolean(error)
-                    }
+                    aria-invalid={Boolean(error)}
                     className={`studio-textarea ${
-                      animatingField ===
-                      "idea"
+                      animatingField === "idea"
                         ? "field-stagger-pop"
                         : ""
                     } ${
@@ -1308,9 +1200,7 @@ function StartupValidator({
 
                 </div>
 
-                {/* =========================
-                    DOMAIN + CUSTOMER
-                ========================= */}
+                {/* DOMAIN + CUSTOMER */}
 
                 <div className="studio-two-col">
 
@@ -1343,8 +1233,7 @@ function StartupValidator({
                       placeholder="e.g. DevOps, HealthTech, FinTech"
                       disabled={loading}
                       className={`studio-input ${
-                        animatingField ===
-                        "domain"
+                        animatingField === "domain"
                           ? "field-stagger-pop"
                           : ""
                       }`}
@@ -1373,17 +1262,14 @@ function StartupValidator({
                     <input
                       id="target-customers"
                       type="text"
-                      value={
-                        targetCustomers
-                      }
+                      value={targetCustomers}
                       onChange={
                         handleCustomerChange
                       }
                       placeholder="e.g. Enterprise Platform Engineers, SMB Clinics"
                       disabled={loading}
                       className={`studio-input ${
-                        animatingField ===
-                        "target"
+                        animatingField === "target"
                           ? "field-stagger-pop"
                           : ""
                       }`}
@@ -1393,9 +1279,7 @@ function StartupValidator({
 
                 </div>
 
-                {/* =========================
-                    ANALYSIS SCOPE
-                ========================= */}
+                {/* ANALYSIS SCOPE */}
 
                 <div className="studio-scope-section">
 
@@ -1421,17 +1305,13 @@ function StartupValidator({
 
                         return (
                           <button
-                            key={
-                              option.id
-                            }
+                            key={option.id}
                             type="button"
                             role="radio"
                             aria-checked={
                               isSelected
                             }
-                            disabled={
-                              loading
-                            }
+                            disabled={loading}
                             className={`studio-scope-btn ${
                               isSelected
                                 ? "active"
@@ -1454,9 +1334,7 @@ function StartupValidator({
                             />
 
                             <span className="studio-scope-title">
-                              {
-                                option.title
-                              }
+                              {option.title}
                             </span>
 
                           </button>
@@ -1495,9 +1373,7 @@ function StartupValidator({
 
                 </div>
 
-                {/* =========================
-                    RUN ANALYSIS
-                ========================= */}
+                {/* RUN ANALYSIS */}
 
                 <div className="studio-cta-bar">
 
@@ -1516,12 +1392,9 @@ function StartupValidator({
                         <span
                           className="clean-spinner"
                           style={{
-                            width:
-                              "16px",
-                            height:
-                              "16px",
-                            borderWidth:
-                              "2px",
+                            width: "16px",
+                            height: "16px",
+                            borderWidth: "2px",
                           }}
                         />
 
@@ -1546,9 +1419,7 @@ function StartupValidator({
                             "undefined" &&
                           navigator.platform
                             ?.toUpperCase()
-                            .indexOf(
-                              "MAC"
-                            ) >= 0
+                            .indexOf("MAC") >= 0
                             ? "⌘↵"
                             : "Ctrl+↵"}
                         </kbd>
@@ -1576,17 +1447,13 @@ function StartupValidator({
         )}
 
         {/* ===================================
-            HOME DASHBOARD
+            FOUNDER DASHBOARD
             ONLY BEFORE VALIDATION
         =================================== */}
 
         {!validationResult &&
           !loading && (
             <section className="founder-dashboard">
-
-              {/* =============================
-                  DASHBOARD HEADER
-              ============================= */}
 
               <div className="founder-dashboard-header">
 
@@ -1625,10 +1492,6 @@ function StartupValidator({
                 </button>
 
               </div>
-
-              {/* =============================
-                  FOUR ANALYSIS MODULES
-              ============================= */}
 
               <div className="dashboard-analysis-grid">
 
@@ -1710,13 +1573,7 @@ function StartupValidator({
 
               </div>
 
-              {/* =============================
-                  BOTTOM DASHBOARD
-              ============================= */}
-
               <div className="dashboard-bottom-grid">
-
-                {/* HOW IT WORKS */}
 
                 <div className="dashboard-info-card">
 
@@ -1732,9 +1589,7 @@ function StartupValidator({
 
                     <div className="dashboard-step">
 
-                      <span>
-                        1
-                      </span>
+                      <span>1</span>
 
                       <div>
 
@@ -1755,9 +1610,7 @@ function StartupValidator({
 
                     <div className="dashboard-step">
 
-                      <span>
-                        2
-                      </span>
+                      <span>2</span>
 
                       <div>
 
@@ -1778,9 +1631,7 @@ function StartupValidator({
 
                     <div className="dashboard-step">
 
-                      <span>
-                        3
-                      </span>
+                      <span>3</span>
 
                       <div>
 
@@ -1804,8 +1655,6 @@ function StartupValidator({
 
                 </div>
 
-                {/* ACTIVITY */}
-
                 <div className="dashboard-activity-card">
 
                   <span className="dashboard-small-label">
@@ -1813,8 +1662,7 @@ function StartupValidator({
                   </span>
 
                   <div className="dashboard-activity-number">
-                    {activityCount ||
-                      0}
+                    {activityCount || 0}
                   </div>
 
                   <h3>
@@ -1831,14 +1679,10 @@ function StartupValidator({
                     type="button"
                     className="dashboard-history-btn"
                     onClick={() =>
-                      setHistoryModalOpen(
-                        true
-                      )
+                      setHistoryModalOpen(true)
                     }
                   >
-                    <HistoryIcon
-                      size={15}
-                    />
+                    <HistoryIcon size={15} />
 
                     View History
                   </button>
@@ -1880,7 +1724,7 @@ function StartupValidator({
                 <div className="error-content">
 
                   <span className="mini-label">
-                    VALIDATION ERROR
+                    ANALYSIS ERROR
                   </span>
 
                   <h3>
@@ -1889,9 +1733,7 @@ function StartupValidator({
                   </h3>
 
                   <p>
-                    {
-                      validationError
-                    }
+                    {validationError}
                   </p>
 
                   <div className="error-actions">
@@ -2011,9 +1853,7 @@ function StartupValidator({
                 }
 
                 onOpenHistory={() =>
-                  setHistoryModalOpen(
-                    true
-                  )
+                  setHistoryModalOpen(true)
                 }
 
                 onNewAnalysis={
@@ -2021,9 +1861,7 @@ function StartupValidator({
                 }
               />
 
-              {/* =============================
-                  STARTUP ADVISOR
-              ============================= */}
+              {/* STARTUP ADVISOR */}
 
               <StartupAdvisor
                 validationContext={{
@@ -2044,7 +1882,8 @@ function StartupValidator({
                   target_customer:
                     submittedCustomers ||
                     targetCustomers ||
-                    validationResult?.target_customer,
+                    validationResult
+                      ?.target_customer,
                 }}
               />
 
@@ -2082,15 +1921,14 @@ function StartupValidator({
               <button
                 type="button"
                 className="primary-button"
-                onClick={
-                  handleClear
-                }
+                onClick={handleClear}
               >
                 Try Another Idea
               </button>
 
             </section>
           )}
+        <Footer />
 
       </main>
 
@@ -2099,13 +1937,9 @@ function StartupValidator({
       ===================================== */}
 
       <AuthModal
-        isOpen={
-          authModalOpen
-        }
+        isOpen={authModalOpen}
         onClose={() =>
-          setAuthModalOpen(
-            false
-          )
+          setAuthModalOpen(false)
         }
       />
 
@@ -2114,13 +1948,9 @@ function StartupValidator({
       ===================================== */}
 
       <SupabaseConfigModal
-        isOpen={
-          supabaseModalOpen
-        }
+        isOpen={supabaseModalOpen}
         onClose={() =>
-          setSupabaseModalOpen(
-            false
-          )
+          setSupabaseModalOpen(false)
         }
       />
 
@@ -2129,13 +1959,9 @@ function StartupValidator({
       ===================================== */}
 
       <ActivityLogModal
-        isOpen={
-          historyModalOpen
-        }
+        isOpen={historyModalOpen}
         onClose={() =>
-          setHistoryModalOpen(
-            false
-          )
+          setHistoryModalOpen(false)
         }
         onLoadIdeaIntoCanvas={
           handleLoadIdeaFromHistory
@@ -2153,16 +1979,12 @@ function StartupValidator({
         type="button"
         className="advisory-float-trigger"
         onClick={() =>
-          setIsAdvisoryOpen(
-            true
-          )
+          setIsAdvisoryOpen(true)
         }
         aria-label="Open Advisory Assistant"
       >
 
-        <SparklesIcon
-          size={15}
-        />
+        <SparklesIcon size={15} />
 
         <span>
           Advisory Copilot
@@ -2185,17 +2007,12 @@ function StartupValidator({
       ===================================== */}
 
       <AdvisorySlideOver
-        isOpen={
-          isAdvisoryOpen
-        }
+        isOpen={isAdvisoryOpen}
         onClose={() =>
-          setIsAdvisoryOpen(
-            false
-          )
+          setIsAdvisoryOpen(false)
         }
         currentIdea={
-          submittedIdea ||
-          idea
+          submittedIdea || idea
         }
         validationResult={
           validationResult

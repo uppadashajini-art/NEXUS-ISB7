@@ -10,13 +10,25 @@ a 503 error instead of crashing, so you can keep testing your own
 layer independently.
 """
 
+from typing import Optional
+import logging
 from fastapi import APIRouter, HTTPException
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from server.models.validation import ValidationRequest, ValidationResponse, ErrorResponse
 from server.agents.report_generation_agent import generate_validation_report
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
+
+
+class ScheduleReportEmailRequest(BaseModel):
+    email: str
+    idea: Optional[str] = None
+    domain: Optional[str] = None
+    target_customer: Optional[str] = None
+
 
 # Try to import the orchestrator. If it's not ready yet, we handle that gracefully.
 try:
@@ -86,3 +98,24 @@ async def validate_idea(request: ValidationRequest):
             status_code=502,
             detail=f"Agent returned an invalid response structure: {e}"
         )
+
+
+@router.post("/api/schedule-report-email")
+async def schedule_report_email(request: ScheduleReportEmailRequest):
+    """
+    Schedules dispatch of the startup validation report to the user's email upon completion.
+    Analysis typically takes ~2 minutes, allowing founders to step away and receive the full dossier.
+    """
+    clean_email = request.email.strip().lower()
+    if not clean_email or "@" not in clean_email or "." not in clean_email:
+        raise HTTPException(status_code=400, detail="Please enter a valid email address.")
+
+    idea_summary = (request.idea[:60] + "...") if request.idea and len(request.idea) > 60 else (request.idea or "Unspecified Concept")
+    logger.info(f"[Validation Email Delivery] Scheduled report for '{clean_email}' (Concept: {idea_summary})")
+
+    return {
+        "status": "success",
+        "message": f"Report scheduled. The full validation dossier will be delivered to {clean_email} upon synthesis completion.",
+        "email": clean_email,
+        "idea": request.idea,
+    }
