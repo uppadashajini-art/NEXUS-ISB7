@@ -440,139 +440,164 @@ function StartupValidator({
   // EXPORT MARKDOWN DOSSIER
   // =========================================
 
-  const handleExportActiveDossier = () => {
+  const handleExportActiveDossier = (format = "markdown") => {
     if (!validationResult) return;
 
-    const report =
-      validationResult.validation_report || {};
-
-    let content =
-      `# NEXUS Startup Validation Dossier\n\n`;
-
-    content += `**Startup Idea**: ${
-      submittedIdea || idea
-    }\n`;
-
-    content += `**Domain / Industry**: ${
+    const domainSlug = (
       submittedDomain ||
       domain ||
-      "Technology"
-    }\n`;
+      "startup"
+    ).replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
 
-    content += `**Target Customer**: ${
-      submittedCustomers ||
-      targetCustomers ||
-      "General Market"
-    }\n`;
+    const timestamp = new Date().toISOString().slice(0, 10);
 
+    if (format === "json") {
+      const jsonContent = JSON.stringify(validationResult, null, 2);
+      const blob = new Blob([jsonContent], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `nexus_validation_${domainSlug}_${timestamp}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      setToastMessage("📥 JSON validation data downloaded locally!");
+      setTimeout(() => setToastMessage(""), 4000);
+      return;
+    }
+
+    // Markdown export
+    const report = validationResult.validation_report || {};
+    const ideaTitle = submittedIdea || idea || "Proposed Startup Venture";
+
+    let content = `# NEXUS AI — Startup Validation Dossier\n\n`;
+    content += `**Startup Idea**: ${ideaTitle}\n\n`;
+    content += `**Domain / Industry**: ${submittedDomain || domain || "Technology"}\n\n`;
+    content += `**Target Customer**: ${submittedCustomers || targetCustomers || "General Market"}\n\n`;
     content += `**Generated Date**: ${new Date().toLocaleString()}\n\n`;
-
     content += `---\n\n`;
 
-    content += `## Executive Summary\n${
-      report.executive_summary ||
-      "Complete AI validation dossier."
-    }\n\n`;
+    // 1. Executive Summary
+    content += `## 1. Executive Summary\n\n`;
+    content += `${report.executive_summary || "Complete multi-agent autonomous validation dossier."}\n\n`;
 
+    // 2. Market Analysis
     if (validationResult.market_analysis) {
-      content += `## Market Opportunity\n${
-        validationResult.market_analysis
-          .market_opportunity || ""
-      }\n\n`;
-
-      if (
-        validationResult.market_analysis
-          .market_trends
-      ) {
-        content += `### Market Trends\n`;
-
-        validationResult.market_analysis.market_trends.forEach(
-          (trend) => {
-            content += `- ${trend}\n`;
-          }
-        );
-
+      const ma = validationResult.market_analysis;
+      content += `## 2. Market Opportunity & Sizing\n\n`;
+      if (ma.market_opportunity) {
+        content += `${ma.market_opportunity}\n\n`;
+      }
+      if (ma.target_demographics) {
+        content += `**Target Demographics**: ${ma.target_demographics}\n\n`;
+      }
+      if (ma.market_size_tam_sam_som) {
+        content += `### Market Sizing (TAM / SAM / SOM)\n`;
+        content += `- **TAM**: ${ma.market_size_tam_sam_som.tam || "N/A"}\n`;
+        content += `- **SAM**: ${ma.market_size_tam_sam_som.sam || "N/A"}\n`;
+        content += `- **SOM**: ${ma.market_size_tam_sam_som.som || "N/A"}\n\n`;
+      }
+      if (ma.market_trends && Array.isArray(ma.market_trends)) {
+        content += `### Market Trends & Tailwinds\n`;
+        ma.market_trends.forEach((trend) => {
+          content += `- ${trend}\n`;
+        });
         content += `\n`;
       }
     }
 
-    if (
-      validationResult.competitor_analysis
-        ?.direct_competitors
-    ) {
-      content += `## Competitor Landscape\n`;
-
-      validationResult.competitor_analysis.direct_competitors.forEach(
-        (competitor) => {
-          content += `### ${competitor.name}\n`;
-
-          if (competitor.strengths) {
-            content += `- Strengths: ${competitor.strengths.join(
-              ", "
-            )}\n`;
+    // 3. Competitor Analysis
+    if (validationResult.competitor_analysis) {
+      const ca = validationResult.competitor_analysis;
+      content += `## 3. Competitor Landscape & Feature Moats\n\n`;
+      if (ca.competitive_landscape) {
+        content += `${ca.competitive_landscape}\n\n`;
+      }
+      if (ca.direct_competitors && Array.isArray(ca.direct_competitors)) {
+        content += `### Direct & Indirect Competitors\n`;
+        ca.direct_competitors.forEach((competitor) => {
+          content += `#### ${competitor.name}\n`;
+          if (competitor.strengths && Array.isArray(competitor.strengths)) {
+            content += `- **Strengths**: ${competitor.strengths.join(", ")}\n`;
           }
-
-          if (competitor.weaknesses) {
-            content += `- Weaknesses: ${competitor.weaknesses.join(
-              ", "
-            )}\n`;
+          if (competitor.weaknesses && Array.isArray(competitor.weaknesses)) {
+            content += `- **Weaknesses**: ${competitor.weaknesses.join(", ")}\n`;
           }
-        }
-      );
-
-      content += `\n`;
+          if (competitor.differentiation) {
+            content += `- **NEXUS Differentiation**: ${competitor.differentiation}\n`;
+          }
+        });
+        content += `\n`;
+      }
     }
 
-    if (
-      validationResult.mvp_recommendations
-        ?.must_have
-    ) {
-      content += `## Must-Have MVP Features\n`;
+    // 4. SWOT Analysis
+    if (validationResult.swot_analysis) {
+      const swot = validationResult.swot_analysis;
+      content += `## 4. SWOT Strategic Matrix\n\n`;
+      if (swot.strengths?.length) content += `### Strengths\n` + swot.strengths.map(s => `- ${s}`).join("\n") + `\n\n`;
+      if (swot.weaknesses?.length) content += `### Weaknesses\n` + swot.weaknesses.map(w => `- ${w}`).join("\n") + `\n\n`;
+      if (swot.opportunities?.length) content += `### Opportunities\n` + swot.opportunities.map(o => `- ${o}`).join("\n") + `\n\n`;
+      if (swot.threats?.length) content += `### Threats\n` + swot.threats.map(t => `- ${t}`).join("\n") + `\n\n`;
+    }
 
-      validationResult.mvp_recommendations.must_have.forEach(
-        (feature) => {
-          content += `- **${feature.feature}**: ${
-            feature.reason || ""
-          }\n`;
-        }
-      );
+    // 5. Risk Assessment
+    if (validationResult.risk_analysis) {
+      const ra = validationResult.risk_analysis;
+      content += `## 5. Risk Assessment & Mitigations\n\n`;
+      if (ra.market_risks?.length) {
+        content += `### Market Risks\n` + ra.market_risks.map(r => `- ${typeof r === "object" ? r.risk || JSON.stringify(r) : r}`).join("\n") + `\n\n`;
+      }
+      if (ra.technical_risks?.length) {
+        content += `### Technical & Execution Risks\n` + ra.technical_risks.map(r => `- ${typeof r === "object" ? r.risk || JSON.stringify(r) : r}`).join("\n") + `\n\n`;
+      }
+    }
 
-      content += `\n`;
+    // 6. MVP Recommendations
+    if (validationResult.mvp_recommendations) {
+      const mvp = validationResult.mvp_recommendations;
+      content += `## 6. MVP Roadmap & Feature Specifications\n\n`;
+      if (mvp.must_have?.length) {
+        content += `### Must-Have Core Features (Phase 1)\n`;
+        mvp.must_have.forEach((feature) => {
+          content += `- **${feature.feature || feature.name || "Core Feature"}**: ${feature.reason || feature.description || ""}\n`;
+        });
+        content += `\n`;
+      }
+      if (mvp.nice_to_have?.length) {
+        content += `### Nice-To-Have Features (Phase 2)\n`;
+        mvp.nice_to_have.forEach((feature) => {
+          content += `- **${feature.feature || feature.name || "Secondary Feature"}**: ${feature.reason || feature.description || ""}\n`;
+        });
+        content += `\n`;
+      }
+    }
+
+    // 7. Go-To-Market Strategy
+    if (validationResult.gtm_strategy) {
+      const gtm = validationResult.gtm_strategy;
+      content += `## 7. Go-To-Market (GTM) Strategy\n\n`;
+      if (gtm.target_launch_channels?.length) {
+        content += `### Customer Acquisition Channels\n` + gtm.target_launch_channels.map(c => `- ${c}`).join("\n") + `\n\n`;
+      }
+      if (gtm.pricing_model) {
+        content += `### Pricing Model\n${gtm.pricing_model}\n\n`;
+      }
     }
 
     content += `---\n`;
-    content +=
-      `*Generated by NEXUS AI Intelligence Engine*\n`;
+    content += `*Generated automatically by NEXUS AI Multi-Agent Intelligence Engine*\n`;
 
-    const blob = new Blob([content], {
-      type: "text/markdown",
-    });
-
+    const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-
     const a = document.createElement("a");
-
     a.href = url;
-
-    a.download = `nexus_validation_${
-      (
-        submittedDomain ||
-        domain ||
-        "startup"
-      ).replace(/[^a-zA-Z0-9]/g, "_")
-    }.md`;
-
+    a.download = `nexus_validation_${domainSlug}_${timestamp}.md`;
     a.click();
-
     URL.revokeObjectURL(url);
 
-    setToastMessage(
-      "📄 Markdown dossier exported successfully!"
-    );
-
-    setTimeout(() => {
-      setToastMessage("");
-    }, 4000);
+    setToastMessage("📥 Markdown validation report downloaded locally!");
+    setTimeout(() => setToastMessage(""), 4000);
   };
 
   // =========================================
@@ -696,7 +721,13 @@ function StartupValidator({
             fullResult: analysisData,
           });
 
-        if (saveRes?.savedToSupabase) {
+        const scheduledEmail = sessionStorage.getItem("nexus_scheduled_report_email");
+        if (scheduledEmail) {
+          setToastMessage(
+            `✨ Idea validated! Full report dispatched to ${scheduledEmail}.`
+          );
+          sessionStorage.removeItem("nexus_scheduled_report_email");
+        } else if (saveRes?.savedToSupabase) {
           setToastMessage(
             "✨ Idea validated & saved to your Supabase Cloud Activity Log!"
           );

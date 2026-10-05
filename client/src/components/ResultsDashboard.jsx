@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Globe,
   RefreshCw,
+  Download,
 } from "lucide-react";
 
 import SearchResultCard from "./SearchResultCard";
@@ -1690,6 +1691,18 @@ export default function ResultsDashboard({
               </span>
             </div>
 
+            {onExport && (
+              <button
+                type="button"
+                className="results-download-btn"
+                onClick={() => onExport("markdown")}
+                title="Download full validation report locally (.md)"
+              >
+                <Download size={14} />
+                <span>Download Report</span>
+              </button>
+            )}
+
             {onNewAnalysis && (
               <button
                 type="button"
@@ -1908,6 +1921,18 @@ export default function ResultsDashboard({
           })}
 
         </div>
+
+        {onExport && (
+          <button
+            type="button"
+            className="results-nav-download-btn"
+            onClick={() => onExport("markdown")}
+            title="Download full validation report locally (.md)"
+          >
+            <Download size={13} />
+            <span>Download Report</span>
+          </button>
+        )}
 
       </nav>
 
@@ -2619,6 +2644,11 @@ export default function ResultsDashboard({
           <ValidationReport
             report={
               validationReportData
+            }
+            onDownload={
+              onExport
+                ? () => onExport("markdown")
+                : undefined
             }
           />
 

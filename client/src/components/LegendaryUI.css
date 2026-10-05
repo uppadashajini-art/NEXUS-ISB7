@@ -55,7 +55,7 @@
   min-height: 100vh;
   background-color: var(--nexus-bg);
   color: var(--nexus-text);
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* Purge all ambient cosmic blur orbs */
