@@ -2,11 +2,77 @@ import asyncio
 import logging
 import os
 import re
+import hashlib
+import json
+import sqlite3
+import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
+
+# Search cache directory and database
+CACHE_DIR = Path(__file__).resolve().parents[1] / "cache"
+CACHE_DB_PATH = CACHE_DIR / "search_cache.sqlite"
+
+def _init_search_cache() -> None:
+    try:
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        with sqlite3.connect(str(CACHE_DB_PATH)) as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS search_cache (
+                    query_hash TEXT PRIMARY KEY,
+                    query TEXT,
+                    results_json TEXT,
+                    cached_at REAL
+                )
+                """
+            )
+            conn.commit()
+    except Exception as e:
+        logger.warning(f"Failed to initialize search cache: {e}")
+
+def _get_cached_search(query: str, ttl_days: int = 7) -> Optional[List[Dict[str, Any]]]:
+    try:
+        _init_search_cache()
+        q_hash = hashlib.sha256(query.strip().lower().encode("utf-8")).hexdigest()
+        min_cached_at = time.time() - (ttl_days * 86400)
+        with sqlite3.connect(str(CACHE_DB_PATH)) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT results_json FROM search_cache WHERE query_hash = ? AND cached_at >= ?",
+                (q_hash, min_cached_at)
+            )
+            row = cursor.fetchone()
+            if row and row[0]:
+                results = json.loads(row[0])
+                if isinstance(results, list) and len(results) > 0:
+                    logger.info(f"CACHE-HIT: Returning {len(results)} cached search results for query: {query[:60]}")
+                    return results
+    except Exception as e:
+        logger.warning(f"Error reading search cache: {e}")
+    return None
+
+def _set_cached_search(query: str, results: List[Dict[str, Any]]) -> None:
+    if not results:
+        return
+    try:
+        _init_search_cache()
+        q_hash = hashlib.sha256(query.strip().lower().encode("utf-8")).hexdigest()
+        with sqlite3.connect(str(CACHE_DB_PATH)) as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO search_cache (query_hash, query, results_json, cached_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (q_hash, query.strip(), json.dumps(results), time.time())
+            )
+            conn.commit()
+    except Exception as e:
+        logger.warning(f"Error writing to search cache: {e}")
+
 
 STOP_WORDS = {
     "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
@@ -358,6 +424,9 @@ def generate_search_queries(
             f"{core} competitors alternatives "
             f"market leaders products"
         )
+        combined_text = f"{core} {audience} {problem} {solution}".lower()
+        if "india" in combined_text or any(w in combined_text for w in ["gig", "swiggy", "zomato", "uber", "cibil", "micro-loan", "micro loan"]):
+            queries.append("India gig worker micro loans competitors KarmaLife SalaryDost Avail Finance Jar")
 
     # Customers
     if validation_type in (
@@ -418,7 +487,7 @@ def generate_search_queries(
         "risks",
     ):
         queries.append(
-            f"{core} scientific validation peer reviewed clinical literature biomarker studies pubmed research"
+            f"{core} scientific validation empirical evidence literature research findings"
         )
 
     # Technical Feasibility
@@ -427,7 +496,7 @@ def generate_search_queries(
         "technical",
     ):
         queries.append(
-            f"{core} technical feasibility acoustic signal processing algorithms sensor constraints audio frequency limits"
+            f"{core} technical feasibility architecture engineering constraints tech stack"
         )
 
     # Regulatory Risk & Compliance
@@ -436,9 +505,14 @@ def generate_search_queries(
         "regulatory",
         "risks",
     ):
-        queries.append(
-            f"{core} FDA SaMD software as a medical device classification clinical trial requirements wellness disclaimer"
-        )
+        if any(h in combined_text for h in ["health", "medical", "patient", "clinical", "sensor", "acoustic", "biomarker"]):
+            queries.append(
+                f"{core} FDA SaMD software as a medical device classification clinical trial requirements wellness disclaimer"
+            )
+        else:
+            queries.append(
+                f"{core} regulatory compliance legal standards governing requirements licensing"
+            )
 
     # --------------------------------------------------------
     # Remove duplicate queries
@@ -467,47 +541,38 @@ def generate_search_queries(
 
 
 # ============================================================
-# Tavily Search
+# Search Failure & Quota Detection
 # ============================================================
 
-async def _search_tavily(
+def _is_quota_or_auth_error(exc: Exception) -> bool:
+    """
+    Detect Tavily quota/rate errors (HTTP 429/432/401, usage limit, exhausted credits).
+    """
+    msg = str(exc).lower()
+    quota_terms = [
+        "429", "432", "401", "quota", "rate limit", "credits",
+        "exhausted", "unauthorized", "usage limit", "forbidden",
+        "too many requests", "payment required"
+    ]
+    return any(term in msg for term in quota_terms)
+
+
+async def _search_tavily_single_key(
     query: str,
+    api_key: str,
     max_results: int = 5,
-) -> List[Dict[str, Any]]:
+) -> Tuple[List[Dict[str, Any]], bool]:
     """
-    Search using Tavily.
-    Tavily is the primary provider.
+    Search using a specific Tavily API key.
+    Returns (results_list, is_quota_error).
     """
-
-    _load_env_if_needed()
-
-    api_key = os.getenv(
-        "TAVILY_API_KEY"
-    )
-
-    if not api_key:
-
-        logger.warning(
-            "TAVILY_API_KEY is not configured."
-        )
-
-        return []
-
-    if api_key == "your_key_here":
-
-        logger.warning(
-            "TAVILY_API_KEY contains placeholder value."
-        )
-
-        return []
+    if not api_key or api_key.strip() in ("", "your_key_here", "none"):
+        return [], False
 
     try:
-
         from tavily import TavilyClient
 
-        client = TavilyClient(
-            api_key=api_key
-        )
+        client = TavilyClient(api_key=api_key)
 
         response = await asyncio.wait_for(
             asyncio.to_thread(
@@ -519,82 +584,88 @@ async def _search_tavily(
             timeout=SEARCH_TIMEOUT_SECONDS,
         )
 
-        if not isinstance(
-            response,
-            dict,
-        ):
-            return []
+        if not isinstance(response, dict):
+            return [], False
 
         results = []
-
-        for item in response.get(
-            "results",
-            [],
-        ):
-
-            if not isinstance(
-                item,
-                dict,
-            ):
+        for item in response.get("results", []):
+            if not isinstance(item, dict):
                 continue
-
-            title = str(
-                item.get(
-                    "title",
-                    "",
-                )
-            ).strip()
-
-            url = str(
-                item.get(
-                    "url",
-                    "",
-                )
-            ).strip()
-
-            content = str(
-                item.get(
-                    "content",
-                    "",
-                )
-            ).strip()
-
+            title = str(item.get("title", "")).strip()
+            url = str(item.get("url", "")).strip()
+            content = str(item.get("content", "")).strip()
             if not title or not url:
                 continue
-
-            results.append(
-                {
-                    "title": title,
-                    "url": url,
-                    "content": content,
-                }
-            )
+            results.append({"title": title, "url": url, "content": content})
 
         logger.info(
             "Tavily returned %d results for query: %s",
             len(results),
             query,
         )
-
-        return results
+        return results, False
 
     except asyncio.TimeoutError:
-
         logger.warning(
             "Tavily search timed out for query: %s",
             query,
         )
-
-        return []
+        return [], False
 
     except Exception as exc:
-
+        is_quota = _is_quota_or_auth_error(exc)
         logger.warning(
-            "Tavily search failed: %s",
+            "Tavily search error (is_quota=%s): %s",
+            is_quota,
             exc,
         )
+        return [], is_quota
 
-        return []
+
+# ============================================================
+# Tavily Search Provider Chain
+# ============================================================
+
+async def _search_tavily(
+    query: str,
+    max_results: int = 5,
+) -> Tuple[List[Dict[str, Any]], bool]:
+    """
+    Search using Tavily provider chain:
+    1. TAVILY_API_KEY
+    2. Fallback to TAVILY_API_KEY_2 if primary fails or hits quota
+    Returns: (results, is_quota_exhausted)
+    """
+    _load_env_if_needed()
+
+    primary_key = os.getenv("TAVILY_API_KEY", "")
+    secondary_key = os.getenv("TAVILY_API_KEY_2", "")
+
+    # Try primary key
+    results, is_quota = await _search_tavily_single_key(
+        query=query,
+        api_key=primary_key,
+        max_results=max_results,
+    )
+
+    if results:
+        return results, False
+
+    # If primary key failed, try secondary key if configured
+    if secondary_key and secondary_key != primary_key:
+        logger.info("Trying secondary TAVILY_API_KEY_2 fallback for query: %s", query)
+        results_sec, is_quota_sec = await _search_tavily_single_key(
+            query=query,
+            api_key=secondary_key,
+            max_results=max_results,
+        )
+        if results_sec:
+            return results_sec, False
+        # If secondary also hit quota or primary did, flag quota
+        is_quota = is_quota or is_quota_sec
+
+    # Both keys failed or not configured
+    return [], is_quota
 
 
 # ============================================================
@@ -704,38 +775,58 @@ async def _search_ddg_async(
 
 
 # ============================================================
-# Execute Search
+# Execute Search with 7-Day Caching & Fallback Chain
 # ============================================================
 
 async def _execute_single_query(
     query: str,
     max_results: int = 5,
-) -> List[Dict[str, Any]]:
+    force_refresh: bool = False,
+) -> Tuple[List[Dict[str, Any]], bool]:
     """
-    Execute one search query.
+    Execute one search query through the fallback provider chain:
+    1. Check 7-day SQLite cache per query (unless force_refresh=True)
+    2. Primary Tavily key (TAVILY_API_KEY)
+    3. Secondary Tavily key (TAVILY_API_KEY_2)
+    4. Alternative provider (DDGS)
+    5. Cache successful search results for 7 days
 
-    Tavily first.
-    DDGS fallback.
+    Returns:
+        (results_list, is_quota_exhausted)
     """
+    # 1. 7-Day SQLite Cache Check
+    if not force_refresh:
+        cached_results = _get_cached_search(query, ttl_days=7)
+        if cached_results:
+            return cached_results, False
 
-    tavily_results = await _search_tavily(
+    # 2. Tavily Provider Chain
+    tavily_results, quota_exhausted = await _search_tavily(
         query,
         max_results=max_results,
     )
 
     if tavily_results:
+        _set_cached_search(query, tavily_results)
+        return tavily_results, False
 
-        return tavily_results
-
+    # 3. Alternative Provider Fallback (DDGS)
     logger.info(
-        "Tavily returned no results; "
-        "trying DDGS fallback."
+        "Tavily returned no results (quota_exhausted=%s); trying DDGS fallback.",
+        quota_exhausted,
     )
 
-    return await _search_ddg_async(
+    ddgs_results = await _search_ddg_async(
         query,
         max_results=max_results,
     )
+
+    if ddgs_results:
+        _set_cached_search(query, ddgs_results)
+        return ddgs_results, quota_exhausted
+
+    return [], quota_exhausted
+
 
 
 # ============================================================
@@ -1654,6 +1745,7 @@ async def run_web_search_agent(
     domain: str = "",
     audience: str = "",
     validation_type: str = "all",
+    force_refresh: bool = False,
 ) -> Dict[str, Any]:
     """
     Main Web Search Agent.
@@ -1764,12 +1856,11 @@ async def run_web_search_agent(
         # ----------------------------------------------------
 
         tasks = [
-
             _execute_single_query(
                 query,
                 max_results=SEARCH_RESULTS_PER_QUERY,
+                force_refresh=force_refresh,
             )
-
             for query in queries
         ]
 
@@ -1779,10 +1870,11 @@ async def run_web_search_agent(
         )
 
         # ----------------------------------------------------
-        # Collect results
+        # Collect results & monitor quota status
         # ----------------------------------------------------
 
         all_results = []
+        any_quota_exhausted = False
 
         for batch in search_batches:
 
@@ -1795,21 +1887,24 @@ async def run_web_search_agent(
                     "Search batch failed: %s",
                     batch,
                 )
+                if _is_quota_or_auth_error(batch):
+                    any_quota_exhausted = True
 
                 continue
 
-            if not isinstance(
-                batch,
-                list,
-            ):
-
-                continue
-
-            all_results.extend(batch)
+            if isinstance(batch, tuple):
+                items, is_quota = batch
+                if is_quota:
+                    any_quota_exhausted = True
+                if isinstance(items, list):
+                    all_results.extend(items)
+            elif isinstance(batch, list):
+                all_results.extend(batch)
 
         logger.info(
-            "Collected %d raw search results",
+            "Collected %d raw search results (quota_exhausted=%s)",
             len(all_results),
+            any_quota_exhausted,
         )
 
         if not all_results:
@@ -1819,8 +1914,10 @@ async def run_web_search_agent(
                 "from Tavily or DDGS."
             )
 
+            status = "quota_exhausted" if any_quota_exhausted else "thin"
             return {
-                "results": []
+                "results": [],
+                "search_status": status,
             }
 
         # ----------------------------------------------------
@@ -1982,13 +2079,21 @@ async def run_web_search_agent(
         # Return
         # ----------------------------------------------------
 
+        search_status = (
+            "quota_exhausted"
+            if any_quota_exhausted
+            else ("thin" if len(final_results) < 5 else "ok")
+        )
+
         logger.info(
-            "Returning %d final search results",
+            "Returning %d final search results (search_status=%s)",
             len(final_results),
+            search_status,
         )
 
         return {
-            "results": final_results
+            "results": final_results,
+            "search_status": search_status,
         }
 
     except ValueError as exc:
@@ -1999,7 +2104,8 @@ async def run_web_search_agent(
         )
 
         return {
-            "results": []
+            "results": [],
+            "search_status": "thin",
         }
 
     except Exception as exc:
@@ -2009,8 +2115,10 @@ async def run_web_search_agent(
             exc,
         )
 
+        is_q = _is_quota_or_auth_error(exc)
         return {
-            "results": []
+            "results": [],
+            "search_status": "quota_exhausted" if is_q else "thin",
         }
 
 

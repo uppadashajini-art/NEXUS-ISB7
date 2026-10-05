@@ -10,3 +10,13 @@ server/idea_*.json
 server/verify_live_api.py
 dist/
 *.log
+scratch/
+server/.cache/
+server/cache/
+server/comparison_results.json
+server/fresh_eval_3_ideas.json
+server/run_fresh_3_ideas.py
+server/run_fresh_evaluation.py
+server/tests/test_data_integrity.py
+server/tests/test_generalization.py
+server/tests/conftest.py

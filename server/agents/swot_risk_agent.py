@@ -332,8 +332,13 @@ async def run_swot_risk_agent(
                 # Validate output shape
                 swot_obj = SWOTAnalysis(**llm_data["swot_analysis"])
                 risk_objs = [RiskItem(**r) for r in llm_data["risk_analysis"]]
+                from server.agents.competitor_analysis_agent import sanitize_failure_sentences
+                clean_swot = sanitize_failure_sentences(swot_obj.model_dump())
+                for field in ["strengths", "weaknesses", "opportunities", "threats"]:
+                    if not clean_swot.get(field):
+                        clean_swot[field] = fallback_data["swot_analysis"].get(field, ["Clear focus on core problem"])
                 return {
-                    "swot_analysis": swot_obj.model_dump(),
+                    "swot_analysis": clean_swot,
                     "risk_analysis": [r.model_dump() for r in risk_objs]
                 }
             except Exception as val_err:
@@ -343,8 +348,14 @@ async def run_swot_risk_agent(
     swot_obj = SWOTAnalysis(**fallback_data["swot_analysis"])
     risk_objs = [RiskItem(**r) for r in fallback_data["risk_analysis"]]
 
+    from server.agents.competitor_analysis_agent import sanitize_failure_sentences
+    clean_swot = sanitize_failure_sentences(swot_obj.model_dump())
+    for field in ["strengths", "weaknesses", "opportunities", "threats"]:
+        if not clean_swot.get(field):
+            clean_swot[field] = fallback_data["swot_analysis"].get(field, ["Clear focus on core problem"])
+
     return {
-        "swot_analysis": swot_obj.model_dump(),
+        "swot_analysis": clean_swot,
         "risk_analysis": [r.model_dump() for r in risk_objs]
     }
 

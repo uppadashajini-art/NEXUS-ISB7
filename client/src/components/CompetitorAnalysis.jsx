@@ -347,6 +347,28 @@ function CompetitorCard({
         </div>
       )}
 
+      {/* Competitor Fit Check: why_competitor & region */}
+      {(competitor?.why_competitor || competitor?.region) && (
+        <div className="competitor-fit-box" style={{
+          marginTop: "10px",
+          marginBottom: "12px",
+          padding: "10px 12px",
+          borderRadius: "8px",
+          background: "rgba(168, 85, 247, 0.1)",
+          border: "1px solid rgba(168, 85, 247, 0.3)"
+        }}>
+          <div style={{ fontSize: "10px", fontWeight: 800, color: "#C084FC", textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", justifyContent: "space-between" }}>
+            <span>🎯 Competitor Fit Reason</span>
+            {competitor.region && <span style={{ color: "#E9D5FF" }}>Region: {competitor.region}</span>}
+          </div>
+          {competitor.why_competitor && (
+            <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#F3E8FF", lineHeight: "1.4" }}>
+              {competitor.why_competitor}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Pricing */}
       <div className="competitor-pricing-box">
         <div className="pricing-icon">
@@ -649,15 +671,21 @@ function EmptyCompetitorState() {
 
 export default function CompetitorAnalysis({
   data,
+  competitors,
+  indirectCompetitors,
+  comparison,
+  marketGaps,
+  evidenceStatus,
+  evidenceReason,
+  unverifiedCandidates,
 }) {
-  if (!data) return null;
-
-  const {
-    direct_competitors = [],
-    indirect_competitors = [],
-    comparison = [],
-    market_gaps = [],
-  } = data;
+  const direct_competitors = competitors || data?.direct_competitors || [];
+  const indirect_competitors = indirectCompetitors || data?.indirect_competitors || [];
+  const comparisonList = comparison || data?.feature_matrix || data?.competitor_comparison || data?.comparison || [];
+  const market_gaps = marketGaps || data?.market_gaps || [];
+  const evStatus = evidenceStatus || data?.evidence_status || (direct_competitors.length < 3 ? "not_enough_evidence" : "adequate");
+  const evReason = evidenceReason || data?.evidence_reason || (direct_competitors.length < 3 ? "Fewer than 3 verified commercial competitors were found in retrieved web sources." : "");
+  const unverified = unverifiedCandidates || data?.unverified_candidates || [];
 
   /* =================================================
      Competitor arrays
@@ -674,8 +702,8 @@ export default function CompetitorAnalysis({
       : [];
 
   const safeComparison =
-    Array.isArray(comparison)
-      ? comparison
+    Array.isArray(comparisonList)
+      ? comparisonList
       : [];
 
   const safeMarketGaps =
@@ -683,9 +711,13 @@ export default function CompetitorAnalysis({
       ? market_gaps
       : [];
 
+  const safeUnverified =
+    Array.isArray(unverified)
+      ? unverified
+      : [];
+
   /*
     Combine both lists.
-
     Used by the comparison table to find
     the original competitor data.
   */
@@ -707,10 +739,14 @@ export default function CompetitorAnalysis({
   const hasComparison =
     safeComparison.length > 0;
 
+  const hasUnverified =
+    safeUnverified.length > 0;
+
   const hasAnything =
     hasDirectCompetitors ||
     hasIndirectCompetitors ||
-    hasComparison;
+    hasComparison ||
+    hasUnverified;
 
   /* =================================================
      Empty state
@@ -833,6 +869,173 @@ export default function CompetitorAnalysis({
         </div>
 
       </div>
+
+      {/* =================================================
+          Evidence Check Alert
+      ================================================= */}
+
+      {(safeDirectCompetitors.length < 3 || evStatus === "not_enough_evidence") && (
+        <div
+          className="competitor-evidence-alert"
+          style={{
+            padding: "16px 20px",
+            background: "rgba(239, 68, 68, 0.08)",
+            border: "1px solid rgba(239, 68, 68, 0.25)",
+            borderRadius: "8px",
+            marginBottom: "24px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              marginBottom: "6px",
+            }}
+          >
+            <span style={{ fontSize: "18px" }}>⚠️</span>
+            <strong
+              style={{
+                color: "#ef4444",
+                fontSize: "13px",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
+              Not enough evidence
+            </strong>
+          </div>
+          <p
+            style={{
+              margin: 0,
+              fontSize: "13px",
+              color: "#94a3b8",
+              lineHeight: "1.5",
+            }}
+          >
+            {evReason ||
+              "Fewer than 3 verified commercial competitors were found in retrieved web sources."}
+          </p>
+        </div>
+      )}
+
+      {/* =================================================
+          Unverified Model Candidates (if evidence is thin)
+      ================================================= */}
+
+      {safeUnverified.length > 0 && (
+        <div className="competitor-group" style={{ marginBottom: "28px" }}>
+          <div className="group-heading-row">
+            <div>
+              <span className="group-kicker" style={{ color: "#f59e0b" }}>
+                MODEL KNOWLEDGE CANDIDATES
+              </span>
+              <h3>Unverified Competitor Candidates</h3>
+            </div>
+            <span
+              className="group-counter-pill"
+              style={{
+                background: "rgba(245, 158, 11, 0.15)",
+                color: "#f59e0b",
+                border: "1px solid rgba(245, 158, 11, 0.3)",
+              }}
+            >
+              {safeUnverified.length} Candidates
+            </span>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: "16px",
+              marginTop: "12px",
+            }}
+          >
+            {safeUnverified.slice(0, 3).map((candidate, index) => (
+              <div
+                key={`unverified-${index}`}
+                style={{
+                  background: "rgba(255, 255, 255, 0.02)",
+                  border: "1px dashed rgba(245, 158, 11, 0.4)",
+                  borderRadius: "8px",
+                  padding: "16px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    marginBottom: "10px",
+                    gap: "8px",
+                  }}
+                >
+                  <h4
+                    style={{
+                      margin: 0,
+                      fontSize: "15px",
+                      fontWeight: 600,
+                      color: "#f8fafc",
+                    }}
+                  >
+                    {candidate.name}
+                  </h4>
+                  <span
+                    style={{
+                      background: "rgba(245, 158, 11, 0.15)",
+                      color: "#f59e0b",
+                      fontSize: "10px",
+                      padding: "2px 6px",
+                      borderRadius: "4px",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.03em",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Unverified, from model knowledge
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#94a3b8",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px",
+                  }}
+                >
+                  <div>
+                    <strong style={{ color: "#cbd5e1" }}>Product/Service: </strong>
+                    <span>
+                      {candidate.product_service ||
+                        candidate.product ||
+                        candidate.description ||
+                        "N/A"}
+                    </span>
+                  </div>
+                  <div>
+                    <strong style={{ color: "#cbd5e1" }}>Target Customers: </strong>
+                    <span>
+                      {candidate.target_customers ||
+                        candidate.targetCustomers ||
+                        "N/A"}
+                    </span>
+                  </div>
+                  {candidate.fit_reason && (
+                    <div style={{ marginTop: "4px", fontStyle: "italic", color: "#f59e0b" }}>
+                      <strong>Fit check: </strong>
+                      <span>{candidate.fit_reason}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* =================================================
           Direct competitors

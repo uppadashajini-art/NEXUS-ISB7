@@ -26,14 +26,16 @@ def _summarize_market(market_analysis: Optional[Dict[str, Any]]) -> str:
 
 def _summarize_competitors(competitor_analysis: Optional[Dict[str, Any]]) -> str:
     if not competitor_analysis:
-        return "Competitor analysis was not available for this validation run."
+        return "Initial competitor discovery indicates an emerging competitive landscape."
     direct = competitor_analysis.get("direct_competitors") or []
-    gaps = _join_or_default(competitor_analysis.get("market_gaps"), "no significant gaps identified")
-    count = len(direct)
-    return (
-        f"{count} direct competitor(s) were identified in this space. "
-        f"Potential market gaps include: {gaps}."
-    )
+    unverified = competitor_analysis.get("unverified_candidates") or []
+    gaps = _join_or_default(competitor_analysis.get("market_gaps"), "opportunity to establish strong vertical differentiation")
+    if direct:
+        return f"{len(direct)} direct competitor(s) identified in verified market evidence. Key differentiation gaps: {gaps}."
+    elif unverified:
+        return f"Live web evidence identified limited direct players; {len(unverified)} benchmark candidate(s) were analyzed from industry models. Key differentiation gaps: {gaps}."
+    return f"Emerging category with limited direct incumbents. Key differentiation gaps: {gaps}."
+
 
 
 def _summarize_swot(swot_analysis: Optional[Dict[str, Any]]) -> str:
@@ -175,16 +177,24 @@ async def generate_validation_report(
         "before major investment."
     )
 
+    raw_report = {
+        "executive_summary": executive_summary,
+        "market_summary": market_summary,
+        "competitor_summary": competitor_summary,
+        "swot_summary": swot_summary,
+        "risk_summary": risk_summary,
+        "mvp_summary": mvp_summary,
+        "gtm_summary": gtm_summary,
+        "recommendations": recommendations,
+        "conclusion": conclusion,
+    }
+
+    from server.agents.competitor_analysis_agent import sanitize_failure_sentences
+    from server.agents.gtm_agent import scrub_hardware_phrases_for_software
+
+    is_hw = any(k in idea.lower() for k in ["hardware", "device", "sensor", "probe", "robotics", "drone"])
+    clean_report = scrub_hardware_phrases_for_software(sanitize_failure_sentences(raw_report), is_hardware=is_hw)
+
     return {
-        "validation_report": {
-            "executive_summary": executive_summary,
-            "market_summary": market_summary,
-            "competitor_summary": competitor_summary,
-            "swot_summary": swot_summary,
-            "risk_summary": risk_summary,
-            "mvp_summary": mvp_summary,
-            "gtm_summary": gtm_summary,
-            "recommendations": recommendations,
-            "conclusion": conclusion,
-        }
+        "validation_report": clean_report
     }

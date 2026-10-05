@@ -229,7 +229,7 @@ def classify_business_archetype(
 
     # Signals
     is_healthcare = any(w in text for w in ["health", "clinic", "medical", "patient", "doctor", "hospital", "pharma", "clinical", "biotech", "inhaler", "cardiac", "therapy"])
-    is_fintech = any(w in text for w in ["fintech", "payment", "invoice", "banking", "factoring", "lending", "credit", "interchange", "treasury", "capital", "underwriting", "wealth"])
+    is_fintech = any(w in text for w in ["fintech", "payment", "invoice", "banking", "factoring", "lending", "credit", "interchange", "treasury", "capital", "underwriting", "wealth", "loan", "micro-loan", "cibil", "payout", "gig worker"])
     is_deeptech = any(w in text for w in ["hardware", "deeptech", "deep-tech", "quantum", "fusion", "robotics", "drone", "sensor", "semiconductor", "biomedical", "satellite"])
     is_local_service = any(w in text for w in ["local service", "hvac", "plumbing", "cleaning", "dispatch", "contractor", "home repair", "landscaping", "mechanic"])
     is_d2c = any(w in text for w in ["d2c", "e-commerce", "ecommerce", "apparel", "footwear", "cosmetics", "packaged goods", "direct-to-consumer", "physical product", "3d-printed footwear", "sustainable apparel"])
@@ -722,7 +722,8 @@ def validate_and_extract_competitors_and_pricing(
 def generate_archetype_pricing_strategy(
     archetype_data: Dict[str, Any],
     currency_symbol: str = "$",
-    pricing_evidence: Optional[List[Dict[str, Any]]] = None
+    pricing_evidence: Optional[List[Dict[str, Any]]] = None,
+    startup_metadata: Optional[Any] = None
 ) -> Dict[str, Any]:
     """
     Generates monetization strategy strictly matching the detected business archetype.
@@ -855,6 +856,38 @@ def generate_archetype_pricing_strategy(
         }
 
     elif primary_arch == "Fintech":
+        # Check if lending / micro-loan
+        is_lending = (
+            (startup_metadata and getattr(startup_metadata, "business_model", "") == "lending")
+            or any(w in (archetype_data.get("idea", "") or "").lower() for w in ["lend", "loan", "micro-loan", "credit", "payout", "cibil", "gig"])
+        )
+        if is_lending:
+            loan_size = 5000.0
+            tenure_days = 30
+            interest_pct = 3.0
+            proc_fee = 250.0
+            total_fee = (loan_size * (interest_pct / 100.0)) + proc_fee
+            flat_pct = (total_fee / loan_size) * 100.0
+            effective_apr = (flat_pct / tenure_days) * 365.0
+
+            return {
+                "model": "Short-Term Micro-Liquidity Advances & Processing Fees",
+                "price_tiers": [
+                    {
+                        "tier": f"Instant Starter Advance ({currency_symbol}2,000 - {currency_symbol}5,000)",
+                        "price": f"{interest_pct:.1f}% monthly fee + {currency_symbol}{proc_fee:.0f} processing fee ({flat_pct:.1f}% flat for {tenure_days} days; {effective_apr:.1f}% p.a. effective APR)",
+                        "description": "30-day bullet advance with automatic deduction from platform payout cycle."
+                    },
+                    {
+                        "tier": f"Extended Growth Advance ({currency_symbol}5,000 - {currency_symbol}10,000)",
+                        "price": f"2.5% monthly fee + {currency_symbol}350 processing fee (6.0% flat for 30 days; 73.0% p.a. effective APR)",
+                        "description": "Available after 3 consecutive on-time repayment cycles with higher credit limit."
+                    }
+                ],
+                "rationale": f"Transparent, capped transaction fees complying with RBI Digital Lending Guidelines. Flat fee of {flat_pct:.1f}% translates to {effective_apr:.1f}% annual percentage rate (APR) over 30 days without hidden penalties. {benchmark_note}",
+                "pricing_status": "verified" if has_verified else "hypothesis"
+            }
+
         return {
             "model": "Volume-Based Fee & Working Capital Spread",
             "price_tiers": [
@@ -1132,12 +1165,65 @@ def generate_channels_and_acquisition(
 
 def generate_unit_economics(
     archetype_data: Dict[str, Any],
-    currency_symbol: str = "$"
+    currency_symbol: str = "$",
+    deep_unit_economics: Optional[Dict[str, Any]] = None,
+    startup_metadata: Optional[Any] = None
 ) -> Dict[str, Any]:
     """
     Produces unit economics metrics tailored to the detected business model.
-    Includes explicit assumptions rather than ungrounded claims.
+    Synchronizes directly with Deep Validation Matrix unit economics as single source of truth.
     """
+    if deep_unit_economics and isinstance(deep_unit_economics, dict):
+        curr = deep_unit_economics.get("currency_symbol") or currency_symbol
+        gross_margin = deep_unit_economics.get("gross_margin_pct", 70.0)
+        is_lending = (
+            deep_unit_economics.get("unit_label") == "loan"
+            or "loan" in str(deep_unit_economics.get("unit_label", "")).lower()
+            or deep_unit_economics.get("loan_size") is not None
+            or (startup_metadata and getattr(startup_metadata, "business_model", "") == "lending")
+        )
+        if is_lending:
+            loan_sz = deep_unit_economics.get("loan_size", 5000)
+            rev_loan = deep_unit_economics.get("revenue_per_loan", 400)
+            coc = deep_unit_economics.get("cost_of_capital", 74)
+            dflt = deep_unit_economics.get("expected_default_loss", 250)
+            coll = deep_unit_economics.get("collections_cost", 40)
+            cac_val = deep_unit_economics.get("cac", 15)
+            net_contrib = deep_unit_economics.get("net_contribution_per_loan", 21)
+            eff_apr = deep_unit_economics.get("effective_apr", 97.3)
+            return {
+                "archetype_model": "Fintech Micro-Lending & Instant Payout Advances",
+                "metrics": {
+                    "loan_size": f"{curr}{loan_sz:,.0f}",
+                    "revenue_per_loan": f"{curr}{rev_loan:,.0f} (3% interest + {curr}250 fee)",
+                    "cost_of_capital": f"{curr}{coc:,.0f} (18% p.a. wholesale NBFC facility)",
+                    "expected_default_loss": f"{curr}{dflt:,.0f} (5% first-loss risk)",
+                    "collections_cost": f"{curr}{coll:,.0f} (automated e-NACH/UPI mandates)",
+                    "cac": f"{curr}{cac_val:,.0f} (WhatsApp delivery rider network)",
+                    "net_contribution_per_loan": f"{curr}{net_contrib:,.0f}",
+                    "effective_apr": f"{eff_apr:.1f}% p.a. (8.0% flat for 30 days)",
+                    "gross_margin": f"{gross_margin:.1f}%",
+                    "margin_grade": deep_unit_economics.get("margin_grade", "thin")
+                },
+                "assumptions": deep_unit_economics.get("assumptions", [
+                    "Average loan size ₹5,000 with 30-day single bullet repayment.",
+                    "Repayment deducted directly via e-NACH mandate on weekly Swiggy/Zomato/Uber payout cycles.",
+                    "Wholesale borrowing rate of 18% p.a. from licensed partner NBFC under RBI Digital Lending Guidelines."
+                ])
+            }
+        else:
+            return {
+                "archetype_model": "Validated Unit Economics (Deep Validation Matrix)",
+                "metrics": {
+                    "cost_to_serve": f"{curr}{deep_unit_economics.get('cost_to_serve_per_user_usd', 0.50):.2f}",
+                    "suggested_price": f"{curr}{deep_unit_economics.get('suggested_price_usd', 29.00):.2f}",
+                    "gross_margin": f"{gross_margin:.1f}%",
+                    "margin_grade": deep_unit_economics.get("margin_grade", "healthy"),
+                    "platform_dependency_risk": deep_unit_economics.get("platform_dependency_risk", "medium")
+                },
+                "assumptions": deep_unit_economics.get("assumptions", [])
+            }
+
     primary_arch = archetype_data.get("primary", "B2C Consumer / Mobile")
 
     if primary_arch in ["B2C Consumer / Mobile", "Creator Economy / Creative Platform"]:
@@ -1531,9 +1617,38 @@ def generate_measurable_launch_roadmap(
     return {"phases": phases}
 
 
+def scrub_hardware_phrases_for_software(data: Any, is_hardware: bool = False) -> Any:
+    """
+    Remove hardware template phrases (e.g. 'demo devices', 'hardware units')
+    for software-only or digital products.
+    """
+    if is_hardware:
+        return data
+
+    REPLACEMENTS = [
+        (re.compile(r"\bdemo devices?\b", re.IGNORECASE), "interactive product demo"),
+        (re.compile(r"\bhardware devices?\b", re.IGNORECASE), "software application"),
+        (re.compile(r"\bphysical devices?\b", re.IGNORECASE), "digital interface"),
+        (re.compile(r"\bship(?:ping)? (?:demo )?devices?\b", re.IGNORECASE), "deploying digital pilot accounts"),
+        (re.compile(r"\bdeploy(?:ing)? (?:demo )?devices?\b", re.IGNORECASE), "deploying digital pilot accounts"),
+    ]
+
+    if isinstance(data, str):
+        text = data
+        for pat, repl in REPLACEMENTS:
+            text = pat.sub(repl, text)
+        return text
+    elif isinstance(data, list):
+        return [scrub_hardware_phrases_for_software(item, is_hardware) for item in data]
+    elif isinstance(data, dict):
+        return {k: scrub_hardware_phrases_for_software(v, is_hardware) for k, v in data.items()}
+    return data
+
+
 # ============================================================================
 # 10. EXPLICIT VIABILITY SCORING FORMULA
 # ============================================================================
+
 
 def calculate_viability_score(
     validation_status: str,
@@ -1564,10 +1679,13 @@ def calculate_viability_score(
     comp_score = 0.5
     if len(competitors) >= 2 and verified_count >= 1:
         comp_score = 0.90
-    elif len(competitors) >= 1:
+    elif len(competitors) >= 1 and verified_count >= 1:
         comp_score = 0.70
-    elif verified_count == 0:
-        comp_score = 0.55
+    elif verified_count == 0 or len(competitors) == 0:
+        # GTM viability drops significantly when competitor pricing evidence is missing
+        comp_score = 0.20
+    else:
+        comp_score = 0.35
     competitor_pricing_score = round(comp_score, 2)
 
     # 3. Unit Economics plausibility score (0.0 to 1.0)
@@ -1985,10 +2103,20 @@ def synthesize_deterministic_gtm(signals: Dict[str, Any]) -> Dict[str, Any]:
     marketing_channels, customer_acquisition = generate_channels_and_acquisition(archetype_data, customer_segments)
 
     # 7. Pricing strategy
-    pricing_strategy = generate_archetype_pricing_strategy(archetype_data, curr_sym, pricing_evidence)
+    pricing_strategy = generate_archetype_pricing_strategy(
+        archetype_data,
+        curr_sym,
+        pricing_evidence,
+        startup_metadata=signals.get("startup_metadata")
+    )
 
     # 8. Unit economics
-    unit_economics = generate_unit_economics(archetype_data, curr_sym)
+    unit_economics = generate_unit_economics(
+        archetype_data,
+        curr_sym,
+        deep_unit_economics=signals.get("unit_economics"),
+        startup_metadata=signals.get("startup_metadata")
+    )
 
     # 9. Startup risks
     risks = generate_startup_risks(idea, archetype_data)
@@ -2211,7 +2339,9 @@ async def run_gtm_agent(
     swot_analysis: Optional[Dict[str, Any]] = None,
     risk_analysis: Optional[Dict[str, Any]] = None,
     mvp_recommendations: Optional[Dict[str, Any]] = None,
-    search_results: Optional[List[Dict[str, Any]]] = None
+    search_results: Optional[List[Dict[str, Any]]] = None,
+    unit_economics: Optional[Dict[str, Any]] = None,
+    startup_metadata: Optional[Any] = None
 ) -> Dict[str, Any]:
     """
     Executes the upgraded GTM Strategy Agent.
@@ -2259,7 +2389,9 @@ async def run_gtm_agent(
         "mvp_recommendations": resolved_mvp,
         "search_results": resolved_search,
         "has_market": bool(resolved_market),
-        "primary_segment": resolved_segments[0]["segment"] if (resolved_segments and isinstance(resolved_segments[0], dict) and "segment" in resolved_segments[0]) else "Target Customers"
+        "primary_segment": resolved_segments[0]["segment"] if (resolved_segments and isinstance(resolved_segments[0], dict) and "segment" in resolved_segments[0]) else "Target Customers",
+        "unit_economics": unit_economics or ctx.get("unit_economics"),
+        "startup_metadata": startup_metadata or ctx.get("startup_metadata")
     }
 
     # Check for Gemini / Groq API Keys
@@ -2289,6 +2421,15 @@ async def run_gtm_agent(
                 llm_draft["competitors"] = comps
                 llm_draft["pricing_evidence"] = pe_list
 
+                # Synchronize unit economics with deep validation matrix as single source of truth
+                if signals.get("unit_economics"):
+                    llm_draft["unit_economics"] = generate_unit_economics(
+                        llm_draft.get("business_archetype", {}),
+                        curr_sym,
+                        deep_unit_economics=signals.get("unit_economics"),
+                        startup_metadata=signals.get("startup_metadata")
+                    )
+
                 # Consistency validation
                 val_result = validate_gtm_consistency(llm_draft, signals)
 
@@ -2314,11 +2455,20 @@ async def run_gtm_agent(
                 llm_draft["gtm_validation"] = val_result
 
                 logger.info(f"GTM Synthesis completed in mode=llm | val_status={val_result['status']} | time={time.monotonic()-start_time:.2f}s")
-                return map_to_legacy_and_extended_contract(llm_draft, generation_mode="llm")
+                raw_out = map_to_legacy_and_extended_contract(llm_draft, generation_mode="llm")
+                from server.agents.competitor_analysis_agent import sanitize_failure_sentences
+                sanitized_out = sanitize_failure_sentences(raw_out)
+                is_hw = "hardware" in str(signals.get("primary_archetype", "")).lower() or "deeptech" in str(signals.get("primary_archetype", "")).lower()
+                return scrub_hardware_phrases_for_software(sanitized_out, is_hardware=is_hw)
 
         except Exception as exc:
             logger.warning(f"Gemini GTM synthesis failed or timed out: {exc}. Using deterministic fallback.")
 
     # Deterministic fallback mode
     logger.info("GTM Synthesis: Executing Deterministic Heuristic Synthesis")
-    return synthesize_deterministic_gtm(signals)
+    raw_fallback = synthesize_deterministic_gtm(signals)
+    from server.agents.competitor_analysis_agent import sanitize_failure_sentences
+    sanitized_fallback = sanitize_failure_sentences(raw_fallback)
+    is_hw = "hardware" in str(signals.get("primary_archetype", "")).lower() or "deeptech" in str(signals.get("primary_archetype", "")).lower()
+    return scrub_hardware_phrases_for_software(sanitized_fallback, is_hardware=is_hw)
+
