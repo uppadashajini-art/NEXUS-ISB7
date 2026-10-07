@@ -25,27 +25,48 @@
 .studio-eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 8px;
   margin-bottom: var(--space-3);
-  padding: 4px 10px 4px 8px;
+  padding: 5px 14px 5px 10px;
   background: var(--surface);
-  border: 1px solid var(--surface-border);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-family-base) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  font-family: var(--font-family-base);
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-secondary);
+  letter-spacing: 0.12em;
+  color: var(--text-primary);
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: default;
+}
+
+.studio-eyebrow:hover {
+  border-color: rgba(255, 199, 44, 0.35);
+  background: var(--surface-2);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.5),
+    0 0 14px rgba(255, 199, 44, 0.15);
+  transform: translateY(-1px);
 }
 
 .studio-live-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--accent-feasibility);
-  box-shadow: 0 0 8px rgba(45, 212, 191, 0.6);
+  background: #2DD4BF;
+  box-shadow: 0 0 10px rgba(45, 212, 191, 0.9);
   animation: studioDotPulse 2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+  flex-shrink: 0;
+}
+
+.studio-eyebrow-text {
+  color: var(--text-primary);
+  letter-spacing: 0.12em;
+  font-weight: 700;
 }
 
 @keyframes studioDotPulse {
@@ -62,22 +83,50 @@
 }
 
 .studio-title {
-  font-family: var(--font-family-base) !important;
-  font-size: clamp(28px, 4vw, 40px);
-  font-weight: 700;
-  line-height: 1.22;
-  letter-spacing: -0.025em;
-  margin: 0 0 var(--space-2) 0;
+  font-family: var(--font-family-base);
+  font-size: clamp(34px, 5.5vw, 56px);
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+  margin: 0 0 var(--space-3) 0;
+  text-align: center;
+  color: #F5F5F7;
+  display: block;
+  filter: drop-shadow(0 0 30px rgba(255, 199, 44, 0.4)) drop-shadow(0 0 65px rgba(255, 138, 31, 0.25));
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: default;
+}
+
+.studio-title-accent {
   background: linear-gradient(
     135deg,
-    #ffc72c 0%,
-    #ffb020 50%,
-    #f59e0b 100%
+    #FFFFFF 0%,
+    #FFF4CC 15%,
+    #FFC72C 35%,
+    #FF8A1F 65%,
+    #F23D5C 100%
   );
+  background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
+  animation: studioGoldShimmer 6s ease-in-out infinite alternate;
+  display: inline-block;
+}
+
+.studio-title:hover {
+  transform: translateY(-2px) scale(1.015);
+  filter: drop-shadow(0 0 45px rgba(255, 199, 44, 0.65)) drop-shadow(0 0 85px rgba(255, 138, 31, 0.4));
+}
+
+@keyframes studioGoldShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
 }
 
 .studio-subcopy {

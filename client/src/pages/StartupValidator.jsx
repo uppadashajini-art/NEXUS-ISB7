@@ -1026,20 +1026,12 @@ function StartupValidator({
           <header className="studio-header">
 
             <div className="studio-eyebrow">
-
-              <span
-                className="studio-live-dot"
-                aria-hidden="true"
-              />
-
-              <span>
-                FOUNDER ANALYTICS
-              </span>
-
+              <span className="studio-live-dot" aria-hidden="true" />
+              <span className="studio-eyebrow-text">FOUNDER ANALYTICS</span>
             </div>
 
             <h1 className="studio-title">
-              Validate Your Startup Idea
+              Validate Your <span className="studio-title-accent">Startup Idea</span>
             </h1>
 
             <p className="studio-subcopy">
