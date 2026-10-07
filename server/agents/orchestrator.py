@@ -31,9 +31,151 @@ from server.models.validation import (
     ValidationResponse,
     SWOTAnalysis,
     RiskItem,
+    StartupMetadata,
+    check_cross_tab_consistency,
+    derive_research_confidence,
 )
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Upfront Startup Metadata Extraction
+# Single LLM call producing {product, target_user, domain, jurisdiction, business_model}
+# ---------------------------------------------------------------------------
+
+def _heuristic_fallback_metadata(clean_idea: str, reason: str = "llm_unavailable") -> StartupMetadata:
+    """
+    Labeled heuristic fallback for startup metadata when LLM extraction is unavailable or fails.
+    Uses conservative keyword rules strictly as fallback behind LLM reasoning.
+    """
+    idea_l = clean_idea.lower()
+
+    # 1. Business model & domain detection fallback
+    if any(k in idea_l for k in ["lend", "lending", "loan", "loans", "micro-loan", "microloan", "borrow", "credit line", "cibil"]):
+        fb_model = "lending"
+        fb_domain = "FinTech & Financial Services"
+    elif any(k in idea_l for k in ["freight", "logistics", "supply chain", "fleet", "courier", "shipping", "warehouse", "routing"]):
+        fb_model = "saas"
+        fb_domain = "Logistics & Supply Chain"
+    elif any(k in idea_l for k in ["health", "medical", "patient", "clinical", "diagnostic", "oncolog", "doctor", "scribe"]):
+        fb_model = "saas"
+        fb_domain = "HealthTech & Digital Health"
+    elif any(k in idea_l for k in ["education", "edtech", "student", "lecture", "curriculum", "tutor", "school"]):
+        fb_model = "saas"
+        fb_domain = "EdTech & Learning Technology"
+    elif any(k in idea_l for k in ["marketplace", "two-sided", "peer-to-peer", "buyer and seller"]):
+        fb_model = "marketplace"
+        fb_domain = "E-Commerce & RetailTech"
+    elif any(k in idea_l for k in ["hardware", "robotics", "drone", "sensor", "satellite", "mems", "soil"]):
+        fb_model = "hardware"
+        fb_domain = "Industrial IoT & Predictive Maintenance"
+    else:
+        fb_model = "saas"
+        fb_domain = "Enterprise SaaS & Productivity"
+
+    # 2. Jurisdiction detection fallback
+    if any(k in idea_l for k in ["india", "indian", "₹", "inr", "swiggy", "zomato", "cibil", "rbi"]):
+        fb_jurisdiction = "India"
+    elif any(k in idea_l for k in ["uk", "nhs", "london", "fca"]):
+        fb_jurisdiction = "UK"
+    elif any(k in idea_l for k in ["us", "usa", "america", "fda", "fincen", "california"]):
+        fb_jurisdiction = "US"
+    else:
+        fb_jurisdiction = "Global"
+
+    # 3. Clean product & target user fallback
+    if fb_model == "lending" and any(k in idea_l for k in ["gig", "worker", "swiggy", "zomato", "uber"]):
+        fb_product = "Gig Worker Instant Micro-Lending Platform"
+        fb_user = "Gig delivery riders and rideshare drivers (Swiggy, Zomato, Uber)"
+        fb_domain = "FinTech & Financial Services"
+    else:
+        first_clause = re.split(r"[.;,]", clean_idea)[0].strip()
+        fb_product = first_clause[:50].strip() if len(first_clause) > 10 else f"{clean_idea[:40]} Platform"
+        fb_user = "Target business and individual customers"
+
+    logger.info(
+        f"DOMAIN-CLASSIFICATION: HEURISTIC-FALLBACK | reason={reason} | domain='{fb_domain}' | "
+        f"model='{fb_model}' | jurisdiction='{fb_jurisdiction}'"
+    )
+
+    return StartupMetadata(
+        product=fb_product,
+        target_user=fb_user,
+        domain=fb_domain,
+        jurisdiction=fb_jurisdiction,
+        business_model=fb_model,  # type: ignore
+        source_type="heuristic_fallback",
+    )
+
+
+async def extract_startup_metadata(idea: str) -> StartupMetadata:
+    """
+    Performs a single, focused LLM call at the start to extract:
+    {product, target_user, domain, jurisdiction, business_model}.
+    business_model: lending | saas | marketplace | hardware | other.
+    LLM extraction is primary; keyword-based classification acts strictly as a labeled fallback.
+    """
+    clean_idea = (idea or "").strip()
+    if not clean_idea:
+        return _heuristic_fallback_metadata("Technology platform", reason="empty_idea")
+
+    try:
+        from server.utils.gemini_client import call_gemini_generate_content, clean_llm_json_text
+        import json
+
+        prompt = f"""You are a senior venture analyst. Analyze this startup idea and extract its core structured metadata in JSON format.
+Return ONLY a valid JSON object matching this schema:
+{{
+  "product": "Clean, concise brand or product concept title (e.g. 'Gig Worker Instant Micro-Lending Platform', NOT fragmented keywords)",
+  "target_user": "Specific target customer persona (e.g. 'Gig delivery workers and drivers on Swiggy, Zomato, and Uber')",
+  "domain": "One of: FinTech & Financial Services, Logistics & Supply Chain, HealthTech & Digital Health, EdTech & Learning Technology, Enterprise SaaS & Productivity, E-Commerce & RetailTech, CleanTech & Sustainability, CyberSecurity & Data Privacy, AgriTech & FoodTech, PropTech & Real Estate, LegalTech & Regulatory Compliance, Industrial IoT & Predictive Maintenance, Artificial Intelligence & Automation, Technology & Digital Services",
+  "jurisdiction": "Target geography (e.g. 'India', 'US', 'UK', 'Global')",
+  "business_model": "Must be exactly one of: 'lending', 'saas', 'marketplace', 'hardware', 'other'"
+}}
+
+Startup Idea:
+"{clean_idea}"
+"""
+        result = await call_gemini_generate_content(
+            prompt=prompt,
+            temperature=0.1,
+            response_mime_type="application/json",
+            timeout_per_model=12.0,
+            tag="IDEA-EXTRACTION"
+        )
+        if result:
+            raw_text, successful_model = result
+            clean_text = clean_llm_json_text(raw_text)
+            parsed = json.loads(clean_text)
+            if isinstance(parsed, dict) and parsed.get("product"):
+                bm = str(parsed.get("business_model", "")).lower().strip()
+                if bm not in ("lending", "saas", "marketplace", "hardware", "other"):
+                    bm = "other"
+
+                extracted_product = str(parsed.get("product")).strip()
+                extracted_user = str(parsed.get("target_user") or "Target customers").strip()
+                extracted_domain = str(parsed.get("domain") or "Technology & Digital Services").strip()
+                extracted_jurisdiction = str(parsed.get("jurisdiction") or "Global").strip()
+
+                logger.info(
+                    f"DOMAIN-CLASSIFICATION: LLM-EXTRACTED | model={successful_model} | domain='{extracted_domain}' | "
+                    f"business_model='{bm}' | jurisdiction='{extracted_jurisdiction}'"
+                )
+
+                return StartupMetadata(
+                    product=extracted_product,
+                    target_user=extracted_user,
+                    domain=extracted_domain,
+                    jurisdiction=extracted_jurisdiction,
+                    business_model=bm,  # type: ignore
+                    source_type="llm_extracted",
+                )
+    except Exception as exc:
+        logger.warning(f"Upfront idea metadata LLM extraction failed: {exc}. Using labeled heuristic fallback.")
+        return _heuristic_fallback_metadata(clean_idea, reason=str(exc))
+
+    return _heuristic_fallback_metadata(clean_idea, reason="llm_returned_empty")
 
 
 # ---------------------------------------------------------------------------
@@ -110,6 +252,7 @@ async def _dispatch_market_analysis(
     idea: str,
     search_results: List[Dict[str, Any]],
     domain: Optional[str] = None,
+    startup_metadata: Optional[StartupMetadata] = None,
 ) -> Dict[str, Any]:
 
     try:
@@ -121,6 +264,7 @@ async def _dispatch_market_analysis(
             idea=idea,
             search_results=search_results,
             domain=domain,
+            idea_metadata=startup_metadata,
         )
 
         if isinstance(result, dict):
@@ -176,6 +320,24 @@ async def _dispatch_market_analysis(
             ),
             "regulatory_risk": deep_eval.get(
                 "regulatory_risk"
+            ),
+            "kill_switch": deep_eval.get(
+                "kill_switch"
+            ),
+            "unit_economics": deep_eval.get(
+                "unit_economics"
+            ),
+            "regulatory_runway": deep_eval.get(
+                "regulatory_runway"
+            ),
+            "trl_readiness": deep_eval.get(
+                "trl_readiness"
+            ),
+            "moat_durability": deep_eval.get(
+                "moat_durability"
+            ),
+            "pivot_plan": deep_eval.get(
+                "pivot_plan"
             ),
             **fallback_market,
         }
@@ -1019,6 +1181,7 @@ async def run_orchestrator(
     idea: str,
     domain: Optional[str] = None,
     audience: Optional[str] = None,
+    force_refresh: bool = False,
 ) -> Dict[str, Any]:
 
     # -------------------------------------------------------
@@ -1051,6 +1214,18 @@ async def run_orchestrator(
     )
 
     # -------------------------------------------------------
+    # 1b. Upfront Idea Extraction (Single LLM call)
+    # -------------------------------------------------------
+    startup_metadata = await extract_startup_metadata(cleaned_idea)
+    logger.info(
+        f"EXTRACTED-STARTUP-METADATA | product='{startup_metadata.product}' | "
+        f"user='{startup_metadata.target_user}' | domain='{startup_metadata.domain}' | "
+        f"jurisdiction='{startup_metadata.jurisdiction}' | model='{startup_metadata.business_model}'"
+    )
+    if not domain and startup_metadata.domain:
+        domain = startup_metadata.domain
+
+    # -------------------------------------------------------
     # 2. Web Search Agent
     # -------------------------------------------------------
 
@@ -1062,22 +1237,33 @@ async def run_orchestrator(
 
             domain=domain,
 
-            audience=audience,
+            audience=audience or startup_metadata.target_user,
+
+            force_refresh=force_refresh,
         )
 
         search_results = (
-
             search_payload.get(
                 "results",
                 []
             )
-
             if isinstance(
                 search_payload,
                 dict
             )
-
             else []
+        )
+
+        search_status = (
+            search_payload.get(
+                "search_status",
+                "ok"
+            )
+            if isinstance(
+                search_payload,
+                dict
+            )
+            else ("thin" if len(search_results) < 5 else "ok")
         )
 
         # Diagnostic logging
@@ -1098,6 +1284,7 @@ async def run_orchestrator(
 
             f"ORCHESTRATOR-SEARCH-RESULTS | "
             f"count={len(search_results)} | "
+            f"search_status={search_status} | "
             f"sample_title={_sample_title!r} | "
             f"source=run_web_search_agent() "
             f"final return value"
@@ -1110,6 +1297,8 @@ async def run_orchestrator(
         )
 
         search_results = []
+        is_q = any(t in str(exc).lower() for t in ["429", "432", "401", "quota", "rate limit", "credits", "exhausted", "unauthorized"])
+        search_status = "quota_exhausted" if is_q else "thin"
 
     # -------------------------------------------------------
     # 3. Market Analysis + Competitor Analysis
@@ -1122,6 +1311,8 @@ async def run_orchestrator(
         search_results,
 
         domain,
+
+        startup_metadata=startup_metadata,
     )
 
     competitor_task = _dispatch_competitor_analysis(
@@ -1204,6 +1395,72 @@ async def run_orchestrator(
             dict
         )
 
+        else None
+    )
+
+    kill_data = (
+        market_agent_output.get(
+            "kill_switch"
+        )
+        if isinstance(
+            market_agent_output,
+            dict
+        )
+        else None
+    )
+
+    ue_data = (
+        market_agent_output.get(
+            "unit_economics"
+        )
+        if isinstance(
+            market_agent_output,
+            dict
+        )
+        else None
+    )
+
+    reg_runway_data = (
+        market_agent_output.get(
+            "regulatory_runway"
+        )
+        if isinstance(
+            market_agent_output,
+            dict
+        )
+        else None
+    )
+
+    trl_data = (
+        market_agent_output.get(
+            "trl_readiness"
+        )
+        if isinstance(
+            market_agent_output,
+            dict
+        )
+        else None
+    )
+
+    moat_data = (
+        market_agent_output.get(
+            "moat_durability"
+        )
+        if isinstance(
+            market_agent_output,
+            dict
+        )
+        else None
+    )
+
+    pivot_data = (
+        market_agent_output.get(
+            "pivot_plan"
+        )
+        if isinstance(
+            market_agent_output,
+            dict
+        )
         else None
     )
 
@@ -1307,7 +1564,9 @@ async def run_orchestrator(
             swot_analysis=swot_data,
             risk_analysis=risk_data,
             mvp_recommendations=mvp_data,
-            search_results=search_results
+            search_results=search_results,
+            unit_economics=ue_data,
+            startup_metadata=startup_metadata,
         )
         gtm_data = gtm_res.get("gtm_strategy")
     except Exception as exc:
@@ -1317,48 +1576,8 @@ async def run_orchestrator(
     # 9. Build computed fields: product_name, scores, signals
     # -------------------------------------------------------
 
-    def _derive_product_name(idea: str) -> str:
-        """Derive a clean concise brand/product name from idea text."""
-        idea_l = idea.lower()
-        # Oncology / Medical scribe
-        if any(k in idea_l for k in ["oncol", "cancer", "tumor", "chemo", "radiol"]):
-            return "OncoScribe AI"
-        if any(k in idea_l for k in ["ambient", "scribe", "physician", "ehr", "emr", "clinical", "medical"]):
-            return "ClinixScribe AI"
-        # Kubernetes / SRE / Cloud
-        if any(k in idea_l for k in ["kubernetes", "k8s", "sre", "devops", "observ", "telemetry"]):
-            return "KubeSRE Copilot"
-        if any(k in idea_l for k in ["cloud", "infra", "microservice", "docker", "container"]):
-            return "CloudNexus AI"
-        # FinTech / Payments / Escrow
-        if any(k in idea_l for k in ["escrow", "cross-border", "remittance", "fx", "currency"]):
-            return "EscrowFlow"
-        if any(k in idea_l for k in ["fintech", "payment", "bank", "invoice", "billing"]):
-            return "PayNexus AI"
-        # Carbon / ESG
-        if any(k in idea_l for k in ["carbon", "esg", "climate", "emission", "sustainability", "co2"]):
-            return "CarbonPulse API"
-        # Healthcare general
-        if any(k in idea_l for k in ["health", "wellness", "patient", "clinic", "hospital"]):
-            return "HealthNexus AI"
-        # EdTech
-        if any(k in idea_l for k in ["education", "edtech", "learning", "student", "course"]):
-            return "LearnPulse AI"
-        # Fitness
-        if any(k in idea_l for k in ["fitness", "gym", "workout", "exercise", "nutrition"]):
-            return "FitFlow AI"
-        # E-commerce
-        if any(k in idea_l for k in ["ecommerce", "e-commerce", "retail", "marketplace", "store"]):
-            return "MarketNexus AI"
-        # Security
-        if any(k in idea_l for k in ["security", "cyber", "fraud", "zero-trust", "auth"]):
-            return "SecureNexus AI"
-        # General fallback — derive from first 2 non-stop words
-        words = [w.capitalize() for w in idea.split() if len(w) > 3][:2]
-        suffix = "AI" if "ai" in idea_l or "ml" in idea_l else "Platform"
-        return " ".join(words) + f" {suffix}" if words else "NexusAI Platform"
-
-    product_name = _derive_product_name(cleaned_idea)
+    # Single source of truth for product name: from upfront metadata extraction
+    product_name = startup_metadata.product
 
     # -------------------------------------------------------
     # Compute sub_scores from agent outputs
@@ -1396,7 +1615,9 @@ async def run_orchestrator(
         market_score = 75.0
 
     comp_score = 0.0
-    if competitor_data and isinstance(competitor_data, dict):
+    if moat_data and isinstance(moat_data, dict) and moat_data.get("moat_score") is not None:
+        comp_score = float(moat_data["moat_score"])
+    elif competitor_data and isinstance(competitor_data, dict):
         directs_count = len(competitor_data.get("direct_competitors", []))
         gaps_count = len(competitor_data.get("market_gaps", []))
         comp_score = min(90.0, 60.0 + directs_count * 4.0 + gaps_count * 2.0)
@@ -1562,6 +1783,28 @@ async def run_orchestrator(
         validation_report_data = None
 
     # -------------------------------------------------------
+    # Derive Research Confidence & Consistency Warnings
+    # -------------------------------------------------------
+
+    eval_payload = {
+        "unit_economics": ue_data,
+        "gtm_strategy": gtm_data,
+        "moat_durability": moat_data,
+        "sub_scores": sub_scores,
+        "kill_switch": kill_data,
+        "risk_analysis": risk_data,
+        "regulatory_risk": reg_data,
+        "regulatory_runway": reg_runway_data,
+        "trl_readiness": trl_data,
+        "pivot_plan": pivot_data,
+        "search_results": search_results,
+        "search_status": search_status,
+    }
+
+    consistency_warnings = check_cross_tab_consistency(eval_payload)
+    research_confidence = derive_research_confidence(eval_payload)
+
+    # -------------------------------------------------------
     # Build final validated response
     # -------------------------------------------------------
 
@@ -1570,6 +1813,14 @@ async def run_orchestrator(
         idea=cleaned_idea,
 
         product_name=product_name,
+
+        startup_metadata=startup_metadata,
+
+        research_confidence=research_confidence,
+
+        search_status=search_status,
+
+        consistency_warnings=consistency_warnings,
 
         overall_score=overall_score,
 
@@ -1590,6 +1841,31 @@ async def run_orchestrator(
         regulatory_risk=reg_data,
 
         execution_feasibility=exec_feasibility_data,
+
+        kill_switch=kill_data,
+
+        unit_economics=ue_data,
+
+        regulatory_runway=reg_runway_data,
+
+        trl_readiness=trl_data,
+
+        moat_durability=moat_data,
+
+        pivot_plan=pivot_data,
+
+        deep_validation={
+            "technical_feasibility": tech_data,
+            "scientific_validation": sci_data,
+            "regulatory_risk": reg_data,
+            "kill_switch": kill_data,
+            "unit_economics": ue_data,
+            "regulatory_runway": reg_runway_data,
+            "trl_readiness": trl_data,
+            "moat_durability": moat_data,
+            "pivot_plan": pivot_data,
+            "consistency_warnings": consistency_warnings,
+        },
 
         compliance_frameworks=compliance_frameworks,
 

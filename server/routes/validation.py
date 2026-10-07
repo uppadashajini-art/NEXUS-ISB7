@@ -62,6 +62,7 @@ async def validate_idea(request: ValidationRequest):
             idea=request.idea,
             domain=request.domain,
             audience=request.target_customer,
+            force_refresh=getattr(request, "force_refresh", False),
         )
     except ValueError as e:
         # Raised for bad/invalid input that got past initial validation

@@ -730,21 +730,26 @@ export default function ResultsDashboard({
     };
 
   const regulatoryCompliance =
+    deepValidation.regulatory_risk ||
+    r.regulatory_risk ||
     deepValidation.regulatory_compliance ||
     r.regulatory_compliance || {
       risk_level: "Medium",
 
       fda_classification:
-        "ISO 27001 / IEC 62443 / OSHA Safety Standards",
+        deepValidation.regulatory_runway?.applicable_regimes?.join(" / ") ||
+        r.regulatory_runway?.applicable_regimes?.join(" / ") ||
+        "Applicable Industry Compliance Standards",
 
       compliance_requirements: [
-        "Adherence to OSHA safety compliance standards.",
-        "Compliance with data security frameworks such as ISO 27001 and SOC 2 Type II.",
+        "Adherence to jurisdiction-specific privacy and industry standards.",
+        "Compliance with data security frameworks and audit logging.",
       ],
 
       recommended_pathway:
-        "Establish foundational compliance via ISO 27001 and IEC 62443 frameworks and align product audit logs with applicable reporting requirements.",
+        "Establish baseline operational compliance and align product architecture with applicable statutory guidelines.",
     };
+
 
   /* ============================================================
      MARKET DATA
@@ -836,171 +841,14 @@ export default function ResultsDashboard({
 
   const directCompetitors =
     compAnalysis.direct_competitors ||
-    compAnalysis.competitors || [
-      {
-        name: "Labviva",
-
-        website:
-          "https://finance.yahoo.com/news/labviva-introduces-real-time-inventory-130000270.html",
-
-        target_audience:
-          "Laboratory scientists, researchers, and procurement professionals.",
-
-        what_they_offer:
-          "Automated inventory management and life sciences purchasing software.",
-
-        pricing:
-          "Not available in retrieved sources",
-
-        key_capabilities: [
-          "Automated inventory management",
-          "Real-time visibility",
-          "Compliance data access",
-        ],
-
-        strengths: [
-          "Streamlines inventory management.",
-          "Integrates compliance data.",
-        ],
-
-        weaknesses: [
-          "Focuses primarily on purchasing and inventory.",
-        ],
-      },
-
-      {
-        name:
-          "Ares Scientific Environmental Monitoring Systems",
-
-        website:
-          "https://aresscientific.com/product-category/environmental-monitoring",
-
-        target_audience:
-          "Research laboratories, pharmaceutical facilities, clinical diagnostic centers.",
-
-        what_they_offer:
-          "Environmental monitoring systems using wireless sensors and cloud-based management.",
-
-        pricing:
-          "Not available in retrieved sources",
-
-        key_capabilities: [
-          "Wireless sensors",
-          "Cloud management",
-          "Automated alarms",
-        ],
-
-        strengths: [
-          "Continuous environmental monitoring.",
-        ],
-
-        weaknesses: [
-          "Does not primarily focus on human behavioral and PPE monitoring.",
-        ],
-      },
-
-      {
-        name: "LigoLab",
-
-        website:
-          "https://www.ligolab.com/post/ai-in-laboratory-billing-real-time-impact-on-revenue-cycle-performance",
-
-        target_audience:
-          "Healthcare consumers and medical providers.",
-
-        what_they_offer:
-          "Laboratory information system software and AI-powered compliance workflows.",
-
-        pricing:
-          "Pricing varies by solution.",
-
-        key_capabilities: [
-          "AI compliance monitoring",
-          "Regulatory change monitoring",
-          "Billing workflow management",
-        ],
-
-        strengths: [
-          "Reduces manual compliance work.",
-        ],
-
-        weaknesses: [
-          "Focused more on billing and revenue-cycle workflows.",
-        ],
-      },
-
-      {
-        name:
-          "E Tech Group Pharmaceutical Automation Solutions",
-
-        website:
-          "https://etechgroup.com/pharmaceutical-automation-companies",
-
-        target_audience:
-          "Research laboratories, pharmaceutical companies, and academic institutions.",
-
-        what_they_offer:
-          "Pharmaceutical automation and information management solutions.",
-
-        pricing:
-          "Not available in retrieved sources",
-
-        key_capabilities: [
-          "Safety monitoring",
-          "Remote access",
-          "Operational maintenance",
-        ],
-
-        strengths: [
-          "Integrated automation capabilities.",
-        ],
-
-        weaknesses: [
-          "Legacy hardware integration can require extensive engineering.",
-        ],
-      },
-
-      {
-        name:
-          "Mayo Clinic Platform Solutions Studio Automated Compliance Monitoring",
-
-        website:
-          "https://www.mayoclinicplatform.org/solutions-catalog/listing/automated-compliance-monitoring",
-
-        target_audience:
-          "Healthcare consumers and medical providers.",
-
-        what_they_offer:
-          "Automated compliance monitoring for clinical workflows.",
-
-        pricing:
-          "Enterprise institutional licensing.",
-
-        key_capabilities: [
-          "Automated interaction auditing",
-          "Adherence scoring",
-          "Real-time guidance",
-        ],
-
-        strengths: [
-          "Provides managers with compliance visibility.",
-        ],
-
-        weaknesses: [
-          "Designed for clinical workflows rather than laboratory safety.",
-        ],
-      },
-    ];
+    compAnalysis.competitors ||
+    [];
 
   const marketGapsList =
     compAnalysis.market_gaps ||
-    r.market_gaps || [
-      "Potential opportunity: Real-time computer vision detection of missing PPE specifically tailored for research laboratories.",
+    r.market_gaps ||
+    [];
 
-      "Potential opportunity: Automated visual monitoring of hazardous material handling and restricted access.",
-
-      "Primary customer research and competitor benchmarking are recommended to validate these potential gaps.",
-    ];
 
   /* ============================================================
      RISKS
@@ -1528,6 +1376,15 @@ export default function ResultsDashboard({
       ? "#FF8A1F"
       : "#F43F5E";
 
+  const researchConfidence = (r?.research_confidence || validationResult?.research_confidence || "HIGH").toUpperCase();
+  const searchStatus = (r?.search_status || validationResult?.search_status || "ok").toLowerCase();
+  const confidenceColor =
+    researchConfidence === "HIGH"
+      ? "#10B981"
+      : researchConfidence === "MEDIUM"
+      ? "#F59E0B"
+      : "#EF4444";
+
   /* ============================================================
      RETURN
   ============================================================ */
@@ -1550,6 +1407,46 @@ export default function ResultsDashboard({
           "var(--font-family-base, Inter, -apple-system, BlinkMacSystemFont, sans-serif)",
       }}
     >
+      {/* Search Status Degradation Banner */}
+      {searchStatus !== "ok" && (
+        <div
+          className="search-status-degraded-banner"
+          style={{
+            margin: "24px 24px 0",
+            padding: "12px 20px",
+            borderRadius: "10px",
+            background: "rgba(245, 158, 11, 0.12)",
+            border: "1px solid rgba(245, 158, 11, 0.4)",
+            color: "#FBBF24",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+            fontSize: "13px",
+            fontWeight: 600,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span style={{ fontSize: "16px" }}>⚠️</span>
+            <span>Web evidence limited: competitor data and pricing may be missing.</span>
+          </div>
+          {searchStatus === "quota_exhausted" && (
+            <span style={{
+              fontSize: "10px",
+              fontWeight: 800,
+              padding: "2px 8px",
+              borderRadius: "4px",
+              background: "rgba(239, 68, 68, 0.2)",
+              color: "#EF4444",
+              border: "1px solid rgba(239, 68, 68, 0.4)",
+              letterSpacing: "0.06em",
+              textTransform: "uppercase"
+            }}>
+              Quota Exhausted
+            </span>
+          )}
+        </div>
+      )}
 
       {/* ======================================================
           RESULTS HERO
@@ -1680,14 +1577,14 @@ export default function ResultsDashboard({
                 style={{
                   fontSize: "12px",
                   fontWeight: 800,
-                  color: "#FFC72C",
+                  color: confidenceColor,
                   letterSpacing:
                     "0.06em",
                   textTransform:
                     "uppercase",
                 }}
               >
-                RESEARCH CONFIDENCE HIGH
+                RESEARCH CONFIDENCE {researchConfidence}
               </span>
             </div>
 
@@ -1837,8 +1734,9 @@ export default function ResultsDashboard({
           <QuickStat
             icon="🎯"
             label="CONFIDENCE"
-            value="HIGH"
-            description="Research confidence level"
+            value={researchConfidence}
+            accent={confidenceColor}
+            description="Derived confidence level"
           />
 
           <QuickStat
@@ -2106,6 +2004,27 @@ export default function ResultsDashboard({
               </span>
 
             </div>
+
+            {(r.is_cached || r.cached_result) && (
+              <div
+                className="cached-result-badge"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 14px",
+                  borderRadius: "30px",
+                  background: "rgba(56, 189, 248, 0.12)",
+                  border: "1px solid rgba(56, 189, 248, 0.4)",
+                  color: "#38BDF8",
+                  fontSize: "12px",
+                  fontWeight: 800,
+                  textTransform: "uppercase"
+                }}
+              >
+                ⚡ Cached result
+              </div>
+            )}
 
           </div>
 
@@ -2528,6 +2447,27 @@ export default function ResultsDashboard({
             regulatory={
               regulatoryCompliance
             }
+            killSwitch={
+              deepValidation.kill_switch || r.kill_switch
+            }
+            unitEconomics={
+              deepValidation.unit_economics || r.unit_economics
+            }
+            regulatoryRunway={
+              deepValidation.regulatory_runway || r.regulatory_runway
+            }
+            trlReadiness={
+              deepValidation.trl_readiness || r.trl_readiness
+            }
+            moatDurability={
+              deepValidation.moat_durability || r.moat_durability
+            }
+            pivotPlan={
+              deepValidation.pivot_plan || r.pivot_plan
+            }
+            consistencyWarnings={
+              deepValidation.consistency_warnings || r.consistency_warnings || []
+            }
           />
 
         </section>
@@ -2573,17 +2513,30 @@ export default function ResultsDashboard({
         >
 
           <CompetitorAnalysis
+            data={compAnalysis}
             competitors={
               directCompetitors
             }
-            indirectCompetitors={[]}
+            indirectCompetitors={
+              compAnalysis.indirect_competitors || []
+            }
             comparison={
               compAnalysis.feature_matrix ||
               compAnalysis.competitor_comparison ||
+              compAnalysis.comparison ||
               []
             }
             marketGaps={
               marketGapsList
+            }
+            evidenceStatus={
+              compAnalysis.evidence_status
+            }
+            evidenceReason={
+              compAnalysis.evidence_reason
+            }
+            unverifiedCandidates={
+              compAnalysis.unverified_candidates || []
             }
           />
 

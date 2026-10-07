@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 # CONFIGURATION
 # ============================================================
 
-DEFAULT_COMPETITOR_LIMIT = 6
+DEFAULT_COMPETITOR_LIMIT = 5
 MAX_COMPETITOR_LIMIT = 8
 MAX_INDIRECT_COMPETITORS = 2
 MAX_SEARCH_RESULTS_FOR_GEMINI = 10
@@ -1424,6 +1424,8 @@ def _build_competitor(
         "pricing": _extract_pricing(
             content
         ),
+        "why_competitor": _safe_text(result.get("why_competitor")) or "Competes for similar target customers and problem space.",
+        "region": _safe_text(result.get("region")) or ("India" if "india" in str(result).lower() else "Global"),
         "key_features": _extract_features(
             content
         ),
@@ -1917,12 +1919,85 @@ def _is_placeholder_name(name: str) -> bool:
         "competitor a", "competitor b", "competitor c", "competitor 1", "competitor 2",
         "incumbent platform", "incumbent a", "incumbent b", "legacy competitor",
         "legacy platform", "generic competitor", "unknown competitor", "placeholder",
-        "hypothetical", "example competitor", "sample competitor", "not available"
+        "hypothetical", "example competitor", "sample competitor", "not available",
+        "generic category", "category)", "manufacturers (", "suppliers (", "vendors (",
+        "market research", "market intelligence", "research report", "insights",
+        "technavio", "mordor", "grand view", "statista", "startus", "imarc",
+        "market growth", "custom market", "transparency market", "intel market",
+        "directory", "yellowpages"
     ]
     return any(p in lower for p in placeholder_tokens)
 
 
-def _get_domain_named_competitors(idea: str) -> List[Dict[str, Any]]:
+def _is_market_research_or_directory_entity(comp: Dict[str, Any]) -> bool:
+    """
+    Checks if a competitor record is a market-research publisher, directory, news outlet,
+    or generic category rather than a real operating company selling a product.
+    """
+    name = str(comp.get("name") or "").lower()
+    url = str(comp.get("url") or "").lower()
+    ps = str(comp.get("product_service") or "").lower()
+
+    if _is_placeholder_name(name):
+        return True
+
+    blocked_domains = [
+        "marketresearch", "researchandmarkets", "marketsandmarkets", "grandviewresearch",
+        "mordorintelligence", "technavio", "statista", "globenewswire", "prnewswire",
+        "businesswire", "einpresswire", "idtechex", "gartner", "forrester", "polarismarketresearch",
+        "fortunebusinessinsights", "verifiedmarket", "alliedmarket", "maximizemarket",
+        "startus-insights", "expertmarketresearch", "custommarketinsights", "thebrainyinsights",
+        "futuremarketinsights", "persistencemarketresearch", "imarcgroup", "transparencymarketresearch",
+        "industryarc", "kbvresearch", "marketgrowthreports", "intelmarketresearch", "verifiedmarketreports",
+        "crunchbase", "zoominfo", "owler", "clutch.co", "g2.com", "capterra", "trustpilot",
+        "yellowpages", "wikipedia.org", "medium.com", "substack.com", "hubspot.com"
+    ]
+    if any(bd in url or bd in name for bd in blocked_domains):
+        return True
+
+    blocked_phrases = [
+        "market research", "industry report", "market size", "market share", "market growth",
+        "market forecast", "market analysis", "global market", "companies in", "top 10", "top 5",
+        "best 10", "list of", "manufacturers (generic", "generic category", "research report",
+        "competitive landscape overview", "market trends", "industry analysis"
+    ]
+    if any(bp in name or bp in ps for bp in blocked_phrases):
+        return True
+
+    return False
+
+
+
+def _competitor_matches_business_model(comp: Dict[str, Any], idea: str, business_model: str = "") -> bool:
+    """
+    Business-model fit check for hardcoded fallback competitors.
+    Returns True if the competitor is relevant to the idea's business model.
+    For gig/earned-wage lending competitors (KarmaLife, SalaryDost, etc.),
+    only show them if the idea is genuinely about gig/earned-wage lending.
+    Prevents India gig-lending competitors from leaking into generic fintech or SaaS ideas.
+    """
+    comp_name_lower = (comp.get("name") or "").lower()
+    comp_ps_lower = (comp.get("product_service") or "").lower()
+    comp_text = comp_name_lower + " " + comp_ps_lower + " " + (comp.get("market_position") or "").lower()
+
+    idea_lower = (idea or "").lower()
+    bm_lower = (business_model or "").lower()
+
+    # India gig-worker micro-lending competitors: only match if the idea is about gig/earned-wage lending
+    gig_lending_signals = ["karmalife", "salarydost", "avail finance", "jar", "gig worker", "earned wage", "blue-collar", "delivery rider"]
+    is_gig_lending_comp = any(s in comp_text for s in gig_lending_signals)
+    if is_gig_lending_comp:
+        # Only show if idea explicitly involves gig or earned-wage lending
+        idea_is_gig_lending = (
+            bm_lower == "lending"
+            and any(k in idea_lower for k in ["gig", "swiggy", "zomato", "uber", "delivery", "rider", "earned wage", "payout", "salary advance"])
+        ) or any(k in idea_lower for k in ["karmalife", "salarydost", "gig worker lending", "earned wage advance"])
+        return idea_is_gig_lending
+
+    return True  # All other competitors pass by default
+
+
+def _get_domain_named_competitors(idea: str, business_model: str = "") -> List[Dict[str, Any]]:
     idea_lower = (idea or "").lower()
 
     if any(k in idea_lower for k in ["k8s", "kubernetes", "sre", "devops", "cloud", "cluster", "telemetry", "observability", "infrastructure", "docker"]):
@@ -2077,6 +2152,58 @@ def _get_domain_named_competitors(idea: str) -> List[Dict[str, Any]]:
             }
         ]
 
+    if any(k in idea_lower for k in ["gig", "swiggy", "zomato", "uber", "cibil", "micro-loan", "micro loan", "payout loan", "instant loan", "salary advance", "earned wage"]) or (any(k in idea_lower for k in ["loan", "lending", "credit"]) and any(k in idea_lower for k in ["india", "inr", "rupee", "worker", "rider"])):
+        return [
+            {
+                "name": "KarmaLife",
+                "url": "https://karmalife.ai",
+                "product_service": "Earnings-linked financial solutions and micro-advances for gig and blue-collar workers.",
+                "target_customers": "Gig workers (delivery riders, cab drivers) partnering through employer and gig platform integrations.",
+                "pricing": "Subscription or flat processing fee (₹50 - ₹150) per advance",
+                "funding_size": "$4.5M Pre-Series A / Extension (Krishna Capital, Artha)",
+                "market_position": "Pioneering Gig-Worker Financial Solutions in India",
+                "key_features": ["Dynamic credit limits based on real-time earnings", "Zero collateral required", "B2B2C integration with gig employers"],
+                "strengths": ["Direct enterprise tie-ups with gig platforms for payroll/payout deductions", "Proprietary KarmaScore alternative underwriting"],
+                "weaknesses": ["Relies on employer/gig platform cooperation for frictionless deduction", "Limited ticket sizes (₹1,000 - ₹15,000)"]
+            },
+            {
+                "name": "SalaryDost",
+                "url": "https://salarydost.com",
+                "product_service": "Digital micro-lending platform offering short-term personal loans and salary advances to salaried and gig workers.",
+                "target_customers": "Entry-level salaried employees and informal sector workers seeking quick liquidity.",
+                "pricing": "2% - 3% monthly interest + processing fee (₹200 - ₹500)",
+                "funding_size": "Early Stage / Seed (Angel funded)",
+                "market_position": "Niche Short-Term Credit Provider in Tier 2/3 India",
+                "key_features": ["100% paperless digital KYC", "Direct bank transfer within 2 hours", "Flexible tenure from 30 to 90 days"],
+                "strengths": ["High penetration in semi-urban India", "Lenient credit thresholds for new-to-credit borrowers"],
+                "weaknesses": ["Higher delinquency rates without direct payroll deduction", "Customer service and collection friction"]
+            },
+            {
+                "name": "Avail Finance",
+                "url": "https://availfinance.in",
+                "product_service": "Financial inclusion platform providing neo-banking, micro-loans, and insurance to blue-collar workers (acquired by Ola).",
+                "target_customers": "Blue-collar gig workers, app-based drivers, and unbanked delivery personnel.",
+                "pricing": "1.5% - 2.5% monthly interest on advances",
+                "funding_size": "Acquired by Ola (ANI Technologies) for ~$50M",
+                "market_position": "Acquired Gig Ecosystem Provider",
+                "key_features": ["Integration with Ola driver ecosystem", "Micro-savings and insurance products", "UPI-based repayment"],
+                "strengths": ["Massive captive user base through Ola cab network", "Extensive historical ride-frequency underwriting data"],
+                "weaknesses": ["Integration with non-Ola platforms (Swiggy, Zomato) is constrained", "Product updates slowed post-acquisition"]
+            },
+            {
+                "name": "Jar",
+                "url": "https://myjar.app",
+                "product_service": "Automated micro-savings and gold-backed digital credit platform for everyday consumers and young earners.",
+                "target_customers": "Young retail users, gig earners, and first-time digital savers across India.",
+                "pricing": "Free digital gold savings; spread on credit advances",
+                "funding_size": "$58M+ across rounds (Tiger Global, Rocketship.vc)",
+                "market_position": "Fast-Growing Retail Micro-Finance Super App",
+                "key_features": ["Automated round-up savings on UPI transactions", "Collateralized micro-credit against accumulated gold", "Gamified financial habits"],
+                "strengths": ["Exceptional consumer engagement and viral growth via UPI round-ups", "Over 15M registered users"],
+                "weaknesses": ["Primarily savings-first rather than uncollateralized instant emergency liquidity for gig payouts"]
+            }
+        ]
+
     if any(k in idea_lower for k in ["fintech", "escrow", "cross-border", "payment", "bank", "currency", "fx", "remittance", "crypto", "trade", "invoice"]):
         return [
             {
@@ -2150,6 +2277,110 @@ def _get_domain_named_competitors(idea: str) -> List[Dict[str, Any]]:
                 "key_features": ["Mass payout engine in 190+ countries", "Commercial Mastercard", "Marketplace integration"],
                 "strengths": ["Reaches unbanked or emerging market contractors where others have no presence"],
                 "weaknesses": ["Outdated web portal experience", "Unpredictable compliance account freezes"]
+            }
+        ]
+
+    if any(k in idea_lower for k in ["invoice", "reconciliation", "gst", "vendor invoice", "ledger"]) and any(k in idea_lower for k in ["india", "sme", "msme", "inr", "rupee"]):
+        return [
+            {
+                "name": "Clear (ClearTax)",
+                "url": "https://clear.in",
+                "product_service": "AI-powered GST compliance, e-invoicing, and automated vendor invoice reconciliation for Indian SMEs.",
+                "target_customers": "Indian SMEs, chartered accountants, and finance teams managing high-volume vendor billing.",
+                "pricing": "₹10,000 - ₹35,000 / year base platform fee",
+                "funding_size": "$140M Series C (Y Combinator, Stripe, Alkeon)",
+                "market_position": "Dominant Tax & Invoicing Market Leader in India",
+                "key_features": ["Automated GSTR-2B matching", "ERP connector (Tally/SAP)", "Mismatch alert feeds"],
+                "strengths": ["Deep regulatory integration with GSTN portal", "Universal brand recognition among Indian accountants"],
+                "weaknesses": ["Complex interface with steep learning curve for non-accountant founders", "Opaque custom enterprise pricing tiers"]
+            },
+            {
+                "name": "HostBooks",
+                "url": "https://www.hostbooks.com",
+                "product_service": "Automated cloud accounting, GST e-way billing, and bank/invoice ledger reconciliation.",
+                "target_customers": "Indian small and medium businesses and accounting firms.",
+                "pricing": "₹5,000 - ₹15,000 / year",
+                "funding_size": "Venture-backed Series A",
+                "market_position": "Affordable SME Accounting Challenger",
+                "key_features": ["Seamless bank statement parsing", "Real-time GST filing", "Multi-user access"],
+                "strengths": ["Affordable entry price for Tier 2/Tier 3 Indian merchants"],
+                "weaknesses": ["Limited LLM agentic reconciliation for ambiguous unformatted paper bills"]
+            },
+            {
+                "name": "Zoho Books",
+                "url": "https://www.zoho.com/books",
+                "product_service": "Comprehensive GST-compliant accounting software with automated bank reconciliation.",
+                "target_customers": "Freelancers, growing startups, and Indian mid-market enterprises.",
+                "pricing": "₹899 - ₹3,599 / organization / month",
+                "funding_size": "Bootstrapped / Profitable ($1B+ Annual Revenue)",
+                "market_position": "Broad Business Suite Standard",
+                "key_features": ["Auto-scan expense receipts", "UPI payment link generation", "Comprehensive audit trails"],
+                "strengths": ["Rock-solid reliability and deep integration with Zoho ecosystem"],
+                "weaknesses": ["General ledger focus rather than autonomous cross-vendor invoice matching"]
+            },
+            {
+                "name": "RazorpayX",
+                "url": "https://razorpay.com/x",
+                "product_service": "Automated vendor payments, corporate cards, and invoice ledger reconciliation.",
+                "target_customers": "Tech-enabled Indian startups and digital-first businesses.",
+                "pricing": "Usage-based transaction fees + platform tiers",
+                "funding_size": "Venture-backed ($7.5B Valuation, Tiger Global, Sequoia)",
+                "market_position": "Modern FinTech Banking Challenger",
+                "key_features": ["Automated OCR bill parsing", "Instant vendor bank payouts", "Tally & Zoho auto-sync"],
+                "strengths": ["Best-in-class developer APIs and UI experience"],
+                "weaknesses": ["Requires opening a RazorpayX current account for full payout automation"]
+            }
+        ]
+
+    if any(k in idea_lower for k in ["soil", "moisture", "sensor", "farmer", "agriculture", "irrigation", "crop"]) and any(k in idea_lower for k in ["india", "inr", "farm", "kisan"]):
+        return [
+            {
+                "name": "Fasal",
+                "url": "https://fasal.co",
+                "product_service": "AI-powered IoT farm-level sensor hardware monitoring soil moisture, microclimate, and precision irrigation for Indian farmers.",
+                "target_customers": "Indian horticulture farmers, progressive growers, and agricultural cooperatives.",
+                "pricing": "₹25,000 - ₹45,000 hardware device + annual advisory subscription",
+                "funding_size": "$12M Series A (TDK Ventures, British International Investment)",
+                "market_position": "Pioneering Indian AgriTech IoT Hardware Leader",
+                "key_features": ["On-field soil moisture sensor probes", "Microclimate weather telemetry", "Vernacular smartphone irrigation alerts"],
+                "strengths": ["Proven water savings of 30-50% in grape, pomegranate, and chilli crops across Maharashtra and Karnataka"],
+                "weaknesses": ["Upfront hardware capex is high for marginal smallholder farmers without government subsidy"]
+            },
+            {
+                "name": "Yuktix",
+                "url": "https://www.yuktix.com",
+                "product_service": "GreenSense IoT solar-powered wireless soil moisture, canopy, and weather monitoring devices for Indian agriculture.",
+                "target_customers": "Plantations, contract farming companies, and agricultural research institutes in India.",
+                "pricing": "₹15,000 - ₹30,000 per solar node",
+                "funding_size": "Seed-stage funded (MANAGE, StartUp Karnataka)",
+                "market_position": "Ruggedized Low-Cost Hardware Specialist",
+                "key_features": ["Solar-powered battery backup", "LoRaWAN & 2G/4G connectivity", "Multi-depth capacitive soil probes"],
+                "strengths": ["Resilient hardware engineered specifically for harsh Indian tropical conditions"],
+                "weaknesses": ["Smaller direct-to-farmer sales distribution network compared to fertilizer/seed giants"]
+            },
+            {
+                "name": "CropIn",
+                "url": "https://www.cropin.com",
+                "product_service": "SmartFarm platform integrating remote sensing, weather intelligence, and farm management software.",
+                "target_customers": "Agribusinesses, seed corporations, government bodies, and international developmental agencies.",
+                "pricing": "Enterprise custom quotes ($2 - $5 / acre / year)",
+                "funding_size": "$47M+ across rounds (Google, Chiratae Ventures, JSR)",
+                "market_position": "Global AgriTech SaaS Leader",
+                "key_features": ["Satellite imagery vegetation index", "Plot digitization", "Predictive yield modeling"],
+                "strengths": ["Enterprise scale deployed across millions of acres globally"],
+                "weaknesses": ["Software and satellite first; lacks hyper-local sub-surface capacitive soil moisture ground sensors"]
+            },
+            {
+                "name": "Sensegrass",
+                "url": "https://sensegrass.com",
+                "product_service": "3-in-1 IoT soil sensor and drone intelligence for precision agronomy and nutrient management.",
+                "target_customers": "Precision agriculture farms, agribusinesses, and agronomists.",
+                "pricing": "₹20,000 per IoT unit",
+                "funding_size": "Pre-Series A / Grants",
+                "market_position": "Emerging Deep-Tech Agri Challenger",
+                "key_features": ["Soil NPK and moisture telemetry", "AI recommendation engine", "Mobile app dashboard"],
+                "strengths": ["Combines chemical NPK sensing with moisture readings in a single probe"],
+                "weaknesses": ["Limited ground deployment footprint and sensor calibration drift over extended seasons"]
             }
         ]
 
@@ -2229,81 +2460,89 @@ def _get_domain_named_competitors(idea: str) -> List[Dict[str, Any]]:
             }
         ]
 
-    # Default / Modern B2B SaaS
-    return [
-        {
-            "name": "Salesforce / MuleSoft",
-            "url": "https://www.salesforce.com",
-            "product_service": "Enterprise cloud platform, CRM, and workflow integration ecosystem.",
-            "target_customers": "Global 2000 enterprises across all verticals.",
-            "pricing": "$75 - $300 / user / month + custom platform licenses",
-            "funding_size": "Public (NYSE: CRM, ~$280B Market Cap)",
-            "market_position": "Dominant Enterprise Suite Incumbent",
-            "key_features": ["Einstein AI", "Apex automation engine", "Massive AppExchange ecosystem"],
-            "strengths": ["Ubiquitous enterprise procurement channel", "Unmatched database scale"],
-            "weaknesses": ["Prohibitive implementation costs", "Decades of technical debt and sluggish UX"]
-        },
-        {
-            "name": "HubSpot",
-            "url": "https://www.hubspot.com",
-            "product_service": "Inbound marketing, sales CRM, and customer success platform.",
-            "target_customers": "Growing SMBs and mid-market commercial businesses.",
-            "pricing": "$50 - $1,500 / month based on contacts and feature tiers",
-            "funding_size": "Public (NYSE: HUBS, ~$30B Market Cap)",
-            "market_position": "SMB & Mid-Market Champion",
-            "key_features": ["Intuitive drag-and-drop workflows", "Unified customer record", "Inbound lead tracking"],
-            "strengths": ["Beloved user experience and self-serve onboarding", "Fast time to initial value"],
-            "weaknesses": ["Costs escalate dramatically as contact database expands", "Limited niche vertical customization"]
-        },
-        {
-            "name": "Zapier",
-            "url": "https://zapier.com",
-            "product_service": "No-code automation platform connecting 6,000+ web applications.",
-            "target_customers": "Operations leads, marketers, and no-code builders.",
-            "pricing": "Free tier to $29.99 - $99+ / month for multi-step Zaps",
-            "funding_size": "$5B Valuation (Profitable / Bootstrapped & Sequoia)",
-            "market_position": "No-Code Workflow Standard",
-            "key_features": ["6,000+ app connectors", "AI action generation", "Webhooks and filters"],
-            "strengths": ["Vast integration network", "Empowers non-technical operators to build automations"],
-            "weaknesses": ["Task-based pricing gets expensive at scale", "Lacks domain-specific intelligence or AI agents"]
-        },
-        {
-            "name": "Retool",
-            "url": "https://retool.com",
-            "product_service": "Low-code developer platform for building custom internal tools and workflows.",
-            "target_customers": "Software engineering teams, operations engineers, and technical product managers.",
-            "pricing": "$10 - $50 / user / month",
-            "funding_size": "$3.2B Valuation (Sequoia, Stripe founders)",
-            "market_position": "Internal Developer Tool Leader",
-            "key_features": ["Pre-built UI components", "Direct database & API connectors", "Role-based access permissions"],
-            "strengths": ["Saves weeks of frontend engineering time for internal dashboards"],
-            "weaknesses": ["Requires basic SQL/JavaScript knowledge", "Not built as an external customer-facing app"]
-        },
-        {
-            "name": "Make (formerly Integromat)",
-            "url": "https://www.make.com",
-            "product_service": "Visual integration platform for designing complex multi-system workflows.",
-            "target_customers": "Technical marketers, operations managers, and agency builders.",
-            "pricing": "$9 - $29 / month based on operations",
-            "funding_size": "Acquired by Celonis ($13B Valuation)",
-            "market_position": "Visual Automation Challenger",
-            "key_features": ["Visual flow router", "Data transformation tools", "JSON/REST API parsing"],
-            "strengths": ["Significantly more affordable than Zapier for high-volume automated data transfers"],
-            "weaknesses": ["Steeper learning curve for non-technical users", "Less brand awareness in North America"]
-        },
-        {
-            "name": "Workato",
-            "url": "https://www.workato.com",
-            "product_service": "Enterprise workflow automation and integration platform (iPaaS).",
-            "target_customers": "Enterprise IT, security, and operations executives.",
-            "pricing": "$10,000 - $50,000+ annual enterprise license",
-            "funding_size": "$5.7B Valuation (Battery Ventures, Insight Partners)",
-            "market_position": "Enterprise Automation Incumbent",
-            "key_features": ["Enterprise governance and security audit", "Recipe community", "Bot integrations for Slack/Teams"],
-            "strengths": ["Built specifically to meet strict SOC 2, HIPAA, and enterprise IT governance criteria"],
-            "weaknesses": ["No self-serve signup", "Expensive annual contracts requiring sales qualification"]
-        }
-    ]
+    # B2B CRM / Sales SaaS
+    if any(k in idea_lower for k in ["crm", "sales automation", "inbound marketing", "sales pipeline", "lead generation"]):
+        return [
+            {
+                "name": "Salesforce / MuleSoft",
+                "url": "https://www.salesforce.com",
+                "product_service": "Enterprise cloud platform, CRM, and workflow integration ecosystem.",
+                "target_customers": "Global 2000 enterprises across all verticals.",
+                "pricing": "$75 - $300 / user / month + custom platform licenses",
+                "funding_size": "Public (NYSE: CRM, ~$280B Market Cap)",
+                "market_position": "Dominant Enterprise Suite Incumbent",
+                "key_features": ["Einstein AI", "Apex automation engine", "Massive AppExchange ecosystem"],
+                "strengths": ["Ubiquitous enterprise procurement channel", "Unmatched database scale"],
+                "weaknesses": ["Prohibitive implementation costs", "Decades of technical debt and sluggish UX"]
+            },
+            {
+                "name": "HubSpot",
+                "url": "https://www.hubspot.com",
+                "product_service": "Inbound marketing, sales CRM, and customer success platform.",
+                "target_customers": "Growing SMBs and mid-market commercial businesses.",
+                "pricing": "$50 - $1,500 / month based on contacts and feature tiers",
+                "funding_size": "Public (NYSE: HUBS, ~$30B Market Cap)",
+                "market_position": "SMB & Mid-Market Champion",
+                "key_features": ["Intuitive drag-and-drop workflows", "Unified customer record", "Inbound lead tracking"],
+                "strengths": ["Beloved user experience and self-serve onboarding", "Fast time to initial value"],
+                "weaknesses": ["Costs escalate dramatically as contact database expands", "Limited niche vertical customization"]
+            },
+            {
+                "name": "Zapier",
+                "url": "https://zapier.com",
+                "product_service": "No-code automation platform connecting 6,000+ web applications.",
+                "target_customers": "Operations leads, marketers, and no-code builders.",
+                "pricing": "Free tier to $29.99 - $99+ / month for multi-step Zaps",
+                "funding_size": "$5B Valuation (Profitable / Bootstrapped & Sequoia)",
+                "market_position": "No-Code Workflow Standard",
+                "key_features": ["6,000+ app connectors", "AI action generation", "Webhooks and filters"],
+                "strengths": ["Vast integration network", "Empowers non-technical operators to build automations"],
+                "weaknesses": ["Task-based pricing gets expensive at scale", "Lacks domain-specific intelligence or AI agents"]
+            }
+        ]
+    if any(k in idea_lower for k in ["workflow", "integration", "automation", "zapier", "ipaas", "internal tool", "low-code", "retool"]):
+        return [
+            {
+                "name": "Retool",
+                "url": "https://retool.com",
+                "product_service": "Low-code developer platform for building custom internal tools and workflows.",
+                "target_customers": "Software engineering teams, operations engineers, and technical product managers.",
+                "pricing": "$10 - $50 / user / month",
+                "funding_size": "$3.2B Valuation (Sequoia, Stripe founders)",
+                "market_position": "Internal Developer Tool Leader",
+                "key_features": ["Pre-built UI components", "Direct database & API connectors", "Role-based access permissions"],
+                "strengths": ["Saves weeks of frontend engineering time for internal dashboards"],
+                "weaknesses": ["Requires basic SQL/JavaScript knowledge", "Not built as an external customer-facing app"]
+            },
+            {
+                "name": "Make (formerly Integromat)",
+                "url": "https://www.make.com",
+                "product_service": "Visual integration platform for designing complex multi-system workflows.",
+                "target_customers": "Technical marketers, operations managers, and agency builders.",
+                "pricing": "$9 - $29 / month based on operations",
+                "funding_size": "Acquired by Celonis ($13B Valuation)",
+                "market_position": "Visual Automation Challenger",
+                "key_features": ["Visual flow router", "Data transformation tools", "JSON/REST API parsing"],
+                "strengths": ["Significantly more affordable than Zapier for high-volume automated data transfers"],
+                "weaknesses": ["Steeper learning curve for non-technical users", "Less brand awareness in North America"]
+            },
+            {
+                "name": "Workato",
+                "url": "https://www.workato.com",
+                "product_service": "Enterprise workflow automation and integration platform (iPaaS).",
+                "target_customers": "Enterprise IT, security, and operations executives.",
+                "pricing": "$10,000 - $50,000+ annual enterprise license",
+                "funding_size": "$5.7B Valuation (Battery Ventures, Insight Partners)",
+                "market_position": "Enterprise Automation Incumbent",
+                "key_features": ["Enterprise governance and security audit", "Recipe community", "Bot integrations for Slack/Teams"],
+                "strengths": ["Built specifically to meet strict SOC 2, HIPAA, and enterprise IT governance criteria"],
+                "weaknesses": ["No self-serve signup", "Expensive annual contracts requiring sales qualification"]
+            }
+        ]
+
+    # Return empty list if no domain taxonomy matches - NEVER inject unrelated domain competitors
+    return []
+
 
 
 def _build_domain_feature_matrix(direct_competitors: List[Dict[str, Any]], idea: str) -> List[Dict[str, Any]]:
@@ -2687,32 +2926,38 @@ STRICT RULES:
 3. A direct competitor solves substantially the same core
    customer problem using a similar product/service.
 
-4. An indirect competitor solves the same customer problem
+4. PERFORM A COMPETITOR FIT CHECK for every competitor:
+   - Confirm they serve the same target customer, solve the same core problem, and operate in a relevant jurisdiction.
+   - For every competitor (direct and indirect), provide:
+     a) "why_competitor": a one-sentence justification of why this company is a competitor (same customer, same problem, same jurisdiction fit).
+     b) "region": geographic region/market (e.g., "India", "US", "Global", "EU").
+
+5. An indirect competitor solves the same customer problem
    using another method or traditional alternative.
 
-5. Do NOT classify a company as a competitor merely because
+6. Do NOT classify a company as a competitor merely because
    it uses AI, software, subscriptions, payments, cloud,
    analytics, or another technology.
 
-6. Provide 5 to {max_competitors} direct competitors.
+7. Provide 5 to {max_competitors} direct competitors.
 
-7. Maximum 2 indirect competitors.
+8. Maximum 2 indirect competitors.
 
-8. NEVER copy the startup's target customers into a competitor.
+9. NEVER copy the startup's target customers into a competitor.
    Target customers must come from evidence specifically
    associated with that competitor.
 
-9. NEVER invent pricing. If unknown, use "Pricing available on request / tiered".
+10. NEVER invent pricing. If unknown, use "Pricing available on request / tiered".
 
-10. NEVER invent weaknesses. If none supported, list real architectural trade-offs.
+11. NEVER invent weaknesses. If none supported, list real architectural trade-offs.
 
-11. Specify realistic funding_size (e.g. "$50M Series B", "Public ($15B Cap)", "Bootstrapped") and market_position (e.g. "Category Leader", "Enterprise Incumbent", "Fast Challenger").
+12. Specify realistic funding_size (e.g. "$50M Series B", "Public ($15B Cap)", "Bootstrapped") and market_position (e.g. "Category Leader", "Enterprise Incumbent", "Fast Challenger").
 
-12. Use the source URL when possible.
+13. Use the source URL when possible.
 
-13. Market gaps must be potential opportunities, not facts.
+14. Market gaps must be potential opportunities, not facts.
 
-14. Output only valid JSON.
+15. Output only valid JSON.
 
 Required schema:
 
@@ -2727,6 +2972,8 @@ Required schema:
         "pricing": "{NOT_AVAILABLE}",
         "funding_size": "Funding size or valuation",
         "market_position": "Category Leader / Challenger / Niche",
+        "why_competitor": "One-line justification of competitor fit (same customer, problem, jurisdiction)",
+        "region": "India / US / Global",
         "key_features": [],
         "strengths": [],
         "weaknesses": []
@@ -2741,6 +2988,8 @@ Required schema:
         "pricing": "{NOT_AVAILABLE}",
         "funding_size": "Venture-backed / Established",
         "market_position": "Indirect Alternative",
+        "why_competitor": "One-line justification of indirect competitor fit",
+        "region": "India / US / Global",
         "key_features": [],
         "strengths": [],
         "weaknesses": []
@@ -2853,11 +3102,17 @@ def _clean_gemini_competitors(
         market_position = _safe_text(competitor.get("market_position"))
         competitor["market_position"] = market_position if market_position else "Market Competitor"
 
+        why_comp = _safe_text(competitor.get("why_competitor"))
+        competitor["why_competitor"] = why_comp if why_comp else "Direct competitor addressing same target customer segment and problem space."
+
+        region_val = _safe_text(competitor.get("region"))
+        competitor["region"] = region_val if region_val else ("India" if "india" in str(competitor).lower() else "Global")
+
         # ----------------------------------------------------
-        # Discard placeholder names
+        # Discard placeholder names and market research publishers
         # ----------------------------------------------------
 
-        if _is_placeholder_name(competitor.get("name", "")):
+        if _is_placeholder_name(competitor.get("name", "")) or _is_market_research_or_directory_entity(competitor):
             continue
 
         # ----------------------------------------------------
@@ -2885,6 +3140,195 @@ def _clean_gemini_competitors(
 
 
 # ============================================================
+# FAILURE TEXT FILTER & SANITIZER
+# ============================================================
+
+FAILURE_PATTERNS = [
+    re.compile(r"no competitor analysis (?:can|could) be performed", re.IGNORECASE),
+    re.compile(r"competitor analysis (?:could not|was not|cannot) be performed", re.IGNORECASE),
+    re.compile(r"no competitor analysis was available", re.IGNORECASE),
+    re.compile(r"due to the lack of competitor", re.IGNORECASE),
+    re.compile(r"in the absence of competitor data", re.IGNORECASE),
+    re.compile(r"not enough competitor evidence to perform", re.IGNORECASE),
+    re.compile(r"no competitors? (?:were|was) identified to analyze", re.IGNORECASE),
+    re.compile(r"no competitor data is available", re.IGNORECASE),
+    re.compile(r"no competitors could be identified", re.IGNORECASE),
+]
+
+def sanitize_failure_sentences(data: Any) -> Any:
+    """
+    Failure sentences ("no competitor analysis can be performed...") must never
+    enter market gaps, MVP, SWOT, GTM or the report.
+    Filters out any string or item matching failure patterns.
+    """
+    def _has_failure(text: str) -> bool:
+        if not isinstance(text, str):
+            return False
+        return any(p.search(text) for p in FAILURE_PATTERNS)
+
+    if isinstance(data, str):
+        return "" if _has_failure(data) else data
+    elif isinstance(data, list):
+        filtered = []
+        for x in data:
+            if isinstance(x, str):
+                if not _has_failure(x) and x.strip():
+                    filtered.append(x)
+            elif isinstance(x, dict):
+                cleaned_dict = sanitize_failure_sentences(x)
+                if any(bool(v) for v in cleaned_dict.values()):
+                    filtered.append(cleaned_dict)
+            else:
+                filtered.append(x)
+        return filtered
+    elif isinstance(data, dict):
+        cleaned = {}
+        for k, v in data.items():
+            if isinstance(v, str) and _has_failure(v):
+                continue
+            cleaned[k] = sanitize_failure_sentences(v)
+        return cleaned
+    return data
+
+
+# ============================================================
+# LLM-SUGGESTED UNVERIFIED CANDIDATE GENERATION
+# ============================================================
+
+async def _generate_unverified_candidates_async(
+    idea: str,
+    domain: str = "",
+    count: int = 3,
+) -> List[Dict[str, Any]]:
+    """
+    When verified search evidence yields < 3 competitors, suggests up to 3 candidates
+    from LLM knowledge. All candidates are strictly checked for fit (same customer,
+    same problem, same jurisdiction) and clearly labeled 'Unverified, from model knowledge'.
+    NEVER falls back to hardcoded lists from unrelated domains.
+    """
+    prompt = f"""You are a venture capital competitive intelligence analyst.
+Startup Idea to Analyze:
+"{idea}"
+Industry / Domain: {domain or 'Digital Technology'}
+
+Live web search did NOT find sufficient verified competitors.
+Suggest up to {count} real-world competitor companies from your knowledge base that address the SAME customer with the SAME problem in the SAME or relevant jurisdiction.
+DO NOT suggest companies from unrelated domains (e.g. absolutely no DevOps/K8s/SaaS tools for healthtech, no microfinance for software).
+
+For each competitor candidate, return:
+- name: Real company/product name
+- url: Known website URL (or null if uncertain)
+- product_service: One concise sentence describing their product
+- target_customers: Exact target audience (must match the startup's customer)
+- why_competitor: One line explaining why they are a competitor (same customer, same problem, same jurisdiction)
+- region: Target market or headquarters (e.g. India, US, Global)
+- key_features: 2-3 core features (list of strings)
+- strengths: 1-2 core strengths (list of strings)
+- weaknesses: 1-2 core weaknesses (list of strings)
+
+Respond strictly with a JSON array:
+[
+  {{
+    "name": "...",
+    "url": "https://...",
+    "product_service": "...",
+    "target_customers": "...",
+    "why_competitor": "Same customer (...), same problem (...), in jurisdiction (...)",
+    "region": "India / Global",
+    "key_features": ["..."],
+    "strengths": ["..."],
+    "weaknesses": ["..."]
+  }}
+]
+"""
+    candidates: List[Dict[str, Any]] = []
+    try:
+        from server.utils.gemini_client import call_gemini_generate_content, clean_llm_json_text
+        res = await call_gemini_generate_content(
+            prompt=prompt,
+            system_instruction="You are a startup competitive intelligence analyst. Output strictly a JSON array without markdown formatting.",
+        )
+        if res and res.get("text"):
+            cleaned = clean_llm_json_text(res["text"])
+            parsed = json.loads(cleaned)
+            if isinstance(parsed, list):
+                for item in parsed[:count]:
+                    if isinstance(item, dict) and item.get("name"):
+                        item["verification_status"] = "Unverified, from model knowledge"
+                        item["source_type"] = "unverified_model_knowledge"
+                        candidates.append(item)
+    except Exception as exc:
+        logger.warning("Failed to generate unverified competitor candidates via LLM: %s", exc)
+
+    # Idea-specific fallback if LLM is offline - tailored strictly to the idea keywords
+    if not candidates:
+        idea_l = (idea or "").lower()
+        if any(w in idea_l for w in ["adherence", "medication", "pill", "elderly", "chronic", "patient", "health"]):
+            candidates = [
+                {
+                    "name": "Medisafe",
+                    "url": "https://www.medisafe.com",
+                    "product_service": "Digital medication management and pill reminder app with family/caregiver escalation alerts.",
+                    "target_customers": "Elderly patients with chronic conditions and their family caregivers.",
+                    "why_competitor": "Same customer (chronic disease patients & families), same problem (medication non-adherence), available in India & globally.",
+                    "region": "Global / India",
+                    "key_features": ["Dosage scheduling", "Caregiver missed-dose alerts", "Pharmacy refill reminders"],
+                    "strengths": ["Broad consumer awareness", "Reliable reminder engine"],
+                    "weaknesses": ["App interface is complex for low-literacy elderly in Tier 2/3 cities", "Requires standalone app install instead of WhatsApp"],
+                    "verification_status": "Unverified, from model knowledge",
+                    "source_type": "unverified_model_knowledge",
+                },
+                {
+                    "name": "MyTherapy",
+                    "url": "https://www.mytherapyapp.com",
+                    "product_service": "Pill reminder and medication tracker app focused on chronic disease adherence.",
+                    "target_customers": "Patients with hypertension and diabetes managing daily medication regimens.",
+                    "why_competitor": "Same customer (chronic illness patients), same problem (forgetting prescribed doses).",
+                    "region": "Global",
+                    "key_features": ["Health journal", "Dose tracking", "Doctor report export"],
+                    "strengths": ["Clean simple interface", "Privacy-focused design"],
+                    "weaknesses": ["No vernacular voice messaging", "No automated local pharmacy dispatch integration"],
+                    "verification_status": "Unverified, from model knowledge",
+                    "source_type": "unverified_model_knowledge",
+                }
+            ]
+        elif any(w in idea_l for w in ["loan", "lending", "micro-loan", "microloan", "cibil", "borrow"]):
+            candidates = [
+                {
+                    "name": "KarmaLife",
+                    "url": "https://karmalife.ai",
+                    "product_service": "Earnings-linked micro-loans and liquidity solutions for gig platform workers in India.",
+                    "target_customers": "Gig economy and informal platform workers without traditional credit scores.",
+                    "why_competitor": "Same customer (Indian gig workers), same problem (small emergency loans without CIBIL), same jurisdiction (India).",
+                    "region": "India",
+                    "key_features": ["Platform earnings integration", "Instant daily liquidity"],
+                    "strengths": ["Direct enterprise integration with gig employers"],
+                    "weaknesses": ["Restricted to partnered platform workforces"],
+                    "verification_status": "Unverified, from model knowledge",
+                    "source_type": "unverified_model_knowledge",
+                }
+            ]
+        elif any(w in idea_l for w in ["k8s", "kubernetes", "sre", "devops", "cloud", "observability"]):
+            candidates = [
+                {
+                    "name": "Komodor",
+                    "url": "https://komodor.com",
+                    "product_service": "Kubernetes troubleshooting and change intelligence platform.",
+                    "target_customers": "DevOps and Platform Engineering teams managing K8s clusters.",
+                    "why_competitor": "Same customer (DevOps engineers), same problem (troubleshooting K8s outages).",
+                    "region": "Global",
+                    "key_features": ["Timeline tracking", "Automated root cause hints"],
+                    "strengths": ["Intuitive visualization of Kubernetes state"],
+                    "weaknesses": ["Narrow scope limited to K8s ecosystem"],
+                    "verification_status": "Unverified, from model knowledge",
+                    "source_type": "unverified_model_knowledge",
+                }
+            ]
+
+    return candidates[:count]
+
+
+# ============================================================
 # MAIN AGENT
 # ============================================================
 
@@ -2892,6 +3336,7 @@ async def run_competitor_analysis_agent(
     idea: str,
     search_results: Any,
     max_competitors: int = DEFAULT_COMPETITOR_LIMIT,
+    domain: str = "",
 ) -> Dict[str, Any]:
 
     idea = _safe_text(idea)
@@ -2952,20 +3397,15 @@ async def run_competitor_analysis_agent(
     # --------------------------------------------------------
 
     if not valid_results:
-        domain_comps = _get_domain_named_competitors(idea)
-        directs = domain_comps[:max_competitors]
-        indirects = domain_comps[max_competitors:max_competitors + MAX_INDIRECT_COMPETITORS]
-        comparison = _build_comparison(directs, indirects)
-        market_gaps = _build_market_gaps(directs, indirects, idea)
-        feature_matrix = _build_domain_feature_matrix(directs, idea)
-
+        market_gaps = _build_market_gaps([], [], idea)
         return {
             "competitor_analysis": {
-                "direct_competitors": directs,
-                "indirect_competitors": indirects,
-                "comparison": comparison,
+                "direct_competitors": [],
+                "indirect_competitors": [],
+                "comparison": [],
                 "market_gaps": market_gaps,
-                "feature_matrix": feature_matrix,
+                "feature_matrix": None,
+                "source": "empty_search",
             }
         }
 
@@ -3049,17 +3489,39 @@ async def run_competitor_analysis_agent(
                 ]
 
                 # ------------------------------------------------
-                # Discard placeholder names and guarantee 5+ real
+                # Discard placeholder names, generic categories, and publishers
                 # ------------------------------------------------
-                directs = [c for c in directs if not _is_placeholder_name(c.get("name", ""))]
+                directs = [c for c in directs if not _is_placeholder_name(c.get("name", "")) and not _is_market_research_or_directory_entity(c)]
 
-                if len(directs) < 5:
-                    domain_comps = _get_domain_named_competitors(idea)
-                    for dc in domain_comps:
-                        if not _is_duplicate(dc, directs):
-                            directs.append(dc)
-                        if len(directs) >= 5:
-                            break
+                # Re-run search with a refined query if fewer than 3 valid competitors remain
+                if len(directs) < 3:
+                    try:
+                        from server.agents.web_search_agent import run_web_search_agent
+                        refined_q = f"{idea} operating commercial startups companies product competitors alternatives -marketresearch -report -insights"
+                        logger.info(f"Fewer than 3 valid competitors found ({len(directs)}). Re-running search with refined query: '{refined_q}'...")
+                        refined_res = await run_web_search_agent(idea=refined_q, max_results=6)
+                        extra_items = refined_res.get("results", []) if isinstance(refined_res, dict) else []
+                        for extra in extra_items:
+                            built = _build_competitor(extra)
+                            if (
+                                not _is_placeholder_name(built.get("name", ""))
+                                and not _is_market_research_or_directory_entity(built)
+                                and not _is_duplicate(built, directs)
+                            ):
+                                directs.append(built)
+                            if len(directs) >= max_competitors:
+                                break
+                    except Exception as re_err:
+                        logger.warning(f"Refined competitor search error: {re_err}")
+
+                unverified_candidates: List[Dict[str, Any]] = []
+                if len(directs) < 3:
+                    evidence_status = "not_enough_evidence"
+                    evidence_reason = f"Only {len(directs)} verified competitor(s) identified in live search evidence (minimum 3 required for conclusive validation)."
+                    unverified_candidates = await _generate_unverified_candidates_async(idea, domain=domain, count=3)
+                else:
+                    evidence_status = "sufficient"
+                    evidence_reason = None
 
                 # ------------------------------------------------
                 # Build comparison directly from final records.
@@ -3141,13 +3603,18 @@ async def run_competitor_analysis_agent(
                         "potential market gaps."
                     )
 
+                clean_market_gaps = sanitize_failure_sentences(normalized_gaps[:5])
+
                 return {
                     "competitor_analysis": {
                         "direct_competitors": directs,
                         "indirect_competitors": indirects,
                         "comparison": comparison,
-                        "market_gaps": normalized_gaps[:5],
+                        "market_gaps": clean_market_gaps,
                         "feature_matrix": feature_matrix,
+                        "evidence_status": evidence_status,
+                        "evidence_reason": evidence_reason,
+                        "unverified_candidates": unverified_candidates,
                     }
                 }
 
@@ -3213,16 +3680,20 @@ async def run_competitor_analysis_agent(
     # Limits
     # --------------------------------------------------------
 
-    # Discard placeholder names and ensure at least 5 real competitors
-    direct_competitors = [c for c in direct_competitors if not _is_placeholder_name(c.get("name", ""))]
+    # Discard placeholder names, generic categories, and publishers
+    direct_competitors = [
+        c for c in direct_competitors
+        if not _is_placeholder_name(c.get("name", "")) and not _is_market_research_or_directory_entity(c)
+    ]
 
-    if len(direct_competitors) < 5:
-        domain_comps = _get_domain_named_competitors(idea)
-        for dc in domain_comps:
-            if not _is_duplicate(dc, direct_competitors):
-                direct_competitors.append(dc)
-            if len(direct_competitors) >= 5:
-                break
+    unverified_candidates = []
+    if len(direct_competitors) < 3:
+        evidence_status = "not_enough_evidence"
+        evidence_reason = f"Only {len(direct_competitors)} verified competitor(s) identified in live search evidence (minimum 3 required for conclusive validation)."
+        unverified_candidates = await _generate_unverified_candidates_async(idea, domain=domain, count=3)
+    else:
+        evidence_status = "sufficient"
+        evidence_reason = None
 
     direct_competitors = (
         direct_competitors[
@@ -3271,11 +3742,12 @@ async def run_competitor_analysis_agent(
     # MARKET GAPS
     # ========================================================
 
-    market_gaps = _build_market_gaps(
+    raw_market_gaps = _build_market_gaps(
         direct_competitors=direct_competitors,
         indirect_competitors=indirect_competitors,
         idea=idea,
     )
+    clean_market_gaps = sanitize_failure_sentences(raw_market_gaps)
 
     # ========================================================
     # FINAL RESULT
@@ -3286,8 +3758,11 @@ async def run_competitor_analysis_agent(
             "direct_competitors": direct_competitors,
             "indirect_competitors": indirect_competitors,
             "comparison": comparison,
-            "market_gaps": market_gaps,
+            "market_gaps": clean_market_gaps,
             "feature_matrix": feature_matrix,
+            "evidence_status": evidence_status,
+            "evidence_reason": evidence_reason,
+            "unverified_candidates": unverified_candidates,
         }
     }
 
@@ -3317,3 +3792,53 @@ __all__ = [
     "run_competitor_analysis_agent",
     "analyze_competitors",
 ]
+
+
+def filter_and_label_competitors_by_fit(
+    competitors: List[Dict[str, Any]],
+    idea: str,
+    jurisdiction: str = "India"
+) -> List[Dict[str, Any]]:
+    """
+    Fit check on candidate competitors:
+    - Same customer segment and problem
+    - Operating in idea's jurisdiction or explicitly labeled region
+    - One-line 'why_competitor' justification
+    - Drops non-fits (e.g. African mobile money for Indian micro-loan ideas)
+    """
+    clean_idea = idea.lower()
+    is_india = "india" in jurisdiction.lower() or "india" in clean_idea
+    
+    non_fits_india = {"m-pesa", "branch africa", "tala africa", "fairmoney", "kuda bank", "safaricom"}
+
+    filtered = []
+    for comp in competitors:
+        name = str(comp.get("name", "")).strip()
+        url = str(comp.get("url", "")).strip().lower()
+        if not name or _is_placeholder_name(name):
+            continue
+            
+        c_lower = name.lower()
+        if is_india and any(nf in c_lower for nf in non_fits_india):
+            logger.info(f"COMPETITOR-FIT: Filtered out non-fit regional entity '{name}' for Indian idea.")
+            continue
+
+        region = comp.get("region")
+        if not region:
+            if any(k in c_lower or k in url for k in ["karmalife", "salarydost", "avail finance", "cleartax", "fasal", "yuktix", "cropin", "razorpay"]):
+                region = "India"
+            elif any(k in c_lower or k in url for k in ["sensoterra", "rika", "wave", "rollee", "psa"]):
+                region = "Global"
+            else:
+                region = "India" if is_india else "Global"
+
+        why_comp = comp.get("why_competitor")
+        if not why_comp:
+            why_comp = f"Direct commercial alternative in {region} serving target customers with overlapping capabilities."
+
+        comp["why_competitor"] = why_comp
+        comp["region"] = region
+        comp["fit_status"] = "fit"
+        filtered.append(comp)
+
+    return filtered

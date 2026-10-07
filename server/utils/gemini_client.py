@@ -53,12 +53,10 @@ MASTER_MODELS_WATERFALL: List[str] = [
 
 # Master prioritized list of fast Groq models (120B reasoning, Qwen 27B, 20B, 7B)
 GROQ_MODELS_WATERFALL: List[str] = [
-    "openai/gpt-oss-120b",
     "qwen/qwen3.8-27b",
+    "openai/gpt-oss-120b",
     "openai/gpt-oss-20b",
     "allam-2-7b",
-    "llama-3.3-70b-versatile",
-    "llama-3.1-8b-instant",
     "mixtral-8x7b-32768",
 ]
 
@@ -75,10 +73,6 @@ def get_gemini_api_key() -> str:
     key = os.getenv("GEMINI_API_KEY", "").strip()
     if key:
         return key
-
-    # If running inside a pytest test that deliberately unset GEMINI_API_KEY, respect it
-    if "PYTEST_CURRENT_TEST" in os.environ:
-        return ""
 
     # Attempt locating server/.env
     search_paths = [
@@ -122,9 +116,6 @@ def get_groq_api_key() -> str:
     key = os.getenv("GROQ_API_KEY", "").strip()
     if key:
         return key
-
-    if "PYTEST_CURRENT_TEST" in os.environ:
-        return ""
 
     search_paths = [
         Path(__file__).resolve().parent.parent / ".env",
@@ -214,6 +205,55 @@ async def get_all_viable_models(api_key: Optional[str] = None) -> List[str]:
     return list(ordered_list)
 
 
+DIAGNOSTIC_LOGS: List[Dict[str, Any]] = []
+
+def record_diagnostic(
+    provider: str,
+    model: str,
+    status: Optional[int],
+    latency_ms: float,
+    response_length: int = 0,
+    json_parse_error: Optional[str] = None,
+    pydantic_failure: Optional[str] = None,
+    actual_cause: str = "success"
+) -> Dict[str, Any]:
+    entry = {
+        "provider": provider,
+        "model": model,
+        "http_status": status,
+        "latency_ms": round(latency_ms, 1),
+        "response_length": response_length,
+        "json_parse_error": json_parse_error,
+        "pydantic_failure": pydantic_failure,
+        "actual_cause": actual_cause,
+        "timestamp": time.time(),
+    }
+    DIAGNOSTIC_LOGS.append(entry)
+    # Keep last 100 entries
+    if len(DIAGNOSTIC_LOGS) > 100:
+        DIAGNOSTIC_LOGS.pop(0)
+    logger.info(
+        f"[LLM-DIAGNOSTIC] Provider: {provider} | Model: {model} | HTTP: {status} | "
+        f"Latency: {latency_ms:.0f}ms | Length: {response_length} | Cause: {actual_cause}"
+    )
+    return entry
+
+
+def get_recent_diagnostic_logs() -> List[Dict[str, Any]]:
+    return list(DIAGNOSTIC_LOGS)
+
+
+def clear_diagnostic_logs() -> None:
+    DIAGNOSTIC_LOGS.clear()
+
+
+async def sleep_between_calls(delay: Optional[float] = None) -> None:
+    """Configurable delay between sequential LLM calls to prevent rate-limit bursts."""
+    sec = delay if delay is not None else float(os.getenv("NEXUS_LLM_DELAY_SEC", "1.5"))
+    if sec > 0:
+        await asyncio.sleep(sec)
+
+
 def clean_llm_json_text(text: str) -> str:
     """Extracts clean JSON from LLM output, handling markdown fences and prose."""
     raw = text.strip()
@@ -234,12 +274,12 @@ async def call_groq_generate_content(
     system_instruction: Optional[str] = None,
     temperature: float = 0.2,
     response_mime_type: str = "application/json",
-    timeout_per_model: float = 7.0,
+    timeout_per_model: float = 15.0,
     tag: str = "GROQ-AGENT"
 ) -> Optional[Tuple[str, str]]:
     """
-    Executes a prompt against the Groq API (Llama 3.3 70B, Llama 3.1 8B, Mixtral).
-    Fast failover across all Groq models when Gemini is rate-limited or unavailable.
+    Executes a prompt against the Groq API (Llama 3.3 70B, Qwen 27B, GPT-OSS 120B/20B).
+    Fast failover across all Groq models with exponential backoff on 429.
     """
     key = (api_key or get_groq_api_key()).strip()
     if not key:
@@ -255,7 +295,7 @@ async def call_groq_generate_content(
         messages.append({"role": "system", "content": system_instruction})
     messages.append({"role": "user", "content": prompt})
 
-    timeout_config = httpx.Timeout(timeout_per_model, connect=2.5)
+    timeout_config = httpx.Timeout(timeout_per_model, connect=3.0)
 
     for idx, model in enumerate(GROQ_MODELS_WATERFALL):
         payload: Dict[str, Any] = {
@@ -266,9 +306,11 @@ async def call_groq_generate_content(
         if response_mime_type == "application/json":
             payload["response_format"] = {"type": "json_object"}
 
+        t0 = time.monotonic()
         try:
             async with httpx.AsyncClient(timeout=timeout_config) as client:
                 resp = await client.post(GROQ_API_BASE_URL, headers=headers, json=payload)
+                lat_ms = (time.monotonic() - t0) * 1000.0
                 status = resp.status_code
 
                 if status == 200:
@@ -277,8 +319,11 @@ async def call_groq_generate_content(
                     if choices:
                         content = choices[0].get("message", {}).get("content", "")
                         if content.strip():
+                            record_diagnostic("groq", model, status, lat_ms, len(content), actual_cause="success")
                             logger.info(f"[{tag}] GROQ LLM SUCCESS | Model: '{model}' (candidate {idx+1}/{len(GROQ_MODELS_WATERFALL)})")
                             return content, f"groq/{model}"
+                    record_diagnostic("groq", model, status, lat_ms, 0, actual_cause="empty_choices")
+
                 elif status in (400, 422):
                     logger.info(f"[{tag}] Groq Model '{model}' returned {status}. Retrying in standard text mode...")
                     alt_payload = {
@@ -286,25 +331,58 @@ async def call_groq_generate_content(
                         "messages": messages,
                         "temperature": temperature
                     }
+                    t_alt = time.monotonic()
                     async with httpx.AsyncClient(timeout=timeout_config) as client2:
                         alt_resp = await client2.post(GROQ_API_BASE_URL, headers=headers, json=alt_payload)
+                        lat_alt = (time.monotonic() - t_alt) * 1000.0
                         if alt_resp.status_code == 200:
                             alt_choices = alt_resp.json().get("choices", [])
                             if alt_choices:
                                 alt_content = alt_choices[0].get("message", {}).get("content", "")
                                 if alt_content.strip():
+                                    record_diagnostic("groq", model, 200, lat_alt, len(alt_content), actual_cause="success (text-mode)")
                                     logger.info(f"[{tag}] GROQ LLM SUCCESS | Model: '{model}' (standard text mode)")
                                     return alt_content, f"groq/{model}"
+                    record_diagnostic("groq", model, status, lat_ms, len(resp.text), actual_cause=f"client_error ({status})")
                     continue
 
                 elif status == 429:
-                    logger.info(f"[{tag}] Groq Model '{model}' rate-limited (429). Trying next Groq model...")
+                    record_diagnostic("groq", model, 429, lat_ms, len(resp.text), actual_cause="rate_limit (429)")
+                    # Exponential backoff retry on 429
+                    retry_succeeded = False
+                    for b_attempt in range(1, 3):
+                        backoff = min(6.0, 1.5 ** b_attempt)
+                        logger.info(f"[{tag}] Groq Model '{model}' rate-limited (429). Backing off {backoff:.1f}s (retry {b_attempt}/2)...")
+                        await asyncio.sleep(backoff)
+                        try:
+                            t_retry = time.monotonic()
+                            async with httpx.AsyncClient(timeout=timeout_config) as r_client:
+                                r_resp = await r_client.post(GROQ_API_BASE_URL, headers=headers, json=payload)
+                                r_lat = (time.monotonic() - t_retry) * 1000.0
+                                if r_resp.status_code == 200:
+                                    r_choices = r_resp.json().get("choices", [])
+                                    if r_choices:
+                                        r_content = r_choices[0].get("message", {}).get("content", "")
+                                        if r_content.strip():
+                                            record_diagnostic("groq", model, 200, r_lat, len(r_content), actual_cause="success_after_backoff")
+                                            return r_content, f"groq/{model}"
+                        except Exception:
+                            pass
                     continue
+
                 else:
+                    record_diagnostic("groq", model, status, lat_ms, len(resp.text), actual_cause=f"http_{status}")
                     logger.warning(f"[{tag}] Groq Model '{model}' returned status {status}: {resp.text[:120]}. Trying next...")
                     continue
 
+        except httpx.ReadTimeout:
+            lat_ms = (time.monotonic() - t0) * 1000.0
+            record_diagnostic("groq", model, None, lat_ms, 0, actual_cause=f"timeout after {timeout_per_model}s")
+            logger.info(f"[{tag}] Groq Model '{model}' timed out after {timeout_per_model}s. Trying next...")
+            continue
         except Exception as exc:
+            lat_ms = (time.monotonic() - t0) * 1000.0
+            record_diagnostic("groq", model, None, lat_ms, 0, actual_cause=f"exception: {type(exc).__name__}")
             logger.warning(f"[{tag}] Groq Model '{model}' exception: {type(exc).__name__}: {exc}. Trying next...")
             continue
 
@@ -318,17 +396,13 @@ async def call_gemini_generate_content(
     system_instruction: Optional[str] = None,
     temperature: float = 0.2,
     response_mime_type: str = "application/json",
-    timeout_per_model: float = 6.5,
+    timeout_per_model: float = 15.0,
     max_tokens: Optional[int] = None,
     tag: str = "AGENT"
 ) -> Optional[Tuple[str, str]]:
     """
     Executes a prompt against the Google Gemini API with aggressive model waterfall.
-    If all Gemini models are exhausted / rate-limited (429), automatically fails over
-    to Groq (Llama-3.3-70B, Llama-3.1-8B) before falling back to heuristics.
-
-    Returns:
-        (raw_response_text, successful_model_name) or None if all LLMs failed.
+    Includes exponential backoff on 429 and fast failover to Groq.
     """
     key = (api_key or get_gemini_api_key()).strip()
     candidate_models = await get_all_viable_models(key) if key else []
@@ -352,15 +426,17 @@ async def call_gemini_generate_content(
                 "parts": [{"text": system_instruction}]
             }
 
-        timeout_config = httpx.Timeout(timeout_per_model, connect=2.5)
+        timeout_config = httpx.Timeout(timeout_per_model, connect=3.0)
         consecutive_network_errors = 0
         consecutive_429s = 0
 
         for idx, model in enumerate(candidate_models):
             url = f"{GEMINI_API_BASE_URL}/{model}:generateContent?key={key}"
+            t0 = time.monotonic()
             try:
                 async with httpx.AsyncClient(timeout=timeout_config) as client:
                     resp = await client.post(url, json=payload)
+                    lat_ms = (time.monotonic() - t0) * 1000.0
                     status = resp.status_code
 
                     if status == 200:
@@ -371,32 +447,54 @@ async def call_gemini_generate_content(
                             if parts:
                                 raw_text = parts[0].get("text", "")
                                 if raw_text.strip():
+                                    record_diagnostic("gemini", model, 200, lat_ms, len(raw_text), actual_cause="success")
                                     logger.info(
                                         f"[{tag}] GEMINI LLM SUCCESS | Model: '{model}' (candidate {idx+1}/{len(candidate_models)})"
                                     )
                                     return raw_text, model
 
+                        record_diagnostic("gemini", model, 200, lat_ms, 0, actual_cause="empty_parts")
                         logger.warning(f"[{tag}] Model '{model}' returned empty candidate parts. Trying next...")
                         continue
 
                     elif status == 429:
                         consecutive_429s += 1
+                        record_diagnostic("gemini", model, 429, lat_ms, len(resp.text), actual_cause="rate_limit (429)")
                         logger.info(f"[{tag}] Model '{model}' quota/rate-limited (429).")
-                        if consecutive_429s >= 3 and get_groq_api_key():
+
+                        # Try 1 backoff attempt on 429 before waterfalling
+                        backoff = 2.0
+                        await asyncio.sleep(backoff)
+                        try:
+                            t_retry = time.monotonic()
+                            retry_resp = await client.post(url, json=payload)
+                            r_lat = (time.monotonic() - t_retry) * 1000.0
+                            if retry_resp.status_code == 200:
+                                r_cand = retry_resp.json().get("candidates", [])
+                                if r_cand:
+                                    r_parts = r_cand[0].get("content", {}).get("parts", [])
+                                    if r_parts and r_parts[0].get("text", "").strip():
+                                        record_diagnostic("gemini", model, 200, r_lat, len(r_parts[0]["text"]), actual_cause="success_after_backoff")
+                                        return r_parts[0]["text"], model
+                        except Exception:
+                            pass
+
+                        if consecutive_429s >= 2 and get_groq_api_key():
                             logger.info(f"[{tag}] Gemini free-tier quota exhausted. Fast-failing immediately to Groq...")
                             break
                         continue
 
                     elif status == 404:
+                        record_diagnostic("gemini", model, 404, lat_ms, 0, actual_cause="not_found (404)")
                         logger.debug(f"[{tag}] Model '{model}' not found (404). Trying next...")
                         continue
 
                     elif status in (500, 502, 503, 504):
+                        record_diagnostic("gemini", model, status, lat_ms, len(resp.text), actual_cause=f"server_error ({status})")
                         logger.info(f"[{tag}] Model '{model}' unavailable/server error ({status}). Trying next...")
                         continue
 
                     elif status in (400, 401, 403):
-                        # Check if error is due to responseMimeType: application/json on models like gemma
                         err_text = resp.text.lower()
                         if "responsemimetype" in err_text or "mime" in err_text or "json" in err_text:
                             logger.info(f"[{tag}] Model '{model}' does not support responseMimeType JSON. Retrying without it...")
@@ -412,31 +510,38 @@ async def call_gemini_generate_content(
                                     if alt_parts:
                                         alt_text = alt_parts[0].get("text", "")
                                         if alt_text.strip():
+                                            record_diagnostic("gemini", model, 200, (time.monotonic() - t0)*1000.0, len(alt_text), actual_cause="success (text-mode)")
                                             logger.info(f"[{tag}] GEMINI LLM SUCCESS | Model: '{model}' (standard text mode)")
                                             return alt_text, model
+                        record_diagnostic("gemini", model, status, lat_ms, len(resp.text), actual_cause=f"client_error ({status})")
                         logger.warning(f"[{tag}] Model '{model}' returned HTTP {status}. Trying next...")
                         continue
 
                     else:
+                        record_diagnostic("gemini", model, status, lat_ms, len(resp.text), actual_cause=f"http_{status}")
                         logger.warning(f"[{tag}] Model '{model}' returned status {status}. Trying next...")
                         continue
 
             except httpx.ReadTimeout:
+                lat_ms = (time.monotonic() - t0) * 1000.0
+                record_diagnostic("gemini", model, None, lat_ms, 0, actual_cause=f"timeout after {timeout_per_model}s")
                 logger.info(f"[{tag}] Model '{model}' timed out after {timeout_per_model}s. Trying next...")
                 consecutive_network_errors += 1
-                if consecutive_network_errors >= 2 and get_groq_api_key():
-                    logger.info(f"[{tag}] Multiple Gemini timeouts. Fast-failing directly to Groq...")
+                if consecutive_network_errors >= 2:
+                    logger.info(f"[{tag}] Multiple Gemini timeouts. Fast-failing waterfall...")
                     break
                 continue
             except Exception as exc:
+                lat_ms = (time.monotonic() - t0) * 1000.0
+                record_diagnostic("gemini", model, None, lat_ms, 0, actual_cause=f"exception: {type(exc).__name__}")
                 logger.warning(f"[{tag}] Model '{model}' exception: {exc}. Trying next...")
                 consecutive_network_errors += 1
-                if consecutive_network_errors >= 2 and get_groq_api_key():
-                    logger.info(f"[{tag}] Multiple Gemini connection drops. Fast-failing directly to Groq...")
+                if consecutive_network_errors >= 2:
+                    logger.info(f"[{tag}] Multiple Gemini connection drops. Fast-failing waterfall...")
                     break
                 continue
 
-    # --- Secondary Provider: Groq (Llama 3.3 70B, Llama 3.1 8B, Mixtral) Failover ---
+    # --- Secondary Provider: Groq (Llama 3.3 70B, Qwen 27B, GPT-OSS 120B) Failover ---
     groq_key = get_groq_api_key()
     if groq_key:
         logger.info(f"[{tag}] Gemini exhausted or rate-limited. Activating Groq failover ({len(GROQ_MODELS_WATERFALL)} models)...")
@@ -446,6 +551,7 @@ async def call_gemini_generate_content(
             system_instruction=system_instruction,
             temperature=temperature,
             response_mime_type=response_mime_type,
+            timeout_per_model=timeout_per_model,
             tag=tag
         )
         if groq_result:
@@ -453,4 +559,5 @@ async def call_gemini_generate_content(
 
     logger.warning(f"[{tag}] ALL Gemini ({len(candidate_models)}) and Groq models failed or rate-limited. Activating grounded safety fallback.")
     return None
+
 

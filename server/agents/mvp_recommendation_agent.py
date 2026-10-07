@@ -135,14 +135,41 @@ def _to_dict(value: Any) -> Dict[str, Any]:
 
 def _clean_text(value: Any) -> str:
     """
-    Safely convert a value into clean text.
+    Safely convert a value into clean text, unpacking dicts or stringified dicts.
     """
-
     if value is None:
         return ""
 
+    if isinstance(value, dict):
+        for candidate_key in ["pain", "pain_point", "problem", "text", "description", "title", "name", "value"]:
+            if candidate_key in value and value[candidate_key]:
+                return _clean_text(value[candidate_key])
+        vals = [str(v).strip() for v in value.values() if v]
+        if vals:
+            return " - ".join(vals)
+        return ""
+
     if isinstance(value, str):
-        return re.sub(r"\s+", " ", value).strip()
+        trimmed = value.strip()
+        if (trimmed.startswith("{") and trimmed.endswith("}")) or (trimmed.startswith("[") and trimmed.endswith("]")):
+            import ast
+            try:
+                parsed = ast.literal_eval(trimmed)
+                if isinstance(parsed, (dict, list)):
+                    return _clean_text(parsed)
+            except Exception:
+                try:
+                    import json
+                    parsed = json.loads(trimmed)
+                    if isinstance(parsed, (dict, list)):
+                        return _clean_text(parsed)
+                except Exception:
+                    pass
+        return re.sub(r"\s+", " ", trimmed).strip()
+
+    if isinstance(value, list):
+        items = [_clean_text(x) for x in value]
+        return "; ".join([x for x in items if x])
 
     if isinstance(value, (int, float, bool)):
         return str(value)
@@ -400,17 +427,18 @@ def _get_competitors(
             continue
 
         for item in value:
-
-            if isinstance(item, dict):
-                competitors.append(item)
-
-            else:
-                item_dict = _to_dict(item)
-
-                if item_dict:
-                    competitors.append(item_dict)
+            comp_dict = item if isinstance(item, dict) else _to_dict(item)
+            if not comp_dict:
+                continue
+            # Only use verified competitors from retrieved sources
+            if comp_dict.get("verification_status") == "Unverified, from model knowledge":
+                continue
+            if comp_dict.get("source_type") == "unverified_model_knowledge":
+                continue
+            competitors.append(comp_dict)
 
     return competitors
+
 
 
 def _get_competitor_features(
@@ -1910,14 +1938,19 @@ async def run_mvp_recommendation_agent(
             len(validated.future_features),
         )
 
-        # -----------------------------------------------------------
-        # Return exact structure expected by orchestrator
-        # -----------------------------------------------------------
+        from server.agents.competitor_analysis_agent import sanitize_failure_sentences
+        from server.agents.gtm_agent import scrub_hardware_phrases_for_software
 
-        return {
-            "mvp_recommendations": validated.model_dump()
+        mvp_dict = (
+            validated.model_dump()
             if hasattr(validated, "model_dump")
             else validated.dict()
+        )
+        is_hw = any(k in idea.lower() for k in ["hardware", "device", "sensor", "probe", "robotics", "drone"])
+        clean_mvp = scrub_hardware_phrases_for_software(sanitize_failure_sentences(mvp_dict), is_hardware=is_hw)
+
+        return {
+            "mvp_recommendations": clean_mvp
         }
 
     except ValueError:
