@@ -375,8 +375,8 @@ export function Navbar({
             onClick={onOpenSupabase}
             title={
               isSupabaseConnected
-                ? "Connected to Supabase Cloud"
-                : "Click to configure Supabase Cloud"
+                ? "Supabase Cloud Storage Active - All Validation Data Synced"
+                : "Local Vault Mode - Click to inspect storage status"
             }
           >
             <span
@@ -391,8 +391,8 @@ export function Navbar({
 
             <span className="shell-status-text">
               {isSupabaseConnected
-                ? "Cloud"
-                : "Connect"}
+                ? "Cloud Sync"
+                : "Local Vault"}
             </span>
           </button>
 
