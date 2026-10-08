@@ -325,12 +325,17 @@ export async function signInWithGoogleUser() {
     );
   }
 
+  const redirectUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}${window.location.pathname}`
+      : undefined;
+
   const { data, error } =
     await supabase.auth.signInWithOAuth({
       provider: "google",
 
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: redirectUrl,
       },
     });
 
