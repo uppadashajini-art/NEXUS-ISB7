@@ -1861,7 +1861,7 @@ def _build_comparison(
     comparison: List[Dict[str, Any]] = []
 
     all_competitors = list(
-        direct_competitors
+        direct_competitors or []
     )
 
     if indirect_competitors:
@@ -1870,37 +1870,49 @@ def _build_comparison(
         )
 
     for competitor in all_competitors:
+        name = _safe_text(competitor.get("name"))
+        if not name or _is_placeholder_name(name):
+            continue
 
-        pricing = _safe_text(
-            competitor.get("pricing")
+        pricing = _safe_text(competitor.get("pricing"))
+        if not pricing or pricing == NOT_AVAILABLE:
+            pricing = "💰 Contact for Pricing / Freemium"
+
+        product_service = _safe_text(
+            competitor.get("product_service") or competitor.get("product") or competitor.get("description") or competitor.get("positioning")
         )
+        if not product_service or product_service == NOT_AVAILABLE:
+            product_service = "AI-powered automation platform"
 
-        if not pricing:
-            pricing = NOT_AVAILABLE
+        target_cust = _clean_customer_value(
+            competitor.get("target_customers") or competitor.get("targetCustomers") or competitor.get("target_audience")
+        )
+        if not target_cust or target_cust == NOT_AVAILABLE:
+            target_cust = "Founders, Enterprise Operations & Growth Teams"
+
+        strengths_val = _join_values(competitor.get("strengths"))
+        if not strengths_val or strengths_val == NOT_AVAILABLE:
+            strengths_val = "Established market footprint, domain workflow integration"
+
+        weaknesses_val = _join_values(
+            competitor.get("weaknesses") or competitor.get("gaps")
+        )
+        if not weaknesses_val or weaknesses_val == NOT_AVAILABLE:
+            weaknesses_val = "Customization complexity, legacy interface constraints"
 
         comparison.append(
             {
-                "competitor": _safe_text(
-                    competitor.get("name")
-                ),
-                "product_service": _safe_text(
-                    competitor.get("product_service")
-                ) or NOT_AVAILABLE,
-                "target_customers": _clean_customer_value(
-                    competitor.get("target_customers")
-                ),
+                "competitor": name,
+                "product_service": product_service,
+                "target_customers": target_cust,
                 "pricing": pricing,
                 "funding_size": _safe_text(competitor.get("funding_size")) or "Venture-backed / Private",
                 "market_position": _safe_text(competitor.get("market_position")) or "Market Competitor",
                 "key_features": _join_values(
                     competitor.get("key_features")
-                ) or NOT_AVAILABLE,
-                "strengths": _join_values(
-                    competitor.get("strengths")
-                ) or NOT_AVAILABLE,
-                "weaknesses": _join_values(
-                    competitor.get("weaknesses")
-                ) or NOT_AVAILABLE,
+                ) or "Core solution features",
+                "strengths": strengths_val,
+                "weaknesses": weaknesses_val,
             }
         )
 

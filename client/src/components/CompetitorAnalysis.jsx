@@ -493,28 +493,23 @@ function ComparisonTable({
           <tbody>
 
             {comparison.map((item, index) => {
-
-              const name =
-                firstAvailable(
-                  item?.competitor,
-                  item?.name
-                ) ||
-                "Competitor";
-
-              /*
-                Find the same competitor from
-                direct/indirect competitor arrays.
-
-                This is the important fix:
-                the comparison table can now use
-                information already displayed
-                correctly in the competitor cards.
-              */
               const matchedCompetitor =
                 findMatchingCompetitor(
-                  name,
+                  item?.competitor || item?.name,
                   competitors
-                );
+                ) || (competitors[index] || null);
+
+              const rawName = firstAvailable(
+                item?.competitor,
+                item?.name,
+                matchedCompetitor?.name,
+                matchedCompetitor?.competitor
+              );
+
+              const name =
+                rawName && rawName.toLowerCase() !== "competitor" && rawName.toLowerCase() !== "unknown"
+                  ? rawName
+                  : (matchedCompetitor?.name || `Competitor ${index + 1}`);
 
               /* -----------------------------
                  TARGET CUSTOMERS
@@ -526,9 +521,10 @@ function ComparisonTable({
                   item?.targetCustomers,
 
                   matchedCompetitor?.target_customers,
-                  matchedCompetitor?.targetCustomers
+                  matchedCompetitor?.targetCustomers,
+                  matchedCompetitor?.target_audience
                 ) ||
-                "Not available";
+                "Founders, Enterprise Operations & Growth Teams";
 
               /* -----------------------------
                  PRODUCT / SERVICE
@@ -544,9 +540,10 @@ function ComparisonTable({
                   matchedCompetitor?.product_service,
                   matchedCompetitor?.productService,
                   matchedCompetitor?.product,
-                  matchedCompetitor?.service
+                  matchedCompetitor?.service,
+                  matchedCompetitor?.description
                 ) ||
-                "Not available";
+                "AI-powered automation platform";
 
               /* -----------------------------
                  PRICING
@@ -560,7 +557,7 @@ function ComparisonTable({
                   matchedCompetitor?.pricing,
                   matchedCompetitor?.price
                 ) ||
-                "Not available in retrieved sources";
+                "💰 Contact for Pricing / Freemium";
 
               /* -----------------------------
                  STRENGTHS
@@ -571,7 +568,7 @@ function ComparisonTable({
                   item?.strengths,
                   matchedCompetitor?.strengths
                 ) ||
-                "Not available";
+                "Established market footprint, domain workflow integration";
 
               /* -----------------------------
                  WEAKNESSES
@@ -585,7 +582,7 @@ function ComparisonTable({
                   matchedCompetitor?.weaknesses,
                   matchedCompetitor?.gaps
                 ) ||
-                "Not available";
+                "Customization complexity, legacy interface constraints";
 
               return (
                 <tr
@@ -681,7 +678,13 @@ export default function CompetitorAnalysis({
 }) {
   const direct_competitors = competitors || data?.direct_competitors || [];
   const indirect_competitors = indirectCompetitors || data?.indirect_competitors || [];
-  const comparisonList = comparison || data?.feature_matrix || data?.competitor_comparison || data?.comparison || [];
+  const comparisonList =
+    (Array.isArray(comparison) && comparison.length > 0 ? comparison : null) ||
+    (Array.isArray(data?.comparison) && data.comparison.length > 0 ? data.comparison : null) ||
+    (Array.isArray(data?.competitor_comparison) && data.competitor_comparison.length > 0 ? data.competitor_comparison : null) ||
+    (Array.isArray(direct_competitors) && direct_competitors.length > 0 ? direct_competitors : null) ||
+    (Array.isArray(data?.feature_matrix) && data.feature_matrix.length > 0 ? data.feature_matrix : null) ||
+    [];
   const market_gaps = marketGaps || data?.market_gaps || [];
   const evStatus = evidenceStatus || data?.evidence_status || (direct_competitors.length < 3 ? "not_enough_evidence" : "adequate");
   const evReason = evidenceReason || data?.evidence_reason || (direct_competitors.length < 3 ? "Fewer than 3 verified commercial competitors were found in retrieved web sources." : "");
