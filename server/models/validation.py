@@ -78,6 +78,38 @@ class CustomerSegment(BaseModel):
     profile: Optional[str] = None
     urgency: Optional[str] = None
 
+    @field_validator("objections", "needs", "acquisition_channels", mode="before")
+    @classmethod
+    def _coerce_string_list(cls, v):
+        if not isinstance(v, list):
+            return []
+        cleaned = []
+        for item in v:
+            if isinstance(item, str):
+                if item.strip():
+                    cleaned.append(item.strip())
+            elif isinstance(item, dict):
+                val = (
+                    item.get("objection")
+                    or item.get("need")
+                    or item.get("channel")
+                    or item.get("text")
+                    or item.get("value")
+                    or item.get("description")
+                )
+                if not val and item:
+                    for sub_v in item.values():
+                        if isinstance(sub_v, str) and sub_v.strip():
+                            val = sub_v
+                            break
+                if val:
+                    cleaned.append(str(val).strip())
+                else:
+                    cleaned.append(str(item).strip())
+            elif item is not None:
+                cleaned.append(str(item).strip())
+        return cleaned
+
 
 class MarketSizing(BaseModel):
     tam: str = Field(default="$14.8B", description="Total Addressable Market")

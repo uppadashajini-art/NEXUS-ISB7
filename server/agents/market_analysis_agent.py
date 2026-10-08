@@ -1880,15 +1880,28 @@ def _validate_and_sanitize_gemini_output(
                             elif str(p).strip():
                                 pains.append(str(p).strip())
 
+                    def _extract_str(item: Any, preferred_key: str) -> str:
+                        if isinstance(item, str):
+                            return item.strip()
+                        if isinstance(item, dict):
+                            val = item.get(preferred_key) or item.get("text") or item.get("value") or item.get("description")
+                            if not val and item:
+                                for sub_v in item.values():
+                                    if isinstance(sub_v, str) and sub_v.strip():
+                                        val = sub_v
+                                        break
+                            return str(val).strip() if val else str(item).strip()
+                        return str(item).strip() if item is not None else ""
+
                     clean_segments.append({
                         "segment": str(s.get("segment")).strip(),
                         "role": str(s.get("role") or "").strip() or None,
                         "company_size": str(s.get("company_size") or "").strip() or None,
                         "pain_points": pains or fallback_data["customer_segments"][0].get("pain_points", []),
                         "willingness_to_pay": str(s.get("willingness_to_pay") or "").strip() or None,
-                        "acquisition_channels": [str(c).strip() for c in s.get("acquisition_channels", []) if str(c).strip()],
-                        "objections": [str(o).strip() for o in s.get("objections", []) if str(o).strip()],
-                        "needs": _ensure_complete_sentences(s.get("needs", [])) or [str(n).strip() for n in s.get("needs", []) if str(n).strip()]
+                        "acquisition_channels": [_extract_str(c, "channel") for c in s.get("acquisition_channels", []) if _extract_str(c, "channel")],
+                        "objections": [_extract_str(o, "objection") for o in s.get("objections", []) if _extract_str(o, "objection")],
+                        "needs": _ensure_complete_sentences([_extract_str(n, "need") for n in s.get("needs", []) if _extract_str(n, "need")]) or [_extract_str(n, "need") for n in s.get("needs", []) if _extract_str(n, "need")]
                     })
 
         # Ensure at least 3 personas by backfilling from fallback
